@@ -15,7 +15,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'DFU Bakım ve Teknik Yönetim Sistemi',
   description: 'DFU Donuk Fırıncılık Ürünleri A.Ş. Teknik Bakım, Arıza Bildirim ve Puantaj (İSG) Yönetim Portalı.',
-}icons: { icon: '/logo.png' };
+  icons: {
+    icon: '/logo.png',
+  },
+};;
 
 export default function RootLayout({
   children,

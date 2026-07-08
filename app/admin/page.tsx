@@ -165,7 +165,7 @@ export default function AdminDashboard() {
           <div className="flex flex-wrap gap-4 mb-6 no-print">
             <Link href="/admin/ekipmanlar" className="bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-xl font-semibold">Hat ve Ekipman Yönetimi</Link>
             <Link href="/admin/personel" className="bg-purple-600 hover:bg-purple-500 px-6 py-3 rounded-xl font-semibold">Personel Onaylama</Link>
-            <Link href="/admin/mesai" className="bg-teal-600 hover:bg-teal-500 px-6 py-3 rounded-xl font-semibold">Mesai Raporları</Link> <Link href="/admin/duyurular" className="bg-yellow-600 hover:bg-yellow-500 px-6 py-3 rounded-xl font-semibold text-white print:hidden">Duyuru Yayınla</Link>
+            <Link href="/admin/mesai" className="bg-teal-600 hover:bg-teal-500 px-6 py-3 rounded-xl font-semibold">Mesai Raporları</Link> <Link href="/admin/duyurular" className="bg-yellow-600 hover:bg-yellow-500 px-6 py-3 rounded-xl font-semibold text-white print:hidden">Duyuru Yayınla</Link> <Link href="/admin/is-listesi" className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-xl font-semibold">Tüm İşler Listesi</Link>
             <Link href="/dashboard" className="bg-orange-600 hover:bg-orange-500 px-6 py-3 rounded-xl font-semibold ml-auto">Arıza Bildirim Ekranı ➔</Link>
           </div>
 

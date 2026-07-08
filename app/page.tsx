@@ -107,7 +107,11 @@ export default function LoginPage() {
         
         <div className="mx-auto flex justify-center mb-6">
           {/* LOGONUZ BURADA ÇIKAR */}
-          <img src="/logo.png" alt="DFU Logo" className="h-20 w-auto object-contain bg-white rounded-xl p-2 shadow-lg shadow-white/10" />
+         <img 
+  src="https://www.donukfirincilik.com.tr/wp-content/uploads/2021/04/dfu-logo.png" 
+  alt="DFU Logo" 
+  className="h-20 w-auto object-contain bg-white rounded-xl p-2 shadow-lg shadow-white/10" 
+/>
         </div>
 
         <h1 className="text-3xl font-bold text-white mb-2">Bakım Yönetimi</h1>

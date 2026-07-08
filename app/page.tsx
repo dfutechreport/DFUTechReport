@@ -84,8 +84,8 @@ export default function LoginPage() {
                     {/* İçteki Kendi Şirket Logonuz (Nabız Efektli) */}
           <div className="animate-pulse flex items-center justify-center bg-white rounded-full w-28 h-28 z-10 shadow-[0_0_40px_rgba(59,130,246,0.6)] overflow-hidden p-2">
             <img 
-              src="/logo.png" 
-              alt="DFU Logo" 
+  src="/dfulogo.png" 
+  alt="DFU Logo" 
               className="w-full h-full object-contain" 
             />
           </div>
@@ -107,8 +107,8 @@ export default function LoginPage() {
         
         <div className="mx-auto flex justify-center mb-6">
           {/* LOGONUZ BURADA ÇIKAR */}
-         <img 
-  src="https://www.donukfirincilik.com.tr/wp-content/uploads/2021/04/dfu-logo.png" 
+        <img 
+  src="/dfulogo.png" 
   alt="DFU Logo" 
   className="h-20 w-auto object-contain bg-white rounded-xl p-2 shadow-lg shadow-white/10" 
 />

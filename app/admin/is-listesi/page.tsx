@@ -10,10 +10,18 @@ export default function IsListesi() {
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Admin yetki kontrolü
+    useEffect(() => {
+    // Sadece "Onaylı" olan tüm personellere izin ver
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) window.location.href = "/";
+      if (user) {
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+        if (!userSnap.exists() || userSnap.data().isApproved !== true) {
+          window.location.href = "/"; // Onaysızsa ana sayfaya at
+        }
+      } else {
+        window.location.href = "/"; // Giriş yapmadıysa ana sayfaya at
+      }
     });
 
     const fetchLogs = async () => {

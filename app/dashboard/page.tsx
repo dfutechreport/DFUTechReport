@@ -180,7 +180,10 @@ export default function PersonelDashboard() {
           </div>
         </div>
 
-        <div className="mb-6 flex justify-end">
+                <div className="mb-6 flex justify-end gap-4">
+          <a href="/admin/is-listesi" className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg flex items-center gap-2">
+            📋 Geçmiş İşler (Seyir Defteri)
+          </a>
           <a href="/dashboard/mesai" className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg flex items-center gap-2">
             ⏰ Fazla Mesai Girişi Yap
           </a>

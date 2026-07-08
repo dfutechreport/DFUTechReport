@@ -143,9 +143,9 @@ export default function AdminDashboard() {
           
           <div className="flex justify-between items-center mb-10 border-b border-gray-800 pb-5">
             <div className="flex items-center gap-4">
-              <img src="/logo.png" alt="Logo" className="h-12 w-auto object-contain bg-white rounded-lg p-1" />
-              <div>
-                <h1 className="text-3xl font-bold">Yönetici Paneli</h1>
+  <img src="/dfulogo.png" alt="DFU Logo" className="h-12 w-auto object-contain bg-white rounded-lg p-1" />
+  <div>
+    <h1 className="text-3xl font-bold">Yönetici Paneli</h1>
                 <p className="text-gray-400 mt-1"><span className="font-bold text-gray-300">DFU Donuk Fırıncılık Ürünleri A.Ş.</span> | İş Zekası (BI) Ekranı</p>
               </div>
             </div>

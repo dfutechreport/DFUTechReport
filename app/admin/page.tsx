@@ -9,7 +9,9 @@ import Link from "next/link";
 
 export default function AdminDashboard() {
   const [isAdmin, setIsAdmin] = useState(false);
+  const [userRole, setUserRole] = useState(""); // YENİ: Kullanıcının asıl rolünü tutuyoruz
   const [loading, setLoading] = useState(true);
+  
   const [rawLogs, setRawLogs] = useState<any[]>([]);
   const [kpiOnayBekleyen, setKpiOnayBekleyen] = useState(0);
 
@@ -33,9 +35,16 @@ export default function AdminDashboard() {
       if (user) {
         const userRef = doc(db, "users", user.uid);
         const userSnap = await getDoc(userRef);
-        if (userSnap.exists() && userSnap.data().role === "admin" && userSnap.data().isApproved) {
-          setIsAdmin(true);
-          fetchIlkVeriler(); 
+        
+        if (userSnap.exists() && userSnap.data().isApproved) {
+          const role = userSnap.data().role;
+          setUserRole(role);
+          
+          // YENİ YETKİ KONTROLÜ: Admin veya Operatör ise paneli görebilir
+          if (role === "admin" || role === "operator") {
+            setIsAdmin(true); 
+            fetchIlkVeriler(); 
+          }
         }
       }
       setLoading(false);
@@ -125,8 +134,7 @@ export default function AdminDashboard() {
 
   return (
     <>
-      {/* Yazdırma (PDF) için özel CSS Stilleri - Bu kısım arka planı beyaza çevirir */}
-     <style dangerouslySetInnerHTML={{__html: `
+      <style dangerouslySetInnerHTML={{__html: `
         @media print {
           body { background: white !important; color: black !important; }
           .no-print { display: none !important; }
@@ -143,29 +151,43 @@ export default function AdminDashboard() {
           
           <div className="flex justify-between items-center mb-10 border-b border-gray-800 pb-5">
             <div className="flex items-center gap-4">
-  <img src="/dfulogo.png" alt="DFU Logo" className="h-12 w-auto object-contain bg-white rounded-lg p-1" />
-  <div>
-    <h1 className="text-3xl font-bold">Yönetici Paneli</h1>
+              <img src="/dfulogo.png" alt="Logo" className="h-12 w-auto object-contain bg-white rounded-lg p-1" />
+              <div>
+                <h1 className="text-3xl font-bold">
+                  {userRole === "admin" ? "Yönetici Paneli" : "Operatör İzleme Paneli"}
+                </h1>
                 <p className="text-gray-400 mt-1"><span className="font-bold text-gray-300">DFU Donuk Fırıncılık Ürünleri A.Ş.</span> | İş Zekası (BI) Ekranı</p>
               </div>
             </div>
-            {/* Çıkış ve PDF Butonları */}
+            
             <div className="flex gap-3 no-print">
-              <button 
-                onClick={() => window.print()} 
-                className="bg-white text-gray-900 font-bold px-6 py-2 rounded-lg shadow-lg hover:bg-gray-200 transition flex items-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
-                PDF Çıktısı Al
-              </button>
+              {/* PDF Butonu - Sadece Adminlere Görünür */}
+              {userRole === "admin" && (
+                <button 
+                  onClick={() => window.print()} 
+                  className="bg-white text-gray-900 font-bold px-6 py-2 rounded-lg shadow-lg hover:bg-gray-200 transition flex items-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                  PDF Çıktısı Al
+                </button>
+              )}
               <button onClick={() => { auth.signOut(); window.location.href="/"; }} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition">Çıkış Yap</button>
             </div>
           </div>
 
           <div className="flex flex-wrap gap-4 mb-6 no-print">
-            <Link href="/admin/ekipmanlar" className="bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-xl font-semibold">Hat ve Ekipman Yönetimi</Link>
-            <Link href="/admin/personel" className="bg-purple-600 hover:bg-purple-500 px-6 py-3 rounded-xl font-semibold">Personel Onaylama</Link>
-            <Link href="/admin/mesai" className="bg-teal-600 hover:bg-teal-500 px-6 py-3 rounded-xl font-semibold">Mesai Raporları</Link> <Link href="/admin/duyurular" className="bg-yellow-600 hover:bg-yellow-500 px-6 py-3 rounded-xl font-semibold text-white print:hidden">Duyuru Yayınla</Link> <Link href="/admin/is-listesi" className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-xl font-semibold">Tüm İşler Listesi</Link>
+            {/* Yönetim Butonları - Sadece Adminlere Görünür */}
+            {userRole === "admin" && (
+              <>
+                <Link href="/admin/ekipmanlar" className="bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-xl font-semibold">Hat ve Ekipman Yönetimi</Link>
+                <Link href="/admin/personel" className="bg-purple-600 hover:bg-purple-500 px-6 py-3 rounded-xl font-semibold">Personel Onaylama</Link>
+                <Link href="/admin/duyurular" className="bg-yellow-600 hover:bg-yellow-500 px-6 py-3 rounded-xl font-semibold">Duyuru Yayınla</Link>
+              </>
+            )}
+            
+            {/* Herkesin Görebileceği Butonlar */}
+            <Link href="/admin/mesai" className="bg-teal-600 hover:bg-teal-500 px-6 py-3 rounded-xl font-semibold">Mesai Raporları</Link>
+            <Link href="/admin/is-listesi" className="bg-indigo-600 hover:bg-indigo-500 px-6 py-3 rounded-xl font-semibold">Tüm İşler Listesi</Link>
             <Link href="/dashboard" className="bg-orange-600 hover:bg-orange-500 px-6 py-3 rounded-xl font-semibold ml-auto">Arıza Bildirim Ekranı ➔</Link>
           </div>
 
@@ -189,12 +211,9 @@ export default function AdminDashboard() {
             <button onClick={filtreleriTemizle} className="bg-red-900/40 text-red-400 p-2 rounded-lg text-sm h-9">Temizle</button>
           </div>
 
-          {/* Rapor Başlığı (Sadece PDF'te görünür) */}
           <div className="hidden print:block text-center mb-8 border-b-2 border-black pb-4">
             <h2 className="text-2xl font-bold text-black">Bakım Yönetim Sistemi Özet Raporu</h2>
-            <p className="text-gray-600">
-              Rapor Kapsamı: {filterYil || "Tüm Yıllar"} - {filterAy ? `${filterAy}. Ay` : "Tüm Aylar"} | Hat: {filterHat || "Tümü"}
-            </p>
+            <p className="text-gray-600">Rapor Kapsamı: {filterYil || "Tüm Yıllar"} - {filterAy ? `${filterAy}. Ay` : "Tüm Aylar"} | Hat: {filterHat || "Tümü"}</p>
             <p className="text-sm text-gray-500 mt-1">Oluşturulma Tarihi: {new Date().toLocaleString('tr-TR')}</p>
           </div>
 
@@ -207,10 +226,14 @@ export default function AdminDashboard() {
               <h3 className="text-gray-400 text-sm font-semibold mb-2 print:text-black">Filtrelenen Toplam Duruş</h3>
               <p className="text-4xl font-bold text-red-500 print:text-black">{kpiAylikDurus} <span className="text-lg">dk</span></p>
             </div>
-            <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl">
-              <h3 className="text-gray-400 text-sm font-semibold mb-2 print:text-black">Onay Bekleyen Personel</h3>
-              <p className="text-4xl font-bold text-blue-500 print:text-black">{kpiOnayBekleyen}</p>
-            </div>
+            
+            {/* Onay Bekleyen Personel Kartı - Sadece Adminlere Görünür */}
+            {userRole === "admin" && (
+              <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl">
+                <h3 className="text-gray-400 text-sm font-semibold mb-2 print:text-black">Onay Bekleyen Personel</h3>
+                <p className="text-4xl font-bold text-blue-500 print:text-black">{kpiOnayBekleyen}</p>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">

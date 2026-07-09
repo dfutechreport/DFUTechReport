@@ -130,7 +130,7 @@ export default function LoginPage() {
         <h1 className="text-3xl font-bold text-white mb-2">Bakım Yönetimi</h1>
         <p className="text-gray-400 mb-8 text-sm font-medium tracking-wide text-blue-300">DFU Donuk Fırıncılık Ürünleri A.Ş.</p>
 
-        {/* YENİ: İSİM SORMA EKRANI */}
+               {/* YENİ: İSİM SORMA EKRANI */}
         {showNamePrompt ? (
           <form onSubmit={handleIsimKaydet} className="space-y-4 animate-fade-in bg-gray-800 p-6 rounded-xl border border-gray-700">
             <h2 className="text-xl font-bold text-yellow-400">Son Bir Adım!</h2>
@@ -151,20 +151,35 @@ export default function LoginPage() {
               {loading ? "Kaydediliyor..." : "Kaydımı Tamamla"}
             </button>
           </form>
-        ) : userStatus === "admin" ? (
+
+        ) : userStatus === "admin" || userStatus === "operator" ? (
+          // YENİ: ADMİN VE OPERATÖRLER BU BLOKA DÜŞER VE /admin SAYFASINA YÖNLENDİRİLİR
           <div className="space-y-4">
-            <div className="p-4 rounded-lg bg-green-900/30 text-green-400 border border-green-800/50">Giriş Başarılı (Yetki: Admin)</div>
-            <button onClick={() => handleEnterSystem("/admin")} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-4 rounded-xl transition shadow-lg shadow-green-500/30">
-              Yönetim Paneline Git ➔
+            <div className="p-4 rounded-lg bg-green-900/30 text-green-400 border border-green-800/50">
+              Giriş Başarılı (Yetki: {userStatus.toUpperCase()})
+            </div>
+            <button 
+              onClick={() => handleEnterSystem("/admin")} 
+              className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-4 rounded-xl transition shadow-lg shadow-green-500/30"
+            >
+              {userStatus === "admin" ? "Yönetim Paneline Git ➔" : "İzleme Paneline Git ➔"}
             </button>
           </div>
-        ) : userStatus === "user" || userStatus === "teknisyen" || userStatus === "operator" ? (
+
+        ) : userStatus === "teknisyen" || userStatus === "user" ? (
+          // TEKNİSYENLER BU BLOKA DÜŞER VE /dashboard (Arıza) SAYFASINA YÖNLENDİRİLİR
           <div className="space-y-4">
-            <div className="p-4 rounded-lg bg-blue-900/30 text-blue-400 border border-blue-800/50">Giriş Başarılı (Yetki: {userStatus.toUpperCase()})</div>
-            <button onClick={() => handleEnterSystem("/dashboard")} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-4 rounded-xl transition shadow-lg shadow-blue-500/30">
-              Ana Ekrana Git ➔
+            <div className="p-4 rounded-lg bg-blue-900/30 text-blue-400 border border-blue-800/50">
+              Giriş Başarılı (Yetki: Teknisyen)
+            </div>
+            <button 
+              onClick={() => handleEnterSystem("/dashboard")} 
+              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-4 rounded-xl transition shadow-lg shadow-blue-500/30"
+            >
+              Arıza Formuna Git ➔
             </button>
           </div>
+
         ) : userStatus === "pending" ? (
           <div className="p-4 rounded-lg bg-orange-900/30 text-orange-400 border border-orange-800/50">
             {message}

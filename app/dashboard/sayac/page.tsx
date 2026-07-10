@@ -10,12 +10,13 @@ export default function SayacOkuma() {
   const [userRole, setUserRole] = useState("");
   const [userName, setUserName] = useState("");
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // YENİ: Enerji Türü Sekmesi (Tab)
   const [aktifSekme, setAktifSekme] = useState("Elektrik");
-
   const [sayaclar, setSayaclar] = useState<any[]>([]);
   const [gecmisOkumalar, setGecmisOkumalar] = useState<any[]>([]);
+  
+  // Girilen değerleri tutan obje (Örn: { "id1": "150", "id2": "200" })
   const [girisDegerleri, setGirisDegerleri] = useState<Record<string, string>>({});
 
   const [yeniSayacAdi, setYeniSayacAdi] = useState("");
@@ -54,32 +55,47 @@ export default function SayacOkuma() {
     e.preventDefault();
     if (!yeniSayacAdi) return;
     try {
-      await addDoc(collection(db, "meters"), { 
-        name: yeniSayacAdi,
-        tip: aktifSekme // YENİ: Sayacın tipi sekmeden geliyor
-      });
+      await addDoc(collection(db, "meters"), { name: yeniSayacAdi, tip: aktifSekme });
       setYeniSayacAdi("");
       fetchVeriler();
     } catch (error) { alert("Hata!"); }
   };
 
-  const handleDegerKaydet = async (sayacId: string, sayacAdi: string) => {
-    const deger = girisDegerleri[sayacId];
-    if (!deger) return alert("Lütfen bir değer giriniz.");
+  // YENİ: TOPLU KAYIT FONKSİYONU
+  const handleTopluKayit = async () => {
+    // Sadece içi doldurulmuş (boş olmayan) inputları filtrele
+    const doldurulanIdler = Object.keys(girisDegerleri).filter(id => girisDegerleri[id].trim() !== "");
+    
+    if (doldurulanIdler.length === 0) {
+      alert("Sisteme işlenecek herhangi bir değer girmediniz!");
+      return;
+    }
 
+    setIsSubmitting(true);
     try {
-      await addDoc(collection(db, "meter_logs"), {
-        tarih: bugun,
-        sayacAdi: sayacAdi,
-        deger: Number(deger),
-        personel: userName,
-        tip: aktifSekme, // YENİ: Okumanın tipi
-        timestamp: new Date()
-      });
-      alert(`${sayacAdi} okuması kaydedildi.`);
-      setGirisDegerleri(prev => ({ ...prev, [sayacId]: "" }));
-      fetchVeriler();
-    } catch (error) { alert("Kaydedilemedi."); }
+      // Doldurulan tüm sayaçları veritabanına tek tek döngüyle at
+      for (const sayacId of doldurulanIdler) {
+        const sayacAdi = sayaclar.find(s => s.id === sayacId)?.name || "Bilinmeyen Sayaç";
+        const deger = Number(girisDegerleri[sayacId]);
+        
+        await addDoc(collection(db, "meter_logs"), {
+          tarih: bugun,
+          sayacAdi: sayacAdi,
+          deger: deger,
+          personel: userName,
+          tip: aktifSekme,
+          timestamp: new Date()
+        });
+      }
+
+      alert("Tüm okumalar başarıyla sisteme işlendi!");
+      setGirisDegerleri({}); // Inputları sıfırla
+      fetchVeriler(); // Tabloyu yenile
+    } catch (error) {
+      console.error(error); alert("Kaydedilemedi.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleDuzenlemeKaydet = async (e: React.FormEvent) => {
@@ -100,11 +116,9 @@ export default function SayacOkuma() {
     await deleteDoc(doc(db, "meter_logs", id)); fetchVeriler();
   };
 
-  // Ekranda Sadece Aktif Sekmeye Ait Verileri Göster (Eski kayıtlar Elektrik kabul edilir)
   const filtrelenmisSayaclar = sayaclar.filter(s => s.tip === aktifSekme || (!s.tip && aktifSekme === "Elektrik"));
   const filtrelenmisOkumalar = gecmisOkumalar.filter(l => l.tip === aktifSekme || (!l.tip && aktifSekme === "Elektrik"));
 
-  // Dinamik Renkler ve Birimler
   const tema = aktifSekme === "Elektrik" ? "yellow" : aktifSekme === "Doğalgaz" ? "red" : "blue";
   const birim = aktifSekme === "Elektrik" ? "kWh" : aktifSekme === "Doğalgaz" ? "m³" : "Ton";
 
@@ -133,27 +147,16 @@ export default function SayacOkuma() {
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8 border-b border-gray-800 pb-5">
           <div>
-            <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-              Enerji ve Sayaç Okuma
-            </h1>
-            <p className="text-gray-400 mt-1">Tesisin günlük tüketim değerlerini türüne göre takip edin.</p>
+            <h1 className="text-3xl font-bold text-white flex items-center gap-3">Enerji ve Sayaç Okuma</h1>
+            <p className="text-gray-400 mt-1">Tesisin günlük tüketim değerlerini toplu olarak girin.</p>
           </div>
-          <Link href={userRole === "admin" || userRole === "operator" ? "/admin" : "/dashboard"} className="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm transition">
-            ← Panele Dön
-          </Link>
+          <Link href={userRole === "admin" || userRole === "operator" ? "/admin" : "/dashboard"} className="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm transition">← Panele Dön</Link>
         </div>
 
-        {/* YENİ: SEKME (TAB) MENÜSÜ */}
         <div className="flex flex-wrap gap-2 mb-8 bg-gray-900 p-2 rounded-xl inline-flex">
-          <button onClick={() => setAktifSekme("Elektrik")} className={`px-6 py-3 rounded-lg font-bold transition flex items-center gap-2 ${aktifSekme === "Elektrik" ? "bg-yellow-600 text-white" : "text-gray-400 hover:bg-gray-800"}`}>
-            ⚡ Elektrik
-          </button>
-          <button onClick={() => setAktifSekme("Doğalgaz")} className={`px-6 py-3 rounded-lg font-bold transition flex items-center gap-2 ${aktifSekme === "Doğalgaz" ? "bg-red-600 text-white" : "text-gray-400 hover:bg-gray-800"}`}>
-            🔥 Doğalgaz
-          </button>
-          <button onClick={() => setAktifSekme("Su")} className={`px-6 py-3 rounded-lg font-bold transition flex items-center gap-2 ${aktifSekme === "Su" ? "bg-blue-600 text-white" : "text-gray-400 hover:bg-gray-800"}`}>
-            💧 Su
-          </button>
+          <button onClick={() => setAktifSekme("Elektrik")} className={`px-6 py-3 rounded-lg font-bold transition flex items-center gap-2 ${aktifSekme === "Elektrik" ? "bg-yellow-600 text-white" : "text-gray-400 hover:bg-gray-800"}`}>⚡ Elektrik</button>
+          <button onClick={() => setAktifSekme("Doğalgaz")} className={`px-6 py-3 rounded-lg font-bold transition flex items-center gap-2 ${aktifSekme === "Doğalgaz" ? "bg-red-600 text-white" : "text-gray-400 hover:bg-gray-800"}`}>🔥 Doğalgaz</button>
+          <button onClick={() => setAktifSekme("Su")} className={`px-6 py-3 rounded-lg font-bold transition flex items-center gap-2 ${aktifSekme === "Su" ? "bg-blue-600 text-white" : "text-gray-400 hover:bg-gray-800"}`}>💧 Su</button>
         </div>
 
         {userRole === "admin" && (
@@ -166,44 +169,58 @@ export default function SayacOkuma() {
           </div>
         )}
 
-        <div className={`bg-gray-900 border border-${tema}-600/30 p-6 rounded-xl shadow-lg overflow-x-auto mb-10 relative`}>
-          <h2 className="text-xl font-bold mb-4 text-white">Bugünün {aktifSekme} Sayaç Değerleri</h2>
+        {/* TOPLU VERİ GİRİŞ TABLOSU */}
+        <div className={`bg-gray-900 border border-${tema}-600/30 p-6 rounded-xl shadow-lg mb-10`}>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-white">Toplu Değer Girişi ({aktifSekme})</h2>
+            {/* ÜST KAYDET BUTONU */}
+            {filtrelenmisSayaclar.length > 0 && (
+              <button onClick={handleTopluKayit} disabled={isSubmitting} className={`bg-${tema}-600 hover:bg-${tema}-500 text-white font-bold px-6 py-2 rounded-lg shadow-lg disabled:opacity-50`}>
+                {isSubmitting ? "Kaydediliyor..." : "Tüm Endeksleri İşle"}
+              </button>
+            )}
+          </div>
           
           {filtrelenmisSayaclar.length === 0 ? (
-            <div className="text-gray-500 py-4">Sistemde kayıtlı {aktifSekme} sayacı yok.</div>
+            <div className="text-gray-500 py-4">Sistemde kayıtlı sayaç yok.</div>
           ) : (
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-gray-800 text-gray-400 bg-gray-800/50">
-                  <th className="p-3">Okuma Tarihi</th>
-                  <th className="p-3">Sayaç Adı</th>
-                  <th className={`p-3 text-${tema}-400`}>Değer Girin ({birim})</th>
-                  <th className="p-3">Personel</th>
-                  <th className="p-3 text-right">İşlem</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtrelenmisSayaclar.map(sayac => (
-                  <tr key={sayac.id} className="border-b border-gray-800 hover:bg-gray-800/30">
-                    <td className="p-3 text-gray-400 font-medium">{bugun}</td>
-                    <td className="p-3 font-bold text-gray-200">{sayac.name}</td>
-                    <td className="p-3">
-                      <input 
-                        type="number" placeholder="Endeks Girin" value={girisDegerleri[sayac.id] || ""} onChange={(e) => setGirisDegerleri({...girisDegerleri, [sayac.id]: e.target.value})}
-                        className={`w-full max-w-[200px] bg-gray-800 border border-${tema}-500/50 rounded-lg p-2 text-white focus:outline-none focus:border-${tema}-400`}
-                      />
-                    </td>
-                    <td className="p-3 text-gray-400">{userName}</td>
-                    <td className="p-3 text-right">
-                      <button onClick={() => handleDegerKaydet(sayac.id, sayac.name)} className="bg-green-600 hover:bg-green-500 text-white font-bold px-4 py-2 rounded-lg text-xs">Kaydet</button>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm mb-4">
+                <thead>
+                  <tr className="border-b border-gray-800 text-gray-400 bg-gray-800/50">
+                    <th className="p-3">Okuma Tarihi</th>
+                    <th className="p-3">Sayaç Adı</th>
+                    <th className={`p-3 text-${tema}-400`}>Değer Girin ({birim})</th>
+                    <th className="p-3">Personel</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filtrelenmisSayaclar.map(sayac => (
+                    <tr key={sayac.id} className="border-b border-gray-800 hover:bg-gray-800/30">
+                      <td className="p-3 text-gray-400 font-medium">{bugun}</td>
+                      <td className="p-3 font-bold text-gray-200">{sayac.name}</td>
+                      <td className="p-3">
+                        <input 
+                          type="number" placeholder="Endeks Girin..."
+                          value={girisDegerleri[sayac.id] || ""}
+                          onChange={(e) => setGirisDegerleri({...girisDegerleri, [sayac.id]: e.target.value})}
+                          className={`w-full max-w-[200px] bg-gray-800 border border-${tema}-500/50 rounded-lg p-2 text-white focus:outline-none focus:border-${tema}-400`}
+                        />
+                      </td>
+                      <td className="p-3 text-gray-400">{userName}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {/* ALT KAYDET BUTONU */}
+              <button onClick={handleTopluKayit} disabled={isSubmitting} className={`w-full bg-${tema}-600 hover:bg-${tema}-500 text-white font-bold py-4 rounded-xl shadow-lg transition disabled:opacity-50`}>
+                {isSubmitting ? "Lütfen Bekleyin, Sisteme İşleniyor..." : "TÜM ENDEKSLERİ SİSTEME İŞLE"}
+              </button>
+            </div>
           )}
         </div>
 
+        {/* GEÇMİŞ OKUMALAR LİSTESİ */}
         <div className="bg-gray-900 border border-gray-800 p-6 rounded-xl shadow-lg overflow-x-auto">
           <h2 className="text-xl font-bold mb-4 text-gray-300">Geçmiş {aktifSekme} Okumaları</h2>
           {filtrelenmisOkumalar.length === 0 ? (
@@ -225,7 +242,7 @@ export default function SayacOkuma() {
                     <td className="py-3 px-2 text-gray-300">{log.tarih}</td>
                     <td className="py-3 px-2 font-bold text-gray-200">{log.sayacAdi}</td>
                     <td className={`py-3 px-2 text-${tema}-400 font-bold text-lg`}>{log.deger}</td>
-                    <td className="py-3 px-2 text-gray-400">{log.personel}</td>
+                    <td className="py-3 px-2 text-blue-300">{log.personel}</td>
                     {userRole === "admin" && (
                       <td className="py-3 px-2 text-right space-x-2 whitespace-nowrap">
                         <button onClick={() => { setDuzenlenenLog(log); setEditModal(true); }} className="bg-blue-900/50 hover:bg-blue-600 text-blue-400 text-xs px-3 py-1 rounded">Düzenle</button>

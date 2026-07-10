@@ -241,8 +241,14 @@ export default function AdminDashboard() {
             <Link href="/dashboard" className="bg-orange-600 hover:bg-orange-500 px-4 py-2 rounded-xl font-semibold ml-auto text-sm">Arıza Ekranı ➔</Link>
           </div>
 
-          <div className="bg-gray-900 border border-gray-800 p-4 rounded-2xl mb-8 flex flex-wrap gap-4 items-end no-print">
-            {/* ENERJİ TÜRÜ FİLTRESİ (YENİ) */}
+          {/* 1. ENERJİ FİLTRELERİ KUTUSU */}
+          <div className="bg-gray-900 border border-yellow-700/50 p-5 rounded-2xl mb-6 flex flex-wrap gap-4 items-end no-print shadow-[0_0_15px_rgba(234,179,8,0.1)]">
+            <div className="w-full mb-1 border-b border-gray-800 pb-2">
+              <h3 className="text-yellow-500 font-bold flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                Enerji Tüketim Filtreleri
+              </h3>
+            </div>
             <div className="flex-1 min-w-[120px]">
               <label className="block text-xs text-white mb-1 font-bold">Enerji Türü</label>
               <select value={filterEnerjiTipi} onChange={(e) => {setFilterEnerjiTipi(e.target.value); setFilterSayac("");}} className="w-full bg-gray-800 border-white rounded-lg p-2 text-sm text-white font-bold">
@@ -251,15 +257,24 @@ export default function AdminDashboard() {
                 <option value="Su">💧 Su</option>
               </select>
             </div>
-
             <div className="flex-1 min-w-[120px]">
-              <label className={`block text-xs text-${enerjiTema}-400 mb-1 font-bold`}>Sayaç Seçimi</label>
-              <select value={filterSayac} onChange={(e) => setFilterSayac(e.target.value)} className={`w-full bg-gray-800 border-${enerjiTema}-700 text-${enerjiTema}-400 rounded-lg p-2 text-sm focus:border-${enerjiTema}-500`}>
+              <label className={`block text-xs text-${filterEnerjiTipi === 'Elektrik' ? 'yellow' : filterEnerjiTipi === 'Doğalgaz' ? 'red' : 'blue'}-400 mb-1 font-bold`}>Sayaç Seçimi</label>
+              <select value={filterSayac} onChange={(e) => setFilterSayac(e.target.value)} className={`w-full bg-gray-800 border-gray-700 text-white rounded-lg p-2 text-sm focus:border-yellow-500`}>
                 <option value="">Tüm Sayaçlar (Toplam)</option>
                 {sayacListesi.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
+            <button onClick={() => {setFilterEnerjiTipi("Elektrik"); setFilterSayac("");}} className="bg-gray-800 hover:bg-gray-700 border border-gray-600 text-gray-300 px-4 py-2 rounded-lg text-sm h-9">Enerjiyi Sıfırla</button>
+          </div>
 
+          {/* 2. ARIZA VE BAKIM FİLTRELERİ KUTUSU */}
+          <div className="bg-gray-900 border border-blue-700/50 p-5 rounded-2xl mb-8 flex flex-wrap gap-4 items-end no-print shadow-[0_0_15px_rgba(59,130,246,0.1)]">
+            <div className="w-full mb-1 border-b border-gray-800 pb-2">
+              <h3 className="text-blue-500 font-bold flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
+                Arıza ve Bakım Filtreleri
+              </h3>
+            </div>
             <div className="flex-1 min-w-[120px]">
               <label className="block text-xs text-gray-400 mb-1">Yıl</label>
               <select value={filterYil} onChange={(e) => setFilterYil(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-lg p-2 text-sm"><option value="">Tümü</option>{yilListesi.map(y => <option key={y} value={y}>{y}</option>)}</select>
@@ -269,11 +284,14 @@ export default function AdminDashboard() {
               <select value={filterAy} onChange={(e) => setFilterAy(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-lg p-2 text-sm"><option value="">Tümü</option><option value="1">Ocak</option><option value="2">Şubat</option><option value="3">Mart</option><option value="4">Nisan</option><option value="5">Mayıs</option><option value="6">Haziran</option><option value="7">Temmuz</option><option value="8">Ağustos</option><option value="9">Eylül</option><option value="10">Ekim</option><option value="11">Kasım</option><option value="12">Aralık</option></select>
             </div>
             <div className="flex-1 min-w-[120px]">
-              <label className="block text-xs text-gray-400 mb-1">Hat</label>
-              <select value={filterHat} onChange={(e) => { setFilterHat(e.target.value); setFilterEkipman(""); }} className="w-full bg-gray-800 border-gray-700 rounded-lg p-2 text-sm"><option value="">Tümü</option>{hatListesi.map(h => <option key={h} value={h}>{h}</option>)}</select>
+              <label className="block text-xs text-gray-400 mb-1">Üretim Hattı</label>
+              <select value={filterHat} onChange={(e) => { setFilterHat(e.target.value); setFilterEkipman(""); }} className="w-full bg-gray-800 border-gray-700 rounded-lg p-2 text-sm"><option value="">Tüm Hatlar</option>{hatListesi.map(h => <option key={h} value={h}>{h}</option>)}</select>
             </div>
-            
-            <button onClick={filtreleriTemizle} className="bg-red-900/40 text-red-400 p-2 rounded-lg text-sm h-9">Temizle</button>
+            <div className="flex-1 min-w-[120px]">
+              <label className="block text-xs text-gray-400 mb-1">Ekipman</label>
+              <select value={filterEkipman} onChange={(e) => setFilterEkipman(e.target.value)} disabled={!filterHat} className="w-full bg-gray-800 border-gray-700 rounded-lg p-2 text-sm disabled:opacity-50"><option value="">{filterHat ? "Tüm Ekipmanlar" : "Önce Hat Seçin"}</option>{ekipmanListesi.map(e => <option key={e} value={e}>{e}</option>)}</select>
+            </div>
+            <button onClick={() => {setFilterYil(""); setFilterAy(""); setFilterHat(""); setFilterEkipman("");}} className="bg-red-900/40 text-red-400 px-4 py-2 rounded-lg text-sm h-9">Bakımı Sıfırla</button>
           </div>
 
           {/* DİNAMİK ENERJİ TÜKETİM GRAFİĞİ */}

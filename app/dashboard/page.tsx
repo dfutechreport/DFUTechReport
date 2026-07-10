@@ -175,7 +175,12 @@ export default function PersonelDashboard() {
             <p className="text-gray-400 mt-1">Hoş geldin, <span className="text-blue-400 font-medium">{userName}</span></p>
           </div>
           <div className="flex gap-4">
-            {userRole === "admin" && <a href="/admin" className="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg transition text-sm flex items-center">Admin Panel</a>}
+            {/* Admin ve Operatörlere Özel Dönüş Butonu */}
+            {(userRole === "admin" || userRole === "operator") && (
+              <a href="/admin" className="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg transition text-sm flex items-center font-semibold text-blue-400">
+                {userRole === "admin" ? "Yönetim Paneline Dön" : "İzleme Paneline Dön"}
+              </a>
+            )}
             <button onClick={() => { auth.signOut(); window.location.href="/"; }} className="bg-red-900/50 hover:bg-red-600 text-red-400 hover:text-white px-4 py-2 rounded-lg border border-red-800/50">Çıkış</button>
           </div>
         </div>

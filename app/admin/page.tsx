@@ -15,6 +15,7 @@ export default function AdminDashboard() {
   const [rawLogs, setRawLogs] = useState<any[]>([]);
   const [kpiOnayBekleyen, setKpiOnayBekleyen] = useState(0);
 
+  // Bakım Filtreleri
   const [filterYil, setFilterYil] = useState("");
   const [filterAy, setFilterAy] = useState("");
   const [filterHat, setFilterHat] = useState("");
@@ -24,6 +25,11 @@ export default function AdminDashboard() {
   const [hatListesi, setHatListesi] = useState<string[]>([]);
   const [ekipmanListesi, setEkipmanListesi] = useState<string[]>([]);
   
+  // YENİ: Elektrik Filtreleri
+  const [filterSayac, setFilterSayac] = useState("");
+  const [sayacListesi, setSayacListesi] = useState<string[]>([]);
+  const [rawMeterLogs, setRawMeterLogs] = useState<any[]>([]); // Ham sayaç verisi
+
   const [kpiToplamIs, setKpiToplamIs] = useState(0);
   const [kpiAylikDurus, setKpiAylikDurus] = useState(0);
   
@@ -31,7 +37,6 @@ export default function AdminDashboard() {
   const [grafikTumIslerVerisi, setGrafikTumIslerVerisi] = useState<any[]>([]);
   const [personelPerformans, setPersonelPerformans] = useState<any[]>([]);
   
-  // YENİ: Elektrik Tüketim Grafiği State'i
   const [grafikElektrikTuketim, setGrafikElektrikTuketim] = useState<any[]>([]);
 
   useEffect(() => {
@@ -62,12 +67,16 @@ export default function AdminDashboard() {
       const logs = (await getDocs(collection(db, "maintenance_logs"))).docs.map(doc => doc.data());
       setRawLogs(logs);
 
-      // YENİ: SAYAÇ OKUMALARINI ÇEK VE TÜKETİM HESAPLA
-      const qMeter = query(collection(db, "meter_logs"), orderBy("tarih", "asc")); // Eskiden yeniye doğru sıralı gelmeli
+      // SAYAÇ OKUMALARINI ÇEK VE HAFIZAYA AL
+      const qMeter = query(collection(db, "meter_logs"), orderBy("tarih", "asc"));
       const meterSnap = await getDocs(qMeter);
       const meterData = meterSnap.docs.map(d => d.data());
+      setRawMeterLogs(meterData);
 
-      hesaplaElektrikTuketimi(meterData);
+      // Sayaç İsimlerini Listeye Ekle
+      const sayaclar = new Set<string>();
+      meterData.forEach(d => { if (d.sayacAdi) sayaclar.add(d.sayacAdi); });
+      setSayacListesi(Array.from(sayaclar).sort());
 
       const yillar = new Set<string>();
       const hatlar = new Set<string>();
@@ -83,16 +92,19 @@ export default function AdminDashboard() {
     } catch (error) { console.error(error); }
   };
 
-  // --- ENERJİ TÜKETİM (FARK) ALGORİTMASI ---
-  const hesaplaElektrikTuketimi = (meterLogs: any[]) => {
-    // 1. Verileri Sayaçlara Göre Grupla ve Tarihe Göre Sırala
+  // --- YENİ: FİLTRELİ ENERJİ TÜKETİM (FARK) ALGORİTMASI ---
+  useEffect(() => {
+    if (rawMeterLogs.length === 0) return;
+
     const sayacGruplari: Record<string, any[]> = {};
-    meterLogs.forEach(log => {
+    rawMeterLogs.forEach(log => {
+      // Eğer bir sayaç filtrelendiyse ve bu log o sayaca ait değilse yoksay
+      if (filterSayac && log.sayacAdi !== filterSayac) return;
+
       if (!sayacGruplari[log.sayacAdi]) sayacGruplari[log.sayacAdi] = [];
       sayacGruplari[log.sayacAdi].push(log);
     });
 
-    // 2. Farkları (Tüketimi) Hesaplayıp Aylara Böl
     const aylikTuketimler: Record<string, number> = {
       "01. Ay": 0, "02. Ay": 0, "03. Ay": 0, "04. Ay": 0, "05. Ay": 0, "06. Ay": 0,
       "07. Ay": 0, "08. Ay": 0, "09. Ay": 0, "10. Ay": 0, "11. Ay": 0, "12. Ay": 0
@@ -100,14 +112,12 @@ export default function AdminDashboard() {
 
     Object.keys(sayacGruplari).forEach(sayacAdi => {
       const okumalar = sayacGruplari[sayacAdi];
-      // Bir sayacın kendi içindeki ardışık gün okumalarını karşılaştır (Fark hesapla)
       for (let i = 1; i < okumalar.length; i++) {
         const oncekiDeger = Number(okumalar[i - 1].deger);
         const suankiDeger = Number(okumalar[i].deger);
-        const tuketimFarki = Math.max(0, suankiDeger - oncekiDeger); // Eksi değer çıkmasını engelle
+        const tuketimFarki = Math.max(0, suankiDeger - oncekiDeger); 
         
-        // Bu tüketim hangi aya ait? (YYYY-MM-DD içinden MM'yi al)
-        const ayStr = okumalar[i].tarih.split("-")[1]; // Örn "07"
+        const ayStr = okumalar[i].tarih.split("-")[1]; 
         const ayAnahtari = `${ayStr}. Ay`;
 
         if (aylikTuketimler[ayAnahtari] !== undefined) {
@@ -116,15 +126,16 @@ export default function AdminDashboard() {
       }
     });
 
-    // 3. Recharts formatına dönüştür
     const formatliTuketim = Object.keys(aylikTuketimler).map(ay => ({
       ay: ay,
       tuketim: aylikTuketimler[ay]
-    })).filter(a => a.tuketim > 0); // Sadece tüketim olan ayları grafiğe ver
+    })).filter(a => a.tuketim > 0); 
 
     setGrafikElektrikTuketim(formatliTuketim);
-  };
+  }, [rawMeterLogs, filterSayac]); // Sayaç filtresi değiştikçe yeniden hesapla
 
+
+  // BAKIM VERİLERİ HESAPLAMALARI
   useEffect(() => {
     if (rawLogs.length === 0) return;
 
@@ -178,7 +189,7 @@ export default function AdminDashboard() {
 
   }, [rawLogs, filterYil, filterAy, filterHat, filterEkipman]);
 
-  const filtreleriTemizle = () => { setFilterYil(""); setFilterAy(""); setFilterHat(""); setFilterEkipman(""); };
+  const filtreleriTemizle = () => { setFilterYil(""); setFilterAy(""); setFilterHat(""); setFilterEkipman(""); setFilterSayac(""); };
 
   if (loading) return <div className="min-h-screen bg-gray-950 text-white flex justify-center items-center">Sistem yükleniyor...</div>;
   if (!isAdmin) return <div className="min-h-screen bg-gray-950 text-red-500 flex justify-center items-center">Yetkisiz Erişim!</div>;
@@ -250,7 +261,6 @@ export default function AdminDashboard() {
             <Link href="/dashboard" className="bg-orange-600 hover:bg-orange-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold ml-auto text-sm md:text-base">Arıza Bildirim Ekranı ➔</Link>
           </div>
 
-          {/* FİLTRELEME ÇUBUĞU */}
           <div className="bg-gray-900 border border-gray-800 p-4 rounded-2xl mb-8 flex flex-wrap gap-4 items-end no-print">
             <div className="flex-1 min-w-[120px]">
               <label className="block text-xs text-gray-400 mb-1">Yıl</label>
@@ -268,6 +278,16 @@ export default function AdminDashboard() {
               <label className="block text-xs text-gray-400 mb-1">Ekipman</label>
               <select value={filterEkipman} onChange={(e) => setFilterEkipman(e.target.value)} disabled={!filterHat} className="w-full bg-gray-800 border-gray-700 rounded-lg p-2 text-sm disabled:opacity-50"><option value="">{filterHat ? "Tüm Ekipmanlar" : "Önce Hat Seçin"}</option>{ekipmanListesi.map(e => <option key={e} value={e}>{e}</option>)}</select>
             </div>
+            
+            {/* YENİ: SAYAÇ FİLTRESİ */}
+            <div className="flex-1 min-w-[120px]">
+              <label className="block text-xs text-yellow-400 mb-1 font-bold">Sayaç Grafiği</label>
+              <select value={filterSayac} onChange={(e) => setFilterSayac(e.target.value)} className="w-full bg-gray-800 border-yellow-700 text-yellow-400 rounded-lg p-2 text-sm focus:border-yellow-500">
+                <option value="">Tüm Sayaçlar (Toplam)</option>
+                {sayacListesi.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+
             <button onClick={filtreleriTemizle} className="bg-red-900/40 text-red-400 p-2 rounded-lg text-sm h-9">Temizle</button>
           </div>
 
@@ -277,7 +297,6 @@ export default function AdminDashboard() {
             <p className="text-sm text-gray-500 mt-1">Oluşturulma Tarihi: {new Date().toLocaleString('tr-TR')}</p>
           </div>
 
-          {/* KPI KARTLARI */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
             <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl">
               <h3 className="text-gray-400 text-sm font-semibold mb-2 print:text-black">Filtrelenen İş Emri / Arıza</h3>
@@ -295,11 +314,11 @@ export default function AdminDashboard() {
             )}
           </div>
 
-          {/* YENİ: ELEKTRİK TÜKETİM GRAFİĞİ */}
+          {/* ELEKTRİK TÜKETİM GRAFİĞİ */}
           <div className="bg-gray-900 border border-gray-800 p-4 md:p-6 rounded-2xl mb-10 shadow-lg border-b-4 border-b-yellow-500">
             <h2 className="text-lg font-bold mb-6 text-yellow-400 flex items-center gap-2 print:text-black">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-              Elektrik Aylık Tüketim Grafiği (Tüm Sayaçlar Fark Toplamı)
+              Elektrik Aylık Tüketim Grafiği ({filterSayac ? filterSayac : "Tüm Sayaçlar Toplamı"})
             </h2>
             {grafikElektrikTuketim.length === 0 ? (
               <div className="h-48 flex justify-center items-center text-gray-500 border border-dashed border-gray-800 rounded-xl">Hesaplanmış tüketim verisi bulunamadı. Lütfen peş peşe en az 2 gün sayaç endeksi girin.</div>
@@ -332,7 +351,7 @@ export default function AdminDashboard() {
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
                       <XAxis dataKey="isim" tick={{fontSize: 10, fill: '#9CA3AF'}} interval={0} angle={-15} textAnchor="end" />
                       <YAxis tick={{fontSize: 10, fill: '#9CA3AF'}} />
-                      <Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} />
+                      <Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} trigger="hover" />
                       <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '15px' }} />
                       <Bar name="İş Adedi" dataKey="adet" fill="#10B981" maxBarSize={40}>
                         <LabelList dataKey="adet" position="top" fill="#10B981" fontSize={11} fontWeight="bold" />
@@ -355,7 +374,7 @@ export default function AdminDashboard() {
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
                       <XAxis dataKey="isim" tick={{fontSize: 10, fill: '#9CA3AF'}} interval={0} angle={-15} textAnchor="end" />
                       <YAxis tick={{fontSize: 10, fill: '#9CA3AF'}} />
-                      <Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} />
+                      <Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} trigger="hover" />
                       <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '15px' }} />
                       <Bar name="Duruş Adedi" dataKey="adet" fill="#F59E0B" maxBarSize={40}>
                         <LabelList dataKey="adet" position="top" fill="#F59E0B" fontSize={11} fontWeight="bold" />
@@ -379,7 +398,7 @@ export default function AdminDashboard() {
                     <th className="pb-3 px-2 md:px-4">Teknisyen Adı</th>
                     <th className="pb-3 px-2 md:px-4">Toplam İş</th>
                     <th className="pb-3 px-2 md:px-4">Toplam Efor</th>
-                    <th className="pb-3 px-2 md:px-4">MTTR (Ortalama)</th>
+                    <th className="pb-3 px-4">MTTR (Ortalama)</th>
                   </tr>
                 </thead>
                 <tbody>

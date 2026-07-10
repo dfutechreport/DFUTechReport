@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs, doc, getDoc, query, where } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, query, where, orderBy } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../../lib/firebase"; 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts';
@@ -26,9 +26,13 @@ export default function AdminDashboard() {
   
   const [kpiToplamIs, setKpiToplamIs] = useState(0);
   const [kpiAylikDurus, setKpiAylikDurus] = useState(0);
+  
   const [grafikDurusVerisi, setGrafikDurusVerisi] = useState<any[]>([]);
   const [grafikTumIslerVerisi, setGrafikTumIslerVerisi] = useState<any[]>([]);
   const [personelPerformans, setPersonelPerformans] = useState<any[]>([]);
+  
+  // YENİ: Elektrik Tüketim Grafiği State'i
+  const [grafikElektrikTuketim, setGrafikElektrikTuketim] = useState<any[]>([]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -58,6 +62,13 @@ export default function AdminDashboard() {
       const logs = (await getDocs(collection(db, "maintenance_logs"))).docs.map(doc => doc.data());
       setRawLogs(logs);
 
+      // YENİ: SAYAÇ OKUMALARINI ÇEK VE TÜKETİM HESAPLA
+      const qMeter = query(collection(db, "meter_logs"), orderBy("tarih", "asc")); // Eskiden yeniye doğru sıralı gelmeli
+      const meterSnap = await getDocs(qMeter);
+      const meterData = meterSnap.docs.map(d => d.data());
+
+      hesaplaElektrikTuketimi(meterData);
+
       const yillar = new Set<string>();
       const hatlar = new Set<string>();
       
@@ -70,6 +81,48 @@ export default function AdminDashboard() {
       setYilListesi(Array.from(yillar).sort((a, b) => Number(b) - Number(a)));
       setHatListesi(Array.from(hatlar).sort());
     } catch (error) { console.error(error); }
+  };
+
+  // --- ENERJİ TÜKETİM (FARK) ALGORİTMASI ---
+  const hesaplaElektrikTuketimi = (meterLogs: any[]) => {
+    // 1. Verileri Sayaçlara Göre Grupla ve Tarihe Göre Sırala
+    const sayacGruplari: Record<string, any[]> = {};
+    meterLogs.forEach(log => {
+      if (!sayacGruplari[log.sayacAdi]) sayacGruplari[log.sayacAdi] = [];
+      sayacGruplari[log.sayacAdi].push(log);
+    });
+
+    // 2. Farkları (Tüketimi) Hesaplayıp Aylara Böl
+    const aylikTuketimler: Record<string, number> = {
+      "01. Ay": 0, "02. Ay": 0, "03. Ay": 0, "04. Ay": 0, "05. Ay": 0, "06. Ay": 0,
+      "07. Ay": 0, "08. Ay": 0, "09. Ay": 0, "10. Ay": 0, "11. Ay": 0, "12. Ay": 0
+    };
+
+    Object.keys(sayacGruplari).forEach(sayacAdi => {
+      const okumalar = sayacGruplari[sayacAdi];
+      // Bir sayacın kendi içindeki ardışık gün okumalarını karşılaştır (Fark hesapla)
+      for (let i = 1; i < okumalar.length; i++) {
+        const oncekiDeger = Number(okumalar[i - 1].deger);
+        const suankiDeger = Number(okumalar[i].deger);
+        const tuketimFarki = Math.max(0, suankiDeger - oncekiDeger); // Eksi değer çıkmasını engelle
+        
+        // Bu tüketim hangi aya ait? (YYYY-MM-DD içinden MM'yi al)
+        const ayStr = okumalar[i].tarih.split("-")[1]; // Örn "07"
+        const ayAnahtari = `${ayStr}. Ay`;
+
+        if (aylikTuketimler[ayAnahtari] !== undefined) {
+          aylikTuketimler[ayAnahtari] += tuketimFarki;
+        }
+      }
+    });
+
+    // 3. Recharts formatına dönüştür
+    const formatliTuketim = Object.keys(aylikTuketimler).map(ay => ({
+      ay: ay,
+      tuketim: aylikTuketimler[ay]
+    })).filter(a => a.tuketim > 0); // Sadece tüketim olan ayları grafiğe ver
+
+    setGrafikElektrikTuketim(formatliTuketim);
   };
 
   useEffect(() => {
@@ -130,14 +183,16 @@ export default function AdminDashboard() {
   if (loading) return <div className="min-h-screen bg-gray-950 text-white flex justify-center items-center">Sistem yükleniyor...</div>;
   if (!isAdmin) return <div className="min-h-screen bg-gray-950 text-red-500 flex justify-center items-center">Yetkisiz Erişim!</div>;
 
-  // MOBİL UYUMLU TOOLTIP
   const OzelTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-gray-800 border border-gray-700 p-3 rounded-lg shadow-2xl z-50">
           <p className="font-bold text-white mb-2 border-b border-gray-700 pb-1">{label}</p>
-          <p className="text-green-400 text-sm">Adet: <span className="font-bold">{payload[0].value} İş</span></p>
-          <p className="text-blue-400 text-sm">Süre: <span className="font-bold">{payload[1].value} Dk</span></p>
+          {payload.map((p: any, i: number) => (
+            <p key={i} style={{color: p.color}} className="text-sm">
+              {p.name}: <span className="font-bold">{p.value}</span>
+            </p>
+          ))}
         </div>
       );
     }
@@ -190,14 +245,13 @@ export default function AdminDashboard() {
               </>
             )}
             <Link href="/admin/mesai" className="bg-teal-600 hover:bg-teal-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm md:text-base">Mesai Raporları</Link>
+            <Link href="/dashboard/sayac" className="flex items-center gap-2 bg-yellow-600 hover:bg-yellow-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm md:text-base text-white">⚡ Sayaç Okuma</Link>
             <Link href="/admin/is-listesi" className="bg-indigo-600 hover:bg-indigo-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm md:text-base">Tüm İşler Listesi</Link>
-            <Link href="/dashboard" className="bg-orange-600 hover:bg-orange-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold ml-auto text-sm md:text-base">Arıza Bildirim Ekranı ➔</Link> <Link href="/dashboard/sayac" className="flex items-center gap-2 bg-yellow-600 hover:bg-yellow-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm md:text-base text-white">
-   ⚡ Sayaç Okuma
-</Link>
+            <Link href="/dashboard" className="bg-orange-600 hover:bg-orange-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold ml-auto text-sm md:text-base">Arıza Bildirim Ekranı ➔</Link>
           </div>
 
+          {/* FİLTRELEME ÇUBUĞU */}
           <div className="bg-gray-900 border border-gray-800 p-4 rounded-2xl mb-8 flex flex-wrap gap-4 items-end no-print">
-            {/* Filtreler Aynı Kaldı... */}
             <div className="flex-1 min-w-[120px]">
               <label className="block text-xs text-gray-400 mb-1">Yıl</label>
               <select value={filterYil} onChange={(e) => setFilterYil(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-lg p-2 text-sm"><option value="">Tümü</option>{yilListesi.map(y => <option key={y} value={y}>{y}</option>)}</select>
@@ -223,6 +277,7 @@ export default function AdminDashboard() {
             <p className="text-sm text-gray-500 mt-1">Oluşturulma Tarihi: {new Date().toLocaleString('tr-TR')}</p>
           </div>
 
+          {/* KPI KARTLARI */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
             <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl">
               <h3 className="text-gray-400 text-sm font-semibold mb-2 print:text-black">Filtrelenen İş Emri / Arıza</h3>
@@ -240,7 +295,33 @@ export default function AdminDashboard() {
             )}
           </div>
 
-          {/* DOKUNMA VE RAKAM ETİKETİ EKLENMİŞ GRAFİKLER */}
+          {/* YENİ: ELEKTRİK TÜKETİM GRAFİĞİ */}
+          <div className="bg-gray-900 border border-gray-800 p-4 md:p-6 rounded-2xl mb-10 shadow-lg border-b-4 border-b-yellow-500">
+            <h2 className="text-lg font-bold mb-6 text-yellow-400 flex items-center gap-2 print:text-black">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+              Elektrik Aylık Tüketim Grafiği (Tüm Sayaçlar Fark Toplamı)
+            </h2>
+            {grafikElektrikTuketim.length === 0 ? (
+              <div className="h-48 flex justify-center items-center text-gray-500 border border-dashed border-gray-800 rounded-xl">Hesaplanmış tüketim verisi bulunamadı. Lütfen peş peşe en az 2 gün sayaç endeksi girin.</div>
+            ) : (
+              <div className="h-72 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={grafikElektrikTuketim} margin={{ top: 25, right: 5, left: -10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="ay" tick={{fontSize: 12, fill: '#9CA3AF'}} />
+                    <YAxis tick={{fontSize: 12, fill: '#9CA3AF'}} />
+                    <Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} />
+                    <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                    <Bar name="Tüketim (Birim)" dataKey="tuketim" fill="#EAB308" maxBarSize={60}>
+                      <LabelList dataKey="tuketim" position="top" fill="#EAB308" fontSize={12} fontWeight="bold" />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+
+          {/* BAKIM İŞLERİ GRAFİKLERİ */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
             <div className="bg-gray-900 border border-gray-800 p-4 md:p-6 rounded-2xl">
               <h2 className="text-lg font-bold mb-6 text-green-400 print:text-black">Yapılan İşler</h2>
@@ -251,9 +332,8 @@ export default function AdminDashboard() {
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
                       <XAxis dataKey="isim" tick={{fontSize: 10, fill: '#9CA3AF'}} interval={0} angle={-15} textAnchor="end" />
                       <YAxis tick={{fontSize: 10, fill: '#9CA3AF'}} />
-                      <Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} trigger="hover" />
+                      <Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} />
                       <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '15px' }} />
-                      
                       <Bar name="İş Adedi" dataKey="adet" fill="#10B981" maxBarSize={40}>
                         <LabelList dataKey="adet" position="top" fill="#10B981" fontSize={11} fontWeight="bold" />
                       </Bar>
@@ -275,9 +355,8 @@ export default function AdminDashboard() {
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
                       <XAxis dataKey="isim" tick={{fontSize: 10, fill: '#9CA3AF'}} interval={0} angle={-15} textAnchor="end" />
                       <YAxis tick={{fontSize: 10, fill: '#9CA3AF'}} />
-                      <Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} trigger="hover" />
+                      <Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} />
                       <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '15px' }} />
-                      
                       <Bar name="Duruş Adedi" dataKey="adet" fill="#F59E0B" maxBarSize={40}>
                         <LabelList dataKey="adet" position="top" fill="#F59E0B" fontSize={11} fontWeight="bold" />
                       </Bar>
@@ -295,7 +374,6 @@ export default function AdminDashboard() {
             <h2 className="text-xl font-bold mb-6 text-blue-400 print:text-black">Personel Performans ve Efor Matrisi</h2>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-sm md:text-base">
-                {/* Tablo İçeriği Aynı */}
                 <thead>
                   <tr className="border-b border-gray-800 text-gray-400 print:text-black">
                     <th className="pb-3 px-2 md:px-4">Teknisyen Adı</th>

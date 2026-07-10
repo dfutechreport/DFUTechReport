@@ -165,7 +165,7 @@ export default function IsListesi() {
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8 border-b border-gray-800 pb-5">
           <div>
-            <h1 className="text-3xl font-bold text-blue-400">Tüm İşler / Seyir Defteri</h1>
+            <h1 className="text-3xl font-bold text-blue-400">Yapılan İşler Listesi</h1>
             <p className="text-gray-400 mt-1">Sisteme girilen tüm arıza ve bakım kayıtlarının kronolojik listesi.</p>
           </div>
           <Link href={userRole === "admin" || userRole === "operator" ? "/admin" : "/dashboard"} className="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm transition">

@@ -119,7 +119,11 @@ export default function SayacOkuma() {
   };
 
   const filtrelenmisSayaclar = sayaclar.filter(s => s.tip === aktifSekme || (!s.tip && aktifSekme === "Elektrik"));
-  const filtrelenmisOkumalar = gecmisOkumalar.filter(l => l.tip === aktifSekme || (!l.tip && aktifSekme === "Elektrik"));
+  
+  // YENİ: Okumaları Tarih (YYYY-MM-DD) bazında büyükten küçüğe (En yeniden en eskiye) sırala
+  const filtrelenmisOkumalar = gecmisOkumalar
+    .filter(l => l.tip === aktifSekme || (!l.tip && aktifSekme === "Elektrik"))
+    .sort((a, b) => new Date(b.tarih).getTime() - new Date(a.tarih).getTime());
 
   const tema = aktifSekme === "Elektrik" ? "yellow" : aktifSekme === "Doğalgaz" ? "red" : "blue";
   const birim = aktifSekme === "Elektrik" ? "kWh" : aktifSekme === "Doğalgaz" ? "m³" : "Ton";

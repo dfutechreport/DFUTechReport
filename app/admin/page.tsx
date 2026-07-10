@@ -24,7 +24,6 @@ export default function AdminDashboard() {
   const [hatListesi, setHatListesi] = useState<string[]>([]);
   const [ekipmanListesi, setEkipmanListesi] = useState<string[]>([]);
   
-  // YENİ ENERJİ FİLTRELERİ
   const [filterEnerjiTipi, setFilterEnerjiTipi] = useState("Elektrik");
   const [filterSayac, setFilterSayac] = useState("");
   const [sayacListesi, setSayacListesi] = useState<string[]>([]);
@@ -83,7 +82,6 @@ export default function AdminDashboard() {
     } catch (error) { console.error(error); }
   };
 
-  // ENERJİ TÜKETİM (FARK) HESAPLAMASI
   useEffect(() => {
     if (rawMeterLogs.length === 0) return;
 
@@ -91,9 +89,7 @@ export default function AdminDashboard() {
     const aktifSayaclar = new Set<string>();
 
     rawMeterLogs.forEach(log => {
-      // Varsayılan tipi Elektrik kabul et (Eski kayıtlar için)
       const tip = log.tip || "Elektrik";
-      
       if (tip === filterEnerjiTipi) {
         if (log.sayacAdi) aktifSayaclar.add(log.sayacAdi);
         if (filterSayac && log.sayacAdi !== filterSayac) return;
@@ -129,7 +125,6 @@ export default function AdminDashboard() {
   }, [rawMeterLogs, filterSayac, filterEnerjiTipi]);
 
 
-  // BAKIM İŞLERİ HESAPLAMALARI
   useEffect(() => {
     if (rawLogs.length === 0) return;
     let toplamDurusDk = 0; let toplamIsAdedi = 0;
@@ -178,8 +173,6 @@ export default function AdminDashboard() {
 
   }, [rawLogs, filterYil, filterAy, filterHat, filterEkipman]);
 
-  const filtreleriTemizle = () => { setFilterYil(""); setFilterAy(""); setFilterHat(""); setFilterEkipman(""); setFilterSayac(""); };
-
   if (loading) return <div className="min-h-screen bg-gray-950 text-white flex justify-center items-center">Sistem yükleniyor...</div>;
   if (!isAdmin) return <div className="min-h-screen bg-gray-950 text-red-500 flex justify-center items-center">Yetkisiz Erişim!</div>;
 
@@ -197,7 +190,6 @@ export default function AdminDashboard() {
     return null;
   };
 
-  // Dinamik Tema Seçimi
   const enerjiTema = filterEnerjiTipi === "Elektrik" ? "yellow" : filterEnerjiTipi === "Doğalgaz" ? "red" : "blue";
   const enerjiBirim = filterEnerjiTipi === "Elektrik" ? "kWh" : filterEnerjiTipi === "Doğalgaz" ? "m³" : "Ton";
 
@@ -208,7 +200,8 @@ export default function AdminDashboard() {
       <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8 overflow-x-hidden">
         <div className="max-w-7xl mx-auto">
           
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 border-b border-gray-800 pb-5 gap-4">
+          {/* HEADER */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-gray-800 pb-5 gap-4">
             <div className="flex items-center gap-4">
               <img src="/dfulogo.png" alt="Logo" className="h-12 w-auto object-contain bg-white rounded-lg p-1" />
               <div>
@@ -216,7 +209,6 @@ export default function AdminDashboard() {
                 <p className="text-gray-400 mt-1 text-sm md:text-base"><span className="font-bold text-gray-300">DFU Donuk Fırıncılık Ürünleri A.Ş.</span> | İş Zekası (BI)</p>
               </div>
             </div>
-            
             <div className="flex flex-wrap gap-3 no-print">
               {userRole === "admin" && (
                 <button onClick={() => window.print()} className="bg-white text-gray-900 font-bold px-4 py-2 rounded-lg shadow-lg hover:bg-gray-200 transition flex items-center gap-2 text-sm md:text-base">
@@ -227,21 +219,46 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-4 mb-6 no-print">
-            {userRole === "admin" && (
-              <>
-                <Link href="/admin/ekipmanlar" className="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-xl font-semibold text-sm">Hat/Ekipman</Link>
-                <Link href="/admin/personel" className="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-xl font-semibold text-sm">Personel Onay</Link>
-                <Link href="/admin/duyurular" className="bg-yellow-600 hover:bg-yellow-500 px-4 py-2 rounded-xl font-semibold text-sm">Duyuru Yayınla</Link>
-              </>
-            )}
-            <Link href="/admin/mesai" className="bg-teal-600 hover:bg-teal-500 px-4 py-2 rounded-xl font-semibold text-sm">Mesai Raporları</Link>
-            <Link href="/dashboard/sayac" className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded-xl font-semibold text-sm text-white">⚡ Enerji Sayaç Okuma</Link>
-            <Link href="/admin/is-listesi" className="bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded-xl font-semibold text-sm">Seyir Defteri</Link>
-            <Link href="/dashboard" className="bg-orange-600 hover:bg-orange-500 px-4 py-2 rounded-xl font-semibold ml-auto text-sm">Arıza Ekranı ➔</Link>
+          <div className="hidden print:block text-center mb-8 border-b-2 border-black pb-4">
+            <h2 className="text-2xl font-bold text-black">Bakım Yönetim Sistemi Özet Raporu</h2>
+            <p className="text-gray-600">Rapor Kapsamı: {filterYil || "Tüm Yıllar"} - {filterAy ? `${filterAy}. Ay` : "Tüm Aylar"} | Hat: {filterHat || "Tümü"}</p>
+            <p className="text-sm text-gray-500 mt-1">Oluşturulma Tarihi: {new Date().toLocaleString('tr-TR')}</p>
           </div>
 
-          {/* 1. ENERJİ FİLTRELERİ KUTUSU */}
+          {/* HIZLI ERİŞİM BUTONLARI */}
+          <div className="flex flex-wrap gap-4 mb-10 no-print">
+            {userRole === "admin" && (
+              <>
+                <Link href="/admin/ekipmanlar" className="bg-blue-600 hover:bg-blue-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm">Hat/Ekipman</Link>
+                <Link href="/admin/personel" className="bg-purple-600 hover:bg-purple-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm">Personel Onay</Link>
+                <Link href="/admin/duyurular" className="bg-yellow-600 hover:bg-yellow-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm">Duyuru Yayınla</Link>
+              </>
+            )}
+            <Link href="/admin/mesai" className="bg-teal-600 hover:bg-teal-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm">Mesai Raporları</Link>
+            <Link href="/dashboard/sayac" className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm text-white">⚡ Enerji Sayaç Okuma</Link>
+            <Link href="/admin/is-listesi" className="bg-indigo-600 hover:bg-indigo-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm">Seyir Defteri</Link>
+            <Link href="/dashboard" className="bg-orange-600 hover:bg-orange-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold ml-auto text-sm">Arıza Ekranı ➔</Link>
+          </div>
+
+          {/* YENİ SIRA: 1. KPI KARTLARI */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl">
+              <h3 className="text-gray-400 text-sm font-semibold mb-2 print:text-black">Filtrelenen İş Emri / Arıza</h3>
+              <p className="text-3xl md:text-4xl font-bold text-green-500 print:text-black">{kpiToplamIs}</p>
+            </div>
+            <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl">
+              <h3 className="text-gray-400 text-sm font-semibold mb-2 print:text-black">Filtrelenen Toplam Duruş</h3>
+              <p className="text-3xl md:text-4xl font-bold text-red-500 print:text-black">{kpiAylikDurus} <span className="text-lg">dk</span></p>
+            </div>
+            {userRole === "admin" && (
+              <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl">
+                <h3 className="text-gray-400 text-sm font-semibold mb-2 print:text-black">Onay Bekleyen Personel</h3>
+                <p className="text-3xl md:text-4xl font-bold text-blue-500 print:text-black">{kpiOnayBekleyen}</p>
+              </div>
+            )}
+          </div>
+
+          {/* YENİ SIRA: 2. ENERJİ MODÜLÜ (Filtre + Grafik) */}
           <div className="bg-gray-900 border border-yellow-700/50 p-5 rounded-2xl mb-6 flex flex-wrap gap-4 items-end no-print shadow-[0_0_15px_rgba(234,179,8,0.1)]">
             <div className="w-full mb-1 border-b border-gray-800 pb-2">
               <h3 className="text-yellow-500 font-bold flex items-center gap-2">
@@ -258,7 +275,7 @@ export default function AdminDashboard() {
               </select>
             </div>
             <div className="flex-1 min-w-[120px]">
-              <label className={`block text-xs text-${filterEnerjiTipi === 'Elektrik' ? 'yellow' : filterEnerjiTipi === 'Doğalgaz' ? 'red' : 'blue'}-400 mb-1 font-bold`}>Sayaç Seçimi</label>
+              <label className={`block text-xs text-${enerjiTema}-400 mb-1 font-bold`}>Sayaç Seçimi</label>
               <select value={filterSayac} onChange={(e) => setFilterSayac(e.target.value)} className={`w-full bg-gray-800 border-gray-700 text-white rounded-lg p-2 text-sm focus:border-yellow-500`}>
                 <option value="">Tüm Sayaçlar (Toplam)</option>
                 {sayacListesi.map(s => <option key={s} value={s}>{s}</option>)}
@@ -267,8 +284,32 @@ export default function AdminDashboard() {
             <button onClick={() => {setFilterEnerjiTipi("Elektrik"); setFilterSayac("");}} className="bg-gray-800 hover:bg-gray-700 border border-gray-600 text-gray-300 px-4 py-2 rounded-lg text-sm h-9">Enerjiyi Sıfırla</button>
           </div>
 
-          {/* 2. ARIZA VE BAKIM FİLTRELERİ KUTUSU */}
-          <div className="bg-gray-900 border border-blue-700/50 p-5 rounded-2xl mb-8 flex flex-wrap gap-4 items-end no-print shadow-[0_0_15px_rgba(59,130,246,0.1)]">
+          <div className={`bg-gray-900 border border-gray-800 p-4 md:p-6 rounded-2xl mb-12 shadow-lg border-b-4 border-b-${enerjiTema}-500`}>
+            <h2 className={`text-lg font-bold mb-6 text-${enerjiTema}-400 flex items-center gap-2 print:text-black`}>
+              {filterEnerjiTipi} Aylık Tüketim Grafiği ({filterSayac ? filterSayac : "Tüm Sayaçlar Toplamı"})
+            </h2>
+            {grafikEnerjiTuketim.length === 0 ? (
+              <div className="h-48 flex justify-center items-center text-gray-500 border border-dashed border-gray-800 rounded-xl">Tüketim verisi bulunamadı.</div>
+            ) : (
+              <div className="h-72 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={grafikEnerjiTuketim} margin={{ top: 25, right: 5, left: -10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="ay" tick={{fontSize: 12, fill: '#9CA3AF'}} />
+                    <YAxis tick={{fontSize: 12, fill: '#9CA3AF'}} />
+                    <Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} />
+                    <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                    <Bar name={`Tüketim (${enerjiBirim})`} dataKey="tuketim" fill={filterEnerjiTipi === "Elektrik" ? "#EAB308" : filterEnerjiTipi === "Doğalgaz" ? "#EF4444" : "#3B82F6"} maxBarSize={60}>
+                      <LabelList dataKey="tuketim" position="top" fill={filterEnerjiTipi === "Elektrik" ? "#EAB308" : filterEnerjiTipi === "Doğalgaz" ? "#EF4444" : "#3B82F6"} fontSize={12} fontWeight="bold" />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+
+          {/* YENİ SIRA: 3. BAKIM MODÜLÜ (Filtre + Grafikler) */}
+          <div className="bg-gray-900 border border-blue-700/50 p-5 rounded-2xl mb-6 flex flex-wrap gap-4 items-end no-print shadow-[0_0_15px_rgba(59,130,246,0.1)]">
             <div className="w-full mb-1 border-b border-gray-800 pb-2">
               <h3 className="text-blue-500 font-bold flex items-center gap-2">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
@@ -294,63 +335,10 @@ export default function AdminDashboard() {
             <button onClick={() => {setFilterYil(""); setFilterAy(""); setFilterHat(""); setFilterEkipman("");}} className="bg-red-900/40 text-red-400 px-4 py-2 rounded-lg text-sm h-9">Bakımı Sıfırla</button>
           </div>
 
-          {/* DİNAMİK ENERJİ TÜKETİM GRAFİĞİ */}
-          <div className={`bg-gray-900 border border-gray-800 p-4 md:p-6 rounded-2xl mb-10 shadow-lg border-b-4 border-b-${enerjiTema}-500`}>
-            <h2 className={`text-lg font-bold mb-6 text-${enerjiTema}-400 flex items-center gap-2 print:text-black`}>
-              {filterEnerjiTipi} Aylık Tüketim Grafiği ({filterSayac ? filterSayac : "Tüm Sayaçlar Toplamı"})
-            </h2>
-            {grafikEnerjiTuketim.length === 0 ? (
-              <div className="h-48 flex justify-center items-center text-gray-500 border border-dashed border-gray-800 rounded-xl">Tüketim verisi bulunamadı. Lütfen peş peşe en az 2 gün {filterEnerjiTipi} endeksi girin.</div>
-            ) : (
-              <div className="h-72 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={grafikEnerjiTuketim} margin={{ top: 25, right: 5, left: -10, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="ay" tick={{fontSize: 12, fill: '#9CA3AF'}} />
-                    <YAxis tick={{fontSize: 12, fill: '#9CA3AF'}} />
-                    <Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} />
-                    <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                    <Bar 
-                      name={`Tüketim (${enerjiBirim})`} 
-                      dataKey="tuketim" 
-                      fill={filterEnerjiTipi === "Elektrik" ? "#EAB308" : filterEnerjiTipi === "Doğalgaz" ? "#EF4444" : "#3B82F6"} 
-                      maxBarSize={60}
-                    >
-                      <LabelList 
-                        dataKey="tuketim" 
-                        position="top" 
-                        fill={filterEnerjiTipi === "Elektrik" ? "#EAB308" : filterEnerjiTipi === "Doğalgaz" ? "#EF4444" : "#3B82F6"} 
-                        fontSize={12} fontWeight="bold" 
-                      />
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-            <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl">
-              <h3 className="text-gray-400 text-sm font-semibold mb-2 print:text-black">Filtrelenen İş Emri / Arıza</h3>
-              <p className="text-3xl md:text-4xl font-bold text-green-500 print:text-black">{kpiToplamIs}</p>
-            </div>
-            <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl">
-              <h3 className="text-gray-400 text-sm font-semibold mb-2 print:text-black">Filtrelenen Toplam Duruş</h3>
-              <p className="text-3xl md:text-4xl font-bold text-red-500 print:text-black">{kpiAylikDurus} <span className="text-lg">dk</span></p>
-            </div>
-            {userRole === "admin" && (
-              <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl">
-                <h3 className="text-gray-400 text-sm font-semibold mb-2 print:text-black">Onay Bekleyen Personel</h3>
-                <p className="text-3xl md:text-4xl font-bold text-blue-500 print:text-black">{kpiOnayBekleyen}</p>
-              </div>
-            )}
-          </div>
-
-          {/* Arıza Grafikleri */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
             <div className="bg-gray-900 border border-gray-800 p-4 md:p-6 rounded-2xl">
               <h2 className="text-lg font-bold mb-6 text-green-400 print:text-black">Yapılan İşler</h2>
-              {grafikTumIslerVerisi.length > 0 && (
+              {grafikTumIslerVerisi.length > 0 ? (
                 <div className="h-72 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={grafikTumIslerVerisi} margin={{ top: 25, right: 5, left: -25, bottom: 5 }}>
@@ -364,12 +352,12 @@ export default function AdminDashboard() {
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-              )}
+              ) : <div className="h-48 flex justify-center items-center text-gray-500 border border-dashed border-gray-800 rounded-xl">Filtreye uygun veri yok</div>}
             </div>
 
             <div className="bg-gray-900 border border-gray-800 p-4 md:p-6 rounded-2xl">
               <h2 className="text-lg font-bold mb-6 text-red-400 print:text-black">Sadece Duruşlu Arızalar</h2>
-              {grafikDurusVerisi.length > 0 && (
+              {grafikDurusVerisi.length > 0 ? (
                 <div className="h-72 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={grafikDurusVerisi} margin={{ top: 25, right: 5, left: -25, bottom: 5 }}>
@@ -383,7 +371,7 @@ export default function AdminDashboard() {
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-              )}
+              ) : <div className="h-48 flex justify-center items-center text-gray-500 border border-dashed border-gray-800 rounded-xl">Filtreye uygun duruş yok</div>}
             </div>
           </div>
 

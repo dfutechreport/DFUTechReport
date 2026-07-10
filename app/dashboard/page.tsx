@@ -189,7 +189,9 @@ export default function PersonelDashboard() {
           <a href="/admin/is-listesi" className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg flex items-center gap-2">
             📋 Geçmiş İşler (Seyir Defteri)
           </a>
-          <a href="/dashboard/mesai" className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg flex items-center gap-2">
+          <a href="/dashboard/mesai" className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg flex items-center gap-2"> <a href="/dashboard/sayac" className="bg-yellow-600 hover:bg-yellow-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg flex items-center gap-2">
+  ⚡ Sayaç Okuma
+</a>
             ⏰ Fazla Mesai Girişi Yap
           </a>
         </div>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { signInWithPopup, onAuthStateChanged, updateProfile } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { collection, doc, getDoc, setDoc, getDocs, query, where, deleteDoc } from "firebase/firestore";
 import { auth, googleProvider, db } from "../lib/firebase";
 
 export default function LoginPage() {
@@ -13,32 +13,49 @@ export default function LoginPage() {
   const [showSplash, setShowSplash] = useState(false);
   const [targetUrl, setTargetUrl] = useState("");
 
-  // YENİ: İsim Sorma Mekanizması State'leri
   const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [tempUser, setTempUser] = useState<any>(null);
   const [gercekIsim, setGercekIsim] = useState("");
+
+  // YENİ: Manuel Kayıt Kontrolü İçin Geçici Rol Tutucu
+  const [tempRoleInfo, setTempRoleInfo] = useState<any>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
+          // 1. Önce kullanıcının kendi UID'si ile kaydı var mı diye bak (Daha önce girmiş mi?)
           const userRef = doc(db, "users", user.uid);
           const userSnap = await getDoc(userRef);
 
-          // EĞER KULLANICI VERİTABANINDA HİÇ YOKSA (İLK GİRİŞ)
-          if (!userSnap.exists()) {
-            setTempUser(user);
-            // Google'dan gelen bir isim varsa kutuya varsayılan olarak yaz, yoksa boş bırak
-            setGercekIsim(user.displayName || ""); 
-            setShowNamePrompt(true); // İsim sorma ekranını aç
-          } else {
-            // MEVCUT KULLANICI
+          if (userSnap.exists()) {
+            // ZATEN SİSTEMDE VAR OLAN KULLANICI
             const userData = userSnap.data();
             if (!userData.isApproved) {
               setUserStatus("pending");
               setMessage("Hesabınız henüz onaylanmadı. Lütfen Admin ile iletişime geçin.");
             } else {
               setUserStatus(userData.role);
+            }
+          } else {
+            // 2. UID İLE BULUNAMADI! PEKİ ADMİN BUNU E-POSTA İLE MANUEL EKLMİŞ Mİ?
+            const email = user.email?.toLowerCase().trim();
+            const manuelRef = doc(db, "users", email || "bilinmeyen");
+            const manuelSnap = await getDoc(manuelRef);
+
+            if (manuelSnap.exists()) {
+              // ADMİN MANUEL EKLEMİŞ! Kişinin yetkilerini al ve isim sorma ekranına taşı
+              const manuelData = manuelSnap.data();
+              setTempRoleInfo(manuelData); // Adminin verdiği yetkileri hafızaya al
+              
+              setTempUser(user);
+              setGercekIsim(manuelData.name || user.displayName || ""); 
+              setShowNamePrompt(true);
+            } else {
+              // 3. TAMAMEN YENİ KULLANICI (Ne daha önce girmiş, ne de admin eklemiş)
+              setTempUser(user);
+              setGercekIsim(user.displayName || ""); 
+              setShowNamePrompt(true);
             }
           }
         } catch (error) {
@@ -53,39 +70,55 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await signInWithPopup(auth, googleProvider);
-      // Popup kapandığında useEffect tetiklenecek ve yeni kullanıcıysa isim soracak
     } catch (error) {
       console.error(error);
       setLoading(false);
     }
   };
 
-  // YENİ: İsim Girildikten Sonra Veritabanına Kaydetme
   const handleIsimKaydet = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (gercekIsim.trim().length < 3) {
-      alert("Lütfen geçerli bir İsim-Soyisim giriniz.");
-      return;
-    }
+    if (gercekIsim.trim().length < 3) return alert("Lütfen geçerli bir İsim-Soyisim giriniz.");
 
     setLoading(true);
     try {
-      // 1. Google Profilini Güncelle (Opsiyonel ama faydalı)
       await updateProfile(tempUser, { displayName: gercekIsim });
 
-      // 2. Veritabanına Kaydet (Yeni Kayıt İşlemi)
       const userRef = doc(db, "users", tempUser.uid);
-      await setDoc(userRef, {
-        email: tempUser.email,
-        name: gercekIsim, // Kullanıcının ekrana yazdığı resmi isim
-        role: "pending",
-        isApproved: false,
-        createdAt: new Date()
-      });
 
-      setShowNamePrompt(false);
-      setUserStatus("pending");
-      setMessage(`Kayıt alındı, ${gercekIsim}. Yönetici onayı bekleniyor.`);
+      // EĞER KULLANICIYI ADMİN MANUEL EKLEMİŞSE (Hafızada bilgi varsa)
+      if (tempRoleInfo) {
+        // Yeni UID ile hesabı oluştur ama yetkileri adminin verdiği gibi yap!
+        await setDoc(userRef, {
+          email: tempUser.email,
+          name: gercekIsim, 
+          role: tempRoleInfo.role, // Adminin verdiği rol
+          isApproved: true, // PEŞİNEN ONAYLI !
+          createdAt: new Date(),
+          manuelOnaylandi: true
+        });
+
+        // Eski e-posta ID'li geçici çöp kaydı sil
+        const email = tempUser.email?.toLowerCase().trim();
+        await deleteDoc(doc(db, "users", email));
+
+        setShowNamePrompt(false);
+        setUserStatus(tempRoleInfo.role); // Anında içeri al!
+
+      } else {
+        // TAMAMEN YENİ VE ONAYSIZ KULLANICI KAYDI
+        await setDoc(userRef, {
+          email: tempUser.email,
+          name: gercekIsim,
+          role: "pending",
+          isApproved: false,
+          createdAt: new Date()
+        });
+        setShowNamePrompt(false);
+        setUserStatus("pending");
+        setMessage(`Kayıt alındı, ${gercekIsim}. Yönetici onayı bekleniyor.`);
+      }
+
     } catch (error) {
       console.error("Kayıt hatası:", error);
       alert("İsim kaydedilirken bir hata oluştu.");
@@ -130,60 +163,35 @@ export default function LoginPage() {
         <h1 className="text-3xl font-bold text-white mb-2">Bakım Yönetimi</h1>
         <p className="text-gray-400 mb-8 text-sm font-medium tracking-wide text-blue-300">DFU Donuk Fırıncılık Ürünleri A.Ş.</p>
 
-               {/* YENİ: İSİM SORMA EKRANI */}
         {showNamePrompt ? (
           <form onSubmit={handleIsimKaydet} className="space-y-4 animate-fade-in bg-gray-800 p-6 rounded-xl border border-gray-700">
             <h2 className="text-xl font-bold text-yellow-400">Son Bir Adım!</h2>
-            <p className="text-gray-300 text-sm">Kurumsal kayıtlar ve puantaj için lütfen adınızı ve soyadınızı resmi haliyle giriniz.</p>
-            <input 
-              type="text" 
-              value={gercekIsim}
-              onChange={(e) => setGercekIsim(e.target.value)}
-              placeholder="Örn: Ahmet Yılmaz"
-              className="w-full bg-gray-900 border border-gray-600 rounded-lg p-3 text-white focus:border-blue-500 text-center text-lg font-bold"
-              required
-            />
-            <button 
-              type="submit" 
-              disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition disabled:opacity-50"
-            >
-              {loading ? "Kaydediliyor..." : "Kaydımı Tamamla"}
+            <p className="text-gray-300 text-sm">
+              {tempRoleInfo 
+                ? "Hesabınız yönetici tarafından peşinen onaylandı! Sadece resmi adınızı teyit edin." 
+                : "Kurumsal kayıtlar için lütfen adınızı ve soyadınızı giriniz."}
+            </p>
+            <input type="text" value={gercekIsim} onChange={(e) => setGercekIsim(e.target.value)} placeholder="Örn: Ahmet Yılmaz" className="w-full bg-gray-900 border border-gray-600 rounded-lg p-3 text-white focus:border-blue-500 text-center text-lg font-bold" required />
+            <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition disabled:opacity-50">
+              {loading ? "Sisteme Giriliyor..." : (tempRoleInfo ? "Doğrula ve İçeri Gir" : "Kaydımı Tamamla")}
             </button>
           </form>
-
         ) : userStatus === "admin" || userStatus === "operator" ? (
-          // YENİ: ADMİN VE OPERATÖRLER BU BLOKA DÜŞER VE /admin SAYFASINA YÖNLENDİRİLİR
           <div className="space-y-4">
-            <div className="p-4 rounded-lg bg-green-900/30 text-green-400 border border-green-800/50">
-              Giriş Başarılı (Yetki: {userStatus.toUpperCase()})
-            </div>
-            <button 
-              onClick={() => handleEnterSystem("/admin")} 
-              className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-4 rounded-xl transition shadow-lg shadow-green-500/30"
-            >
+            <div className="p-4 rounded-lg bg-green-900/30 text-green-400 border border-green-800/50">Giriş Başarılı (Yetki: {userStatus.toUpperCase()})</div>
+            <button onClick={() => handleEnterSystem("/admin")} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-4 rounded-xl transition shadow-lg shadow-green-500/30">
               {userStatus === "admin" ? "Yönetim Paneline Git ➔" : "İzleme Paneline Git ➔"}
             </button>
           </div>
-
         ) : userStatus === "teknisyen" || userStatus === "user" ? (
-          // TEKNİSYENLER BU BLOKA DÜŞER VE /dashboard (Arıza) SAYFASINA YÖNLENDİRİLİR
           <div className="space-y-4">
-            <div className="p-4 rounded-lg bg-blue-900/30 text-blue-400 border border-blue-800/50">
-              Giriş Başarılı (Yetki: Teknisyen)
-            </div>
-            <button 
-              onClick={() => handleEnterSystem("/dashboard")} 
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-4 rounded-xl transition shadow-lg shadow-blue-500/30"
-            >
+            <div className="p-4 rounded-lg bg-blue-900/30 text-blue-400 border border-blue-800/50">Giriş Başarılı (Yetki: Teknisyen)</div>
+            <button onClick={() => handleEnterSystem("/dashboard")} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-4 rounded-xl transition shadow-lg shadow-blue-500/30">
               Arıza Formuna Git ➔
             </button>
           </div>
-
         ) : userStatus === "pending" ? (
-          <div className="p-4 rounded-lg bg-orange-900/30 text-orange-400 border border-orange-800/50">
-            {message}
-          </div>
+          <div className="p-4 rounded-lg bg-orange-900/30 text-orange-400 border border-orange-800/50">{message}</div>
         ) : (
           <button onClick={handleGoogleLogin} disabled={loading} className="w-full bg-white hover:bg-gray-100 text-gray-900 font-semibold py-3 px-4 rounded-xl transition flex items-center justify-center gap-3 disabled:opacity-50">
             {loading ? "Bağlanıyor..." : "Google ile Giriş Yap"}

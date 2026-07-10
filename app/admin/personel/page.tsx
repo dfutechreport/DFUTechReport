@@ -78,24 +78,27 @@ export default function PersonelYonetimi() {
     } catch (error) { console.error(error); }
   };
 
-  // YENİ: MANUEL PERSONEL EKLEME
+  // YENİ: MANUEL PERSONEL EKLEME (GÜNCELLENDİ)
   const handleManuelEkle = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!yeniEmail.includes("@gmail.com") && !yeniEmail.includes("@donukfirincilik.com.tr")) {
-      alert("Lütfen Google altyapısı kullanan geçerli bir mail adresi giriniz.");
+    
+    if (!yeniEmail || !yeniEmail.includes("@")) {
+      alert("Lütfen geçerli bir e-posta adresi giriniz.");
       return;
     }
-    if (yeniIsim.length < 3) return alert("Lütfen personelin İsim-Soyisim bilgisini doğru girin.");
+    if (yeniIsim.trim().length < 3) {
+      alert("Lütfen personelin İsim-Soyisim bilgisini doğru girin.");
+      return;
+    }
 
     setEkliyor(true);
     try {
-      // Email adresini ID olarak kullanıp önceden yetkiyi veritabanına mühürlüyoruz
       const lowerEmail = yeniEmail.toLowerCase().trim();
       const userRef = doc(db, "users", lowerEmail); 
       
       const mevcutSnap = await getDoc(userRef);
       if (mevcutSnap.exists()) {
-        alert("Bu e-posta adresine sahip bir kayıt zaten var!");
+        alert("HATA: Bu e-posta adresine sahip bir kayıt sistemde zaten var!");
         setEkliyor(false);
         return;
       }
@@ -104,17 +107,17 @@ export default function PersonelYonetimi() {
         email: lowerEmail,
         name: yeniIsim,
         role: yeniRol,
-        isApproved: true, // PEŞİNEN ONAYLI !
+        isApproved: true, // PEŞİNEN ONAYLI
         createdAt: new Date(),
         manuelEklendi: true
       });
 
-      alert(`${yeniIsim} peşinen onaylandı! İlk giriş yaptığında sistem onu doğrudan içeri alacaktır.`);
+      alert(`${yeniIsim} sisteme başarıyla eklendi!`);
       setYeniEmail(""); setYeniIsim(""); setYeniRol("teknisyen");
       fetchUsers();
-    } catch (error) {
-      console.error(error);
-      alert("Kayıt sırasında hata oluştu.");
+    } catch (error: any) {
+      console.error("Detaylı Hata:", error);
+      alert("Sistemsel Hata: " + error.message);
     } finally {
       setEkliyor(false);
     }

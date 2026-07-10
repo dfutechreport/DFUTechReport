@@ -256,7 +256,9 @@ export default function AdminDashboard() {
               </>
             )}
             <Link href="/admin/mesai" className="bg-teal-600 hover:bg-teal-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm md:text-base">Mesai Raporları</Link>
-            <Link href="/dashboard/sayac" className="flex items-center gap-2 bg-yellow-600 hover:bg-yellow-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm md:text-base text-white">⚡ Sayaç Okuma</Link>
+            <Link href="/dashboard/sayac" className="flex items-center gap-2 bg-yellow-600 hover:bg-yellow-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm md:text-base text-white">
+  ⚡ Elektrik Sayaç Okuma
+</Link>
             <Link href="/admin/is-listesi" className="bg-indigo-600 hover:bg-indigo-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm md:text-base">Tüm İşler Listesi</Link>
             <Link href="/dashboard" className="bg-orange-600 hover:bg-orange-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold ml-auto text-sm md:text-base">Arıza Bildirim Ekranı ➔</Link>
           </div>

@@ -16,14 +16,14 @@ export default function SayacOkuma() {
   const [sayaclar, setSayaclar] = useState<any[]>([]);
   const [gecmisOkumalar, setGecmisOkumalar] = useState<any[]>([]);
   
-  // Girilen değerleri tutan obje (Örn: { "id1": "150", "id2": "200" })
   const [girisDegerleri, setGirisDegerleri] = useState<Record<string, string>>({});
+
+  // YENİ: Manuel Tarih Seçimi (Varsayılan: Bugün)
+  const [seciliTarih, setSeciliTarih] = useState(new Date().toISOString().split('T')[0]);
 
   const [yeniSayacAdi, setYeniSayacAdi] = useState("");
   const [editModal, setEditModal] = useState(false);
   const [duzenlenenLog, setDuzenlenenLog] = useState<any>(null);
-
-  const bugun = new Date().toISOString().split('T')[0];
 
   const fetchVeriler = async () => {
     try {
@@ -61,25 +61,27 @@ export default function SayacOkuma() {
     } catch (error) { alert("Hata!"); }
   };
 
-  // YENİ: TOPLU KAYIT FONKSİYONU
+  // TOPLU KAYIT İŞLEMİ (Seçilen Tarihle Birlikte)
   const handleTopluKayit = async () => {
-    // Sadece içi doldurulmuş (boş olmayan) inputları filtrele
     const doldurulanIdler = Object.keys(girisDegerleri).filter(id => girisDegerleri[id].trim() !== "");
     
     if (doldurulanIdler.length === 0) {
       alert("Sisteme işlenecek herhangi bir değer girmediniz!");
       return;
     }
+    if (!seciliTarih) {
+      alert("Lütfen bir okuma tarihi seçiniz!");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
-      // Doldurulan tüm sayaçları veritabanına tek tek döngüyle at
       for (const sayacId of doldurulanIdler) {
         const sayacAdi = sayaclar.find(s => s.id === sayacId)?.name || "Bilinmeyen Sayaç";
         const deger = Number(girisDegerleri[sayacId]);
         
         await addDoc(collection(db, "meter_logs"), {
-          tarih: bugun,
+          tarih: seciliTarih, // Kilitli 'bugun' yerine yöneticinin/personelin seçtiği tarih
           sayacAdi: sayacAdi,
           deger: deger,
           personel: userName,
@@ -89,8 +91,8 @@ export default function SayacOkuma() {
       }
 
       alert("Tüm okumalar başarıyla sisteme işlendi!");
-      setGirisDegerleri({}); // Inputları sıfırla
-      fetchVeriler(); // Tabloyu yenile
+      setGirisDegerleri({}); 
+      fetchVeriler(); 
     } catch (error) {
       console.error(error); alert("Kaydedilemedi.");
     } finally {
@@ -148,7 +150,7 @@ export default function SayacOkuma() {
         <div className="flex justify-between items-center mb-8 border-b border-gray-800 pb-5">
           <div>
             <h1 className="text-3xl font-bold text-white flex items-center gap-3">Enerji ve Sayaç Okuma</h1>
-            <p className="text-gray-400 mt-1">Tesisin günlük tüketim değerlerini toplu olarak girin.</p>
+            <p className="text-gray-400 mt-1">Tesisin tüketim değerlerini toplu olarak girin.</p>
           </div>
           <Link href={userRole === "admin" || userRole === "operator" ? "/admin" : "/dashboard"} className="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm transition">← Panele Dön</Link>
         </div>
@@ -169,14 +171,24 @@ export default function SayacOkuma() {
           </div>
         )}
 
-        {/* TOPLU VERİ GİRİŞ TABLOSU */}
         <div className={`bg-gray-900 border border-${tema}-600/30 p-6 rounded-xl shadow-lg mb-10`}>
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
             <h2 className="text-xl font-bold text-white">Toplu Değer Girişi ({aktifSekme})</h2>
-            {/* ÜST KAYDET BUTONU */}
+            
+            {/* YENİ: MANUEL TARİH SEÇİCİ */}
+            <div className="flex items-center gap-3 bg-gray-800 p-2 rounded-lg border border-gray-700">
+              <span className="text-sm text-gray-400 font-bold pl-2">Okuma Tarihi:</span>
+              <input 
+                type="date" 
+                value={seciliTarih} 
+                onChange={(e) => setSeciliTarih(e.target.value)}
+                className={`bg-gray-900 border border-${tema}-500/50 rounded p-2 text-white text-sm focus:border-${tema}-400 outline-none`}
+              />
+            </div>
+
             {filtrelenmisSayaclar.length > 0 && (
               <button onClick={handleTopluKayit} disabled={isSubmitting} className={`bg-${tema}-600 hover:bg-${tema}-500 text-white font-bold px-6 py-2 rounded-lg shadow-lg disabled:opacity-50`}>
-                {isSubmitting ? "Kaydediliyor..." : "Tüm Endeksleri İşle"}
+                {isSubmitting ? "İşleniyor..." : "Tüm Endeksleri İşle"}
               </button>
             )}
           </div>
@@ -188,16 +200,14 @@ export default function SayacOkuma() {
               <table className="w-full text-left text-sm mb-4">
                 <thead>
                   <tr className="border-b border-gray-800 text-gray-400 bg-gray-800/50">
-                    <th className="p-3">Okuma Tarihi</th>
-                    <th className="p-3">Sayaç Adı</th>
+                    <th className="p-3 w-1/3">Sayaç Adı</th>
                     <th className={`p-3 text-${tema}-400`}>Değer Girin ({birim})</th>
-                    <th className="p-3">Personel</th>
+                    <th className="p-3 text-right">Kayıt Eden</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtrelenmisSayaclar.map(sayac => (
                     <tr key={sayac.id} className="border-b border-gray-800 hover:bg-gray-800/30">
-                      <td className="p-3 text-gray-400 font-medium">{bugun}</td>
                       <td className="p-3 font-bold text-gray-200">{sayac.name}</td>
                       <td className="p-3">
                         <input 
@@ -207,12 +217,11 @@ export default function SayacOkuma() {
                           className={`w-full max-w-[200px] bg-gray-800 border border-${tema}-500/50 rounded-lg p-2 text-white focus:outline-none focus:border-${tema}-400`}
                         />
                       </td>
-                      <td className="p-3 text-gray-400">{userName}</td>
+                      <td className="p-3 text-right text-gray-500">{userName}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              {/* ALT KAYDET BUTONU */}
               <button onClick={handleTopluKayit} disabled={isSubmitting} className={`w-full bg-${tema}-600 hover:bg-${tema}-500 text-white font-bold py-4 rounded-xl shadow-lg transition disabled:opacity-50`}>
                 {isSubmitting ? "Lütfen Bekleyin, Sisteme İşleniyor..." : "TÜM ENDEKSLERİ SİSTEME İŞLE"}
               </button>
@@ -220,7 +229,6 @@ export default function SayacOkuma() {
           )}
         </div>
 
-        {/* GEÇMİŞ OKUMALAR LİSTESİ */}
         <div className="bg-gray-900 border border-gray-800 p-6 rounded-xl shadow-lg overflow-x-auto">
           <h2 className="text-xl font-bold mb-4 text-gray-300">Geçmiş {aktifSekme} Okumaları</h2>
           {filtrelenmisOkumalar.length === 0 ? (
@@ -239,7 +247,7 @@ export default function SayacOkuma() {
               <tbody>
                 {filtrelenmisOkumalar.map(log => (
                   <tr key={log.id} className="border-b border-gray-800 hover:bg-gray-800/50">
-                    <td className="py-3 px-2 text-gray-300">{log.tarih}</td>
+                    <td className="py-3 px-2 text-gray-300 font-bold">{log.tarih}</td>
                     <td className="py-3 px-2 font-bold text-gray-200">{log.sayacAdi}</td>
                     <td className={`py-3 px-2 text-${tema}-400 font-bold text-lg`}>{log.deger}</td>
                     <td className="py-3 px-2 text-blue-300">{log.personel}</td>

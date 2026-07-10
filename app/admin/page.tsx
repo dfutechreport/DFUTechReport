@@ -15,7 +15,6 @@ export default function AdminDashboard() {
   const [rawLogs, setRawLogs] = useState<any[]>([]);
   const [kpiOnayBekleyen, setKpiOnayBekleyen] = useState(0);
 
-  // Bakım Filtreleri
   const [filterYil, setFilterYil] = useState("");
   const [filterAy, setFilterAy] = useState("");
   const [filterHat, setFilterHat] = useState("");
@@ -25,10 +24,11 @@ export default function AdminDashboard() {
   const [hatListesi, setHatListesi] = useState<string[]>([]);
   const [ekipmanListesi, setEkipmanListesi] = useState<string[]>([]);
   
-  // YENİ: Elektrik Filtreleri
+  // YENİ ENERJİ FİLTRELERİ
+  const [filterEnerjiTipi, setFilterEnerjiTipi] = useState("Elektrik");
   const [filterSayac, setFilterSayac] = useState("");
   const [sayacListesi, setSayacListesi] = useState<string[]>([]);
-  const [rawMeterLogs, setRawMeterLogs] = useState<any[]>([]); // Ham sayaç verisi
+  const [rawMeterLogs, setRawMeterLogs] = useState<any[]>([]); 
 
   const [kpiToplamIs, setKpiToplamIs] = useState(0);
   const [kpiAylikDurus, setKpiAylikDurus] = useState(0);
@@ -36,15 +36,13 @@ export default function AdminDashboard() {
   const [grafikDurusVerisi, setGrafikDurusVerisi] = useState<any[]>([]);
   const [grafikTumIslerVerisi, setGrafikTumIslerVerisi] = useState<any[]>([]);
   const [personelPerformans, setPersonelPerformans] = useState<any[]>([]);
-  
-  const [grafikElektrikTuketim, setGrafikElektrikTuketim] = useState<any[]>([]);
+  const [grafikEnerjiTuketim, setGrafikEnerjiTuketim] = useState<any[]>([]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         const userRef = doc(db, "users", user.uid);
         const userSnap = await getDoc(userRef);
-        
         if (userSnap.exists() && userSnap.data().isApproved) {
           const role = userSnap.data().role;
           setUserRole(role);
@@ -67,16 +65,9 @@ export default function AdminDashboard() {
       const logs = (await getDocs(collection(db, "maintenance_logs"))).docs.map(doc => doc.data());
       setRawLogs(logs);
 
-      // SAYAÇ OKUMALARINI ÇEK VE HAFIZAYA AL
       const qMeter = query(collection(db, "meter_logs"), orderBy("tarih", "asc"));
       const meterSnap = await getDocs(qMeter);
-      const meterData = meterSnap.docs.map(d => d.data());
-      setRawMeterLogs(meterData);
-
-      // Sayaç İsimlerini Listeye Ekle
-      const sayaclar = new Set<string>();
-      meterData.forEach(d => { if (d.sayacAdi) sayaclar.add(d.sayacAdi); });
-      setSayacListesi(Array.from(sayaclar).sort());
+      setRawMeterLogs(meterSnap.docs.map(d => d.data()));
 
       const yillar = new Set<string>();
       const hatlar = new Set<string>();
@@ -92,18 +83,26 @@ export default function AdminDashboard() {
     } catch (error) { console.error(error); }
   };
 
-  // --- YENİ: FİLTRELİ ENERJİ TÜKETİM (FARK) ALGORİTMASI ---
+  // ENERJİ TÜKETİM (FARK) HESAPLAMASI
   useEffect(() => {
     if (rawMeterLogs.length === 0) return;
 
     const sayacGruplari: Record<string, any[]> = {};
-    rawMeterLogs.forEach(log => {
-      // Eğer bir sayaç filtrelendiyse ve bu log o sayaca ait değilse yoksay
-      if (filterSayac && log.sayacAdi !== filterSayac) return;
+    const aktifSayaclar = new Set<string>();
 
-      if (!sayacGruplari[log.sayacAdi]) sayacGruplari[log.sayacAdi] = [];
-      sayacGruplari[log.sayacAdi].push(log);
+    rawMeterLogs.forEach(log => {
+      // Varsayılan tipi Elektrik kabul et (Eski kayıtlar için)
+      const tip = log.tip || "Elektrik";
+      
+      if (tip === filterEnerjiTipi) {
+        if (log.sayacAdi) aktifSayaclar.add(log.sayacAdi);
+        if (filterSayac && log.sayacAdi !== filterSayac) return;
+        if (!sayacGruplari[log.sayacAdi]) sayacGruplari[log.sayacAdi] = [];
+        sayacGruplari[log.sayacAdi].push(log);
+      }
     });
+
+    setSayacListesi(Array.from(aktifSayaclar).sort());
 
     const aylikTuketimler: Record<string, number> = {
       "01. Ay": 0, "02. Ay": 0, "03. Ay": 0, "04. Ay": 0, "05. Ay": 0, "06. Ay": 0,
@@ -116,29 +115,23 @@ export default function AdminDashboard() {
         const oncekiDeger = Number(okumalar[i - 1].deger);
         const suankiDeger = Number(okumalar[i].deger);
         const tuketimFarki = Math.max(0, suankiDeger - oncekiDeger); 
-        
         const ayStr = okumalar[i].tarih.split("-")[1]; 
         const ayAnahtari = `${ayStr}. Ay`;
-
-        if (aylikTuketimler[ayAnahtari] !== undefined) {
-          aylikTuketimler[ayAnahtari] += tuketimFarki;
-        }
+        if (aylikTuketimler[ayAnahtari] !== undefined) aylikTuketimler[ayAnahtari] += tuketimFarki;
       }
     });
 
     const formatliTuketim = Object.keys(aylikTuketimler).map(ay => ({
-      ay: ay,
-      tuketim: aylikTuketimler[ay]
+      ay: ay, tuketim: aylikTuketimler[ay]
     })).filter(a => a.tuketim > 0); 
 
-    setGrafikElektrikTuketim(formatliTuketim);
-  }, [rawMeterLogs, filterSayac]); // Sayaç filtresi değiştikçe yeniden hesapla
+    setGrafikEnerjiTuketim(formatliTuketim);
+  }, [rawMeterLogs, filterSayac, filterEnerjiTipi]);
 
 
-  // BAKIM VERİLERİ HESAPLAMALARI
+  // BAKIM İŞLERİ HESAPLAMALARI
   useEffect(() => {
     if (rawLogs.length === 0) return;
-
     let toplamDurusDk = 0; let toplamIsAdedi = 0;
     const tumIslerData: Record<string, { adet: number, dakika: number }> = {};
     const durusluIslerData: Record<string, { adet: number, dakika: number }> = {};
@@ -154,7 +147,6 @@ export default function AdminDashboard() {
       if (filterAy && ay !== filterAy) return;
       if (filterHat && data.hatAdi !== filterHat) return;
       if (filterEkipman && data.ekipmanAdi !== filterEkipman) return;
-
       if (data.ekipmanAdi) aktifEkipmanlar.add(data.ekipmanAdi);
 
       const groupKey = filterHat ? (data.ekipmanAdi || "Belirsiz") : (data.hatAdi || "Belirsiz");
@@ -164,19 +156,16 @@ export default function AdminDashboard() {
       toplamIsAdedi++;
 
       if (!tumIslerData[groupKey]) tumIslerData[groupKey] = { adet: 0, dakika: 0 };
-      tumIslerData[groupKey].adet += 1;
-      tumIslerData[groupKey].dakika += sure;
+      tumIslerData[groupKey].adet += 1; tumIslerData[groupKey].dakika += sure;
 
       if (data.isDuruslu) {
         toplamDurusDk += sure;
         if (!durusluIslerData[groupKey]) durusluIslerData[groupKey] = { adet: 0, dakika: 0 };
-        durusluIslerData[groupKey].adet += 1;
-        durusluIslerData[groupKey].dakika += sure;
+        durusluIslerData[groupKey].adet += 1; durusluIslerData[groupKey].dakika += sure;
       }
 
       if (!personelAnaliz[personel]) personelAnaliz[personel] = { isSayisi: 0, eforDk: 0 };
-      personelAnaliz[personel].isSayisi += 1;
-      personelAnaliz[personel].eforDk += sure;
+      personelAnaliz[personel].isSayisi += 1; personelAnaliz[personel].eforDk += sure;
     });
 
     setEkipmanListesi(Array.from(aktifEkipmanlar).sort());
@@ -200,9 +189,7 @@ export default function AdminDashboard() {
         <div className="bg-gray-800 border border-gray-700 p-3 rounded-lg shadow-2xl z-50">
           <p className="font-bold text-white mb-2 border-b border-gray-700 pb-1">{label}</p>
           {payload.map((p: any, i: number) => (
-            <p key={i} style={{color: p.color}} className="text-sm">
-              {p.name}: <span className="font-bold">{p.value}</span>
-            </p>
+            <p key={i} style={{color: p.color}} className="text-sm">{p.name}: <span className="font-bold">{p.value}</span></p>
           ))}
         </div>
       );
@@ -210,19 +197,13 @@ export default function AdminDashboard() {
     return null;
   };
 
+  // Dinamik Tema Seçimi
+  const enerjiTema = filterEnerjiTipi === "Elektrik" ? "yellow" : filterEnerjiTipi === "Doğalgaz" ? "red" : "blue";
+  const enerjiBirim = filterEnerjiTipi === "Elektrik" ? "kWh" : filterEnerjiTipi === "Doğalgaz" ? "m³" : "Ton";
+
   return (
     <>
-      <style dangerouslySetInnerHTML={{__html: `
-        @media print {
-          body { background: white !important; color: black !important; }
-          .no-print { display: none !important; }
-          .print-break { page-break-before: always; }
-          .bg-gray-950, .bg-gray-900 { background: white !important; }
-          .text-white, .text-gray-400 { color: black !important; }
-          .border-gray-800, .border-gray-700 { border-color: #ddd !important; }
-          .shadow-lg { box-shadow: none !important; }
-        }
-      `}} />
+      <style dangerouslySetInnerHTML={{__html: `@media print { body { background: white !important; color: black !important; } .no-print { display: none !important; } .print-break { page-break-before: always; } .bg-gray-950, .bg-gray-900 { background: white !important; } .text-white, .text-gray-400 { color: black !important; } .border-gray-800, .border-gray-700 { border-color: #ddd !important; } .shadow-lg { box-shadow: none !important; } }`}} />
 
       <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8 overflow-x-hidden">
         <div className="max-w-7xl mx-auto">
@@ -232,15 +213,14 @@ export default function AdminDashboard() {
               <img src="/dfulogo.png" alt="Logo" className="h-12 w-auto object-contain bg-white rounded-lg p-1" />
               <div>
                 <h1 className="text-2xl md:text-3xl font-bold">{userRole === "admin" ? "Yönetici Paneli" : "Operatör İzleme Paneli"}</h1>
-                <p className="text-gray-400 mt-1 text-sm md:text-base"><span className="font-bold text-gray-300">DFU Donuk Fırıncılık Ürünleri A.Ş.</span> | İş Zekası (BI) Ekranı</p>
+                <p className="text-gray-400 mt-1 text-sm md:text-base"><span className="font-bold text-gray-300">DFU Donuk Fırıncılık Ürünleri A.Ş.</span> | İş Zekası (BI)</p>
               </div>
             </div>
             
             <div className="flex flex-wrap gap-3 no-print">
               {userRole === "admin" && (
                 <button onClick={() => window.print()} className="bg-white text-gray-900 font-bold px-4 py-2 rounded-lg shadow-lg hover:bg-gray-200 transition flex items-center gap-2 text-sm md:text-base">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
-                  PDF Çıktısı Al
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg> PDF Çıktısı Al
                 </button>
               )}
               <button onClick={() => { auth.signOut(); window.location.href="/"; }} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition text-sm md:text-base">Çıkış Yap</button>
@@ -250,20 +230,36 @@ export default function AdminDashboard() {
           <div className="flex flex-wrap gap-4 mb-6 no-print">
             {userRole === "admin" && (
               <>
-                <Link href="/admin/ekipmanlar" className="bg-blue-600 hover:bg-blue-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm md:text-base">Hat/Ekipman Yönetimi</Link>
-                <Link href="/admin/personel" className="bg-purple-600 hover:bg-purple-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm md:text-base">Personel Onaylama</Link>
-                <Link href="/admin/duyurular" className="bg-yellow-600 hover:bg-yellow-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm md:text-base">Duyuru Yayınla</Link>
+                <Link href="/admin/ekipmanlar" className="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-xl font-semibold text-sm">Hat/Ekipman</Link>
+                <Link href="/admin/personel" className="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-xl font-semibold text-sm">Personel Onay</Link>
+                <Link href="/admin/duyurular" className="bg-yellow-600 hover:bg-yellow-500 px-4 py-2 rounded-xl font-semibold text-sm">Duyuru Yayınla</Link>
               </>
             )}
-            <Link href="/admin/mesai" className="bg-teal-600 hover:bg-teal-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm md:text-base">Mesai Raporları</Link>
-            <Link href="/dashboard/sayac" className="flex items-center gap-2 bg-yellow-600 hover:bg-yellow-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm md:text-base text-white">
-  ⚡ Elektrik Sayaç Okuma
-</Link>
-            <Link href="/admin/is-listesi" className="bg-indigo-600 hover:bg-indigo-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm md:text-base">Tüm İşler Listesi</Link>
-            <Link href="/dashboard" className="bg-orange-600 hover:bg-orange-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold ml-auto text-sm md:text-base">Arıza Bildirim Ekranı ➔</Link>
+            <Link href="/admin/mesai" className="bg-teal-600 hover:bg-teal-500 px-4 py-2 rounded-xl font-semibold text-sm">Mesai Raporları</Link>
+            <Link href="/dashboard/sayac" className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded-xl font-semibold text-sm text-white">⚡ Enerji Sayaç Okuma</Link>
+            <Link href="/admin/is-listesi" className="bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded-xl font-semibold text-sm">Seyir Defteri</Link>
+            <Link href="/dashboard" className="bg-orange-600 hover:bg-orange-500 px-4 py-2 rounded-xl font-semibold ml-auto text-sm">Arıza Ekranı ➔</Link>
           </div>
 
           <div className="bg-gray-900 border border-gray-800 p-4 rounded-2xl mb-8 flex flex-wrap gap-4 items-end no-print">
+            {/* ENERJİ TÜRÜ FİLTRESİ (YENİ) */}
+            <div className="flex-1 min-w-[120px]">
+              <label className="block text-xs text-white mb-1 font-bold">Enerji Türü</label>
+              <select value={filterEnerjiTipi} onChange={(e) => {setFilterEnerjiTipi(e.target.value); setFilterSayac("");}} className="w-full bg-gray-800 border-white rounded-lg p-2 text-sm text-white font-bold">
+                <option value="Elektrik">⚡ Elektrik</option>
+                <option value="Doğalgaz">🔥 Doğalgaz</option>
+                <option value="Su">💧 Su</option>
+              </select>
+            </div>
+
+            <div className="flex-1 min-w-[120px]">
+              <label className={`block text-xs text-${enerjiTema}-400 mb-1 font-bold`}>Sayaç Seçimi</label>
+              <select value={filterSayac} onChange={(e) => setFilterSayac(e.target.value)} className={`w-full bg-gray-800 border-${enerjiTema}-700 text-${enerjiTema}-400 rounded-lg p-2 text-sm focus:border-${enerjiTema}-500`}>
+                <option value="">Tüm Sayaçlar (Toplam)</option>
+                {sayacListesi.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+
             <div className="flex-1 min-w-[120px]">
               <label className="block text-xs text-gray-400 mb-1">Yıl</label>
               <select value={filterYil} onChange={(e) => setFilterYil(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-lg p-2 text-sm"><option value="">Tümü</option>{yilListesi.map(y => <option key={y} value={y}>{y}</option>)}</select>
@@ -273,30 +269,46 @@ export default function AdminDashboard() {
               <select value={filterAy} onChange={(e) => setFilterAy(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-lg p-2 text-sm"><option value="">Tümü</option><option value="1">Ocak</option><option value="2">Şubat</option><option value="3">Mart</option><option value="4">Nisan</option><option value="5">Mayıs</option><option value="6">Haziran</option><option value="7">Temmuz</option><option value="8">Ağustos</option><option value="9">Eylül</option><option value="10">Ekim</option><option value="11">Kasım</option><option value="12">Aralık</option></select>
             </div>
             <div className="flex-1 min-w-[120px]">
-              <label className="block text-xs text-gray-400 mb-1">Üretim Hattı</label>
-              <select value={filterHat} onChange={(e) => { setFilterHat(e.target.value); setFilterEkipman(""); }} className="w-full bg-gray-800 border-gray-700 rounded-lg p-2 text-sm"><option value="">Tüm Hatlar</option>{hatListesi.map(h => <option key={h} value={h}>{h}</option>)}</select>
-            </div>
-            <div className="flex-1 min-w-[120px]">
-              <label className="block text-xs text-gray-400 mb-1">Ekipman</label>
-              <select value={filterEkipman} onChange={(e) => setFilterEkipman(e.target.value)} disabled={!filterHat} className="w-full bg-gray-800 border-gray-700 rounded-lg p-2 text-sm disabled:opacity-50"><option value="">{filterHat ? "Tüm Ekipmanlar" : "Önce Hat Seçin"}</option>{ekipmanListesi.map(e => <option key={e} value={e}>{e}</option>)}</select>
+              <label className="block text-xs text-gray-400 mb-1">Hat</label>
+              <select value={filterHat} onChange={(e) => { setFilterHat(e.target.value); setFilterEkipman(""); }} className="w-full bg-gray-800 border-gray-700 rounded-lg p-2 text-sm"><option value="">Tümü</option>{hatListesi.map(h => <option key={h} value={h}>{h}</option>)}</select>
             </div>
             
-            {/* YENİ: SAYAÇ FİLTRESİ */}
-            <div className="flex-1 min-w-[120px]">
-              <label className="block text-xs text-yellow-400 mb-1 font-bold">Sayaç Grafiği</label>
-              <select value={filterSayac} onChange={(e) => setFilterSayac(e.target.value)} className="w-full bg-gray-800 border-yellow-700 text-yellow-400 rounded-lg p-2 text-sm focus:border-yellow-500">
-                <option value="">Tüm Sayaçlar (Toplam)</option>
-                {sayacListesi.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-
             <button onClick={filtreleriTemizle} className="bg-red-900/40 text-red-400 p-2 rounded-lg text-sm h-9">Temizle</button>
           </div>
 
-          <div className="hidden print:block text-center mb-8 border-b-2 border-black pb-4">
-            <h2 className="text-2xl font-bold text-black">Bakım Yönetim Sistemi Özet Raporu</h2>
-            <p className="text-gray-600">Rapor Kapsamı: {filterYil || "Tüm Yıllar"} - {filterAy ? `${filterAy}. Ay` : "Tüm Aylar"} | Hat: {filterHat || "Tümü"}</p>
-            <p className="text-sm text-gray-500 mt-1">Oluşturulma Tarihi: {new Date().toLocaleString('tr-TR')}</p>
+          {/* DİNAMİK ENERJİ TÜKETİM GRAFİĞİ */}
+          <div className={`bg-gray-900 border border-gray-800 p-4 md:p-6 rounded-2xl mb-10 shadow-lg border-b-4 border-b-${enerjiTema}-500`}>
+            <h2 className={`text-lg font-bold mb-6 text-${enerjiTema}-400 flex items-center gap-2 print:text-black`}>
+              {filterEnerjiTipi} Aylık Tüketim Grafiği ({filterSayac ? filterSayac : "Tüm Sayaçlar Toplamı"})
+            </h2>
+            {grafikEnerjiTuketim.length === 0 ? (
+              <div className="h-48 flex justify-center items-center text-gray-500 border border-dashed border-gray-800 rounded-xl">Tüketim verisi bulunamadı. Lütfen peş peşe en az 2 gün {filterEnerjiTipi} endeksi girin.</div>
+            ) : (
+              <div className="h-72 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={grafikEnerjiTuketim} margin={{ top: 25, right: 5, left: -10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="ay" tick={{fontSize: 12, fill: '#9CA3AF'}} />
+                    <YAxis tick={{fontSize: 12, fill: '#9CA3AF'}} />
+                    <Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} />
+                    <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                    <Bar 
+                      name={`Tüketim (${enerjiBirim})`} 
+                      dataKey="tuketim" 
+                      fill={filterEnerjiTipi === "Elektrik" ? "#EAB308" : filterEnerjiTipi === "Doğalgaz" ? "#EF4444" : "#3B82F6"} 
+                      maxBarSize={60}
+                    >
+                      <LabelList 
+                        dataKey="tuketim" 
+                        position="top" 
+                        fill={filterEnerjiTipi === "Elektrik" ? "#EAB308" : filterEnerjiTipi === "Doğalgaz" ? "#EF4444" : "#3B82F6"} 
+                        fontSize={12} fontWeight="bold" 
+                      />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
@@ -316,33 +328,7 @@ export default function AdminDashboard() {
             )}
           </div>
 
-          {/* ELEKTRİK TÜKETİM GRAFİĞİ */}
-          <div className="bg-gray-900 border border-gray-800 p-4 md:p-6 rounded-2xl mb-10 shadow-lg border-b-4 border-b-yellow-500">
-            <h2 className="text-lg font-bold mb-6 text-yellow-400 flex items-center gap-2 print:text-black">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-              Elektrik Aylık Tüketim Grafiği ({filterSayac ? filterSayac : "Tüm Sayaçlar Toplamı"})
-            </h2>
-            {grafikElektrikTuketim.length === 0 ? (
-              <div className="h-48 flex justify-center items-center text-gray-500 border border-dashed border-gray-800 rounded-xl">Hesaplanmış tüketim verisi bulunamadı. Lütfen peş peşe en az 2 gün sayaç endeksi girin.</div>
-            ) : (
-              <div className="h-72 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={grafikElektrikTuketim} margin={{ top: 25, right: 5, left: -10, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="ay" tick={{fontSize: 12, fill: '#9CA3AF'}} />
-                    <YAxis tick={{fontSize: 12, fill: '#9CA3AF'}} />
-                    <Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} />
-                    <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                    <Bar name="Tüketim (Birim)" dataKey="tuketim" fill="#EAB308" maxBarSize={60}>
-                      <LabelList dataKey="tuketim" position="top" fill="#EAB308" fontSize={12} fontWeight="bold" />
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </div>
-
-          {/* BAKIM İŞLERİ GRAFİKLERİ */}
+          {/* Arıza Grafikleri */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
             <div className="bg-gray-900 border border-gray-800 p-4 md:p-6 rounded-2xl">
               <h2 className="text-lg font-bold mb-6 text-green-400 print:text-black">Yapılan İşler</h2>
@@ -355,12 +341,8 @@ export default function AdminDashboard() {
                       <YAxis tick={{fontSize: 10, fill: '#9CA3AF'}} />
                       <Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} trigger="hover" />
                       <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '15px' }} />
-                      <Bar name="İş Adedi" dataKey="adet" fill="#10B981" maxBarSize={40}>
-                        <LabelList dataKey="adet" position="top" fill="#10B981" fontSize={11} fontWeight="bold" />
-                      </Bar>
-                      <Bar name="Süre (Dk)" dataKey="dakika" fill="#3B82F6" maxBarSize={40}>
-                        <LabelList dataKey="dakika" position="top" fill="#3B82F6" fontSize={11} fontWeight="bold" />
-                      </Bar>
+                      <Bar name="İş Adedi" dataKey="adet" fill="#10B981" maxBarSize={40}><LabelList dataKey="adet" position="top" fill="#10B981" fontSize={11} fontWeight="bold" /></Bar>
+                      <Bar name="Süre (Dk)" dataKey="dakika" fill="#3B82F6" maxBarSize={40}><LabelList dataKey="dakika" position="top" fill="#3B82F6" fontSize={11} fontWeight="bold" /></Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -378,12 +360,8 @@ export default function AdminDashboard() {
                       <YAxis tick={{fontSize: 10, fill: '#9CA3AF'}} />
                       <Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} trigger="hover" />
                       <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '15px' }} />
-                      <Bar name="Duruş Adedi" dataKey="adet" fill="#F59E0B" maxBarSize={40}>
-                        <LabelList dataKey="adet" position="top" fill="#F59E0B" fontSize={11} fontWeight="bold" />
-                      </Bar>
-                      <Bar name="Süre (Dk)" dataKey="dakika" fill="#EF4444" maxBarSize={40}>
-                        <LabelList dataKey="dakika" position="top" fill="#EF4444" fontSize={11} fontWeight="bold" />
-                      </Bar>
+                      <Bar name="Duruş Adedi" dataKey="adet" fill="#F59E0B" maxBarSize={40}><LabelList dataKey="adet" position="top" fill="#F59E0B" fontSize={11} fontWeight="bold" /></Bar>
+                      <Bar name="Süre (Dk)" dataKey="dakika" fill="#EF4444" maxBarSize={40}><LabelList dataKey="dakika" position="top" fill="#EF4444" fontSize={11} fontWeight="bold" /></Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </div>

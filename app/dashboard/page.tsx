@@ -185,13 +185,15 @@ export default function PersonelDashboard() {
           </div>
         </div>
 
-                <div className="mb-6 flex justify-end gap-4">
-          <a href="/admin/is-listesi" className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg flex items-center gap-2">
-  📋 Yapılan İşler
-</a>
-          <a href="/dashboard/mesai" className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg flex items-center gap-2"> <a href="/dashboard/sayac" className="bg-yellow-600 hover:bg-yellow-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg flex items-center gap-2">
-  ⚡ Elektrik Sayaç Okuma
-</a>
+                       {/* MOBİL UYUMLU HIZLI ERİŞİM BUTONLARI */}
+        <div className="mb-6 flex flex-wrap justify-center md:justify-end gap-3">
+          <a href="/dashboard/sayac" className="bg-yellow-600 hover:bg-yellow-500 text-white px-4 md:px-6 py-2 md:py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 text-sm md:text-base w-full md:w-auto justify-center">
+            ⚡ Elektrik Sayaç Okuma
+          </a>
+          <a href="/admin/is-listesi" className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 md:px-6 py-2 md:py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 text-sm md:text-base w-full md:w-auto justify-center">
+            📋 Yapılan İşler
+          </a>
+          <a href="/dashboard/mesai" className="bg-blue-600 hover:bg-blue-500 text-white px-4 md:px-6 py-2 md:py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 text-sm md:text-base w-full md:w-auto justify-center">
             ⏰ Fazla Mesai Girişi Yap
           </a>
         </div>

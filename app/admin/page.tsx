@@ -82,6 +82,7 @@ export default function AdminDashboard() {
     } catch (error) { console.error(error); }
   };
 
+  // ENERJİ TÜKETİM (FARK) HESAPLAMASI
   useEffect(() => {
     if (rawMeterLogs.length === 0) return;
 
@@ -125,8 +126,10 @@ export default function AdminDashboard() {
   }, [rawMeterLogs, filterSayac, filterEnerjiTipi]);
 
 
+  // BAKIM İŞLERİ VE ÇOKLU PERSONEL PERFORMANS HESAPLAMALARI
   useEffect(() => {
     if (rawLogs.length === 0) return;
+
     let toplamDurusDk = 0; let toplamIsAdedi = 0;
     const tumIslerData: Record<string, { adet: number, dakika: number }> = {};
     const durusluIslerData: Record<string, { adet: number, dakika: number }> = {};
@@ -142,25 +145,38 @@ export default function AdminDashboard() {
       if (filterAy && ay !== filterAy) return;
       if (filterHat && data.hatAdi !== filterHat) return;
       if (filterEkipman && data.ekipmanAdi !== filterEkipman) return;
+
       if (data.ekipmanAdi) aktifEkipmanlar.add(data.ekipmanAdi);
 
       const groupKey = filterHat ? (data.ekipmanAdi || "Belirsiz") : (data.hatAdi || "Belirsiz");
-      const personel = data.bildirenKisi || "Bilinmiyor";
       const sure = Number(data.toplamSureDakika) || 0;
       
       toplamIsAdedi++;
 
+      // Hat/Ekipman Bazlı Grafik Verileri
       if (!tumIslerData[groupKey]) tumIslerData[groupKey] = { adet: 0, dakika: 0 };
-      tumIslerData[groupKey].adet += 1; tumIslerData[groupKey].dakika += sure;
+      tumIslerData[groupKey].adet += 1; 
+      tumIslerData[groupKey].dakika += sure;
 
       if (data.isDuruslu) {
         toplamDurusDk += sure;
         if (!durusluIslerData[groupKey]) durusluIslerData[groupKey] = { adet: 0, dakika: 0 };
-        durusluIslerData[groupKey].adet += 1; durusluIslerData[groupKey].dakika += sure;
+        durusluIslerData[groupKey].adet += 1; 
+        durusluIslerData[groupKey].dakika += sure;
       }
 
-      if (!personelAnaliz[personel]) personelAnaliz[personel] = { isSayisi: 0, eforDk: 0 };
-      personelAnaliz[personel].isSayisi += 1; personelAnaliz[personel].eforDk += sure;
+      // YENİ: ÇOKLU PERSONEL PERFORMANS DAĞITIMI
+      const isEkibi = Array.isArray(data.isiYapanlar) && data.isiYapanlar.length > 0 
+        ? data.isiYapanlar 
+        : [data.bildirenKisi || "Bilinmiyor"];
+
+      isEkibi.forEach((personelIsmi: string) => {
+        if (!personelAnaliz[personelIsmi]) {
+          personelAnaliz[personelIsmi] = { isSayisi: 0, eforDk: 0 };
+        }
+        personelAnaliz[personelIsmi].isSayisi += 1;
+        personelAnaliz[personelIsmi].eforDk += sure;
+      });
     });
 
     setEkipmanListesi(Array.from(aktifEkipmanlar).sort());
@@ -169,9 +185,13 @@ export default function AdminDashboard() {
 
     setGrafikTumIslerVerisi(Object.keys(tumIslerData).map(k => ({ isim: k, ...tumIslerData[k] })).sort((a, b) => b.adet - a.adet));
     setGrafikDurusVerisi(Object.keys(durusluIslerData).map(k => ({ isim: k, ...durusluIslerData[k] })).sort((a, b) => b.dakika - a.dakika));
+    
+    // Personeli en çok iş yapandan en aza doğru sıralar
     setPersonelPerformans(Object.keys(personelAnaliz).map(k => ({ isim: k, ...personelAnaliz[k] })).sort((a, b) => b.isSayisi - a.isSayisi));
 
   }, [rawLogs, filterYil, filterAy, filterHat, filterEkipman]);
+
+  const filtreleriTemizle = () => { setFilterYil(""); setFilterAy(""); setFilterHat(""); setFilterEkipman(""); setFilterSayac(""); };
 
   if (loading) return <div className="min-h-screen bg-gray-950 text-white flex justify-center items-center">Sistem yükleniyor...</div>;
   if (!isAdmin) return <div className="min-h-screen bg-gray-950 text-red-500 flex justify-center items-center">Yetkisiz Erişim!</div>;
@@ -200,8 +220,7 @@ export default function AdminDashboard() {
       <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8 overflow-x-hidden">
         <div className="max-w-7xl mx-auto">
           
-          {/* HEADER */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-gray-800 pb-5 gap-4">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 border-b border-gray-800 pb-5 gap-4">
             <div className="flex items-center gap-4">
               <img src="/dfulogo.png" alt="Logo" className="h-12 w-auto object-contain bg-white rounded-lg p-1" />
               <div>
@@ -209,6 +228,7 @@ export default function AdminDashboard() {
                 <p className="text-gray-400 mt-1 text-sm md:text-base"><span className="font-bold text-gray-300">DFU Donuk Fırıncılık Ürünleri A.Ş.</span> | İş Zekası (BI)</p>
               </div>
             </div>
+            
             <div className="flex flex-wrap gap-3 no-print">
               {userRole === "admin" && (
                 <button onClick={() => window.print()} className="bg-white text-gray-900 font-bold px-4 py-2 rounded-lg shadow-lg hover:bg-gray-200 transition flex items-center gap-2 text-sm md:text-base">
@@ -219,28 +239,26 @@ export default function AdminDashboard() {
             </div>
           </div>
 
+          <div className="flex flex-wrap gap-4 mb-6 no-print">
+            {userRole === "admin" && (
+              <>
+                <Link href="/admin/ekipmanlar" className="bg-blue-600 hover:bg-blue-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm md:text-base">Hat/Ekipman</Link>
+                <Link href="/admin/personel" className="bg-purple-600 hover:bg-purple-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm md:text-base">Personel Onay</Link>
+                <Link href="/admin/duyurular" className="bg-yellow-600 hover:bg-yellow-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm md:text-base">Duyuru Yayınla</Link>
+              </>
+            )}
+            <Link href="/admin/mesai" className="bg-teal-600 hover:bg-teal-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm md:text-base">Mesai Raporları</Link>
+            <Link href="/dashboard/sayac" className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm md:text-base text-white">⚡ Enerji Sayaç Okuma</Link>
+            <Link href="/admin/is-listesi" className="bg-indigo-600 hover:bg-indigo-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm md:text-base">Yapılan İşler</Link>
+            <Link href="/dashboard" className="bg-orange-600 hover:bg-orange-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold ml-auto text-sm md:text-base">Arıza Ekranı ➔</Link>
+          </div>
+
           <div className="hidden print:block text-center mb-8 border-b-2 border-black pb-4">
             <h2 className="text-2xl font-bold text-black">Bakım Yönetim Sistemi Özet Raporu</h2>
             <p className="text-gray-600">Rapor Kapsamı: {filterYil || "Tüm Yıllar"} - {filterAy ? `${filterAy}. Ay` : "Tüm Aylar"} | Hat: {filterHat || "Tümü"}</p>
             <p className="text-sm text-gray-500 mt-1">Oluşturulma Tarihi: {new Date().toLocaleString('tr-TR')}</p>
           </div>
 
-          {/* HIZLI ERİŞİM BUTONLARI */}
-          <div className="flex flex-wrap gap-4 mb-10 no-print">
-            {userRole === "admin" && (
-              <>
-                <Link href="/admin/ekipmanlar" className="bg-blue-600 hover:bg-blue-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm">Hat/Ekipman</Link>
-                <Link href="/admin/personel" className="bg-purple-600 hover:bg-purple-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm">Personel Onay</Link>
-                <Link href="/admin/duyurular" className="bg-yellow-600 hover:bg-yellow-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm">Duyuru Yayınla</Link>
-              </>
-            )}
-            <Link href="/admin/mesai" className="bg-teal-600 hover:bg-teal-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm">Mesai Raporları</Link>
-            <Link href="/dashboard/sayac" className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm text-white">⚡ Enerji Sayaç Okuma</Link>
-           <Link href="/admin/is-listesi" className="bg-indigo-600 hover:bg-indigo-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm">Yapılan İşler</Link>
-            <Link href="/dashboard" className="bg-orange-600 hover:bg-orange-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold ml-auto text-sm">Arıza Ekranı ➔</Link>
-          </div>
-
-          {/* YENİ SIRA: 1. KPI KARTLARI */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
             <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl">
               <h3 className="text-gray-400 text-sm font-semibold mb-2 print:text-black">Filtrelenen İş Emri / Arıza</h3>
@@ -258,27 +276,22 @@ export default function AdminDashboard() {
             )}
           </div>
 
-          {/* YENİ SIRA: 2. ENERJİ MODÜLÜ (Filtre + Grafik) */}
           <div className="bg-gray-900 border border-yellow-700/50 p-5 rounded-2xl mb-6 flex flex-wrap gap-4 items-end no-print shadow-[0_0_15px_rgba(234,179,8,0.1)]">
             <div className="w-full mb-1 border-b border-gray-800 pb-2">
               <h3 className="text-yellow-500 font-bold flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                Enerji Tüketim Filtreleri
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg> Enerji Tüketim Filtreleri
               </h3>
             </div>
             <div className="flex-1 min-w-[120px]">
               <label className="block text-xs text-white mb-1 font-bold">Enerji Türü</label>
               <select value={filterEnerjiTipi} onChange={(e) => {setFilterEnerjiTipi(e.target.value); setFilterSayac("");}} className="w-full bg-gray-800 border-white rounded-lg p-2 text-sm text-white font-bold">
-                <option value="Elektrik">⚡ Elektrik</option>
-                <option value="Doğalgaz">🔥 Doğalgaz</option>
-                <option value="Su">💧 Su</option>
+                <option value="Elektrik">⚡ Elektrik</option><option value="Doğalgaz">🔥 Doğalgaz</option><option value="Su">💧 Su</option>
               </select>
             </div>
             <div className="flex-1 min-w-[120px]">
               <label className={`block text-xs text-${enerjiTema}-400 mb-1 font-bold`}>Sayaç Seçimi</label>
               <select value={filterSayac} onChange={(e) => setFilterSayac(e.target.value)} className={`w-full bg-gray-800 border-gray-700 text-white rounded-lg p-2 text-sm focus:border-yellow-500`}>
-                <option value="">Tüm Sayaçlar (Toplam)</option>
-                {sayacListesi.map(s => <option key={s} value={s}>{s}</option>)}
+                <option value="">Tüm Sayaçlar (Toplam)</option>{sayacListesi.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
             <button onClick={() => {setFilterEnerjiTipi("Elektrik"); setFilterSayac("");}} className="bg-gray-800 hover:bg-gray-700 border border-gray-600 text-gray-300 px-4 py-2 rounded-lg text-sm h-9">Enerjiyi Sıfırla</button>
@@ -289,7 +302,7 @@ export default function AdminDashboard() {
               {filterEnerjiTipi} Aylık Tüketim Grafiği ({filterSayac ? filterSayac : "Tüm Sayaçlar Toplamı"})
             </h2>
             {grafikEnerjiTuketim.length === 0 ? (
-              <div className="h-48 flex justify-center items-center text-gray-500 border border-dashed border-gray-800 rounded-xl">Tüketim verisi bulunamadı.</div>
+              <div className="h-48 flex justify-center items-center text-gray-500 border border-dashed border-gray-800 rounded-xl">Tüketim verisi bulunamadı. Lütfen peş peşe en az 2 gün {filterEnerjiTipi} endeksi girin.</div>
             ) : (
               <div className="h-72 w-full">
                 <ResponsiveContainer width="100%" height="100%">
@@ -308,12 +321,10 @@ export default function AdminDashboard() {
             )}
           </div>
 
-          {/* YENİ SIRA: 3. BAKIM MODÜLÜ (Filtre + Grafikler) */}
           <div className="bg-gray-900 border border-blue-700/50 p-5 rounded-2xl mb-6 flex flex-wrap gap-4 items-end no-print shadow-[0_0_15px_rgba(59,130,246,0.1)]">
             <div className="w-full mb-1 border-b border-gray-800 pb-2">
               <h3 className="text-blue-500 font-bold flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
-                Arıza ve Bakım Filtreleri
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg> Arıza ve Bakım Filtreleri
               </h3>
             </div>
             <div className="flex-1 min-w-[120px]">

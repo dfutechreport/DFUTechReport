@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs, doc, getDoc, updateDoc, query, where, orderBy } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, updateDoc, query, where, orderBy, deleteDoc } from "firebase/firestore";
 import { auth, db } from "../../../lib/firebase"; 
 import Link from "next/link";
 import { onAuthStateChanged } from "firebase/auth";
@@ -14,7 +14,6 @@ export default function AktifIslerListesi() {
 
   const fetchOrders = async () => {
     try {
-      // Sadece "Açık" (Tamamlanmamış) olan iş emirlerini getir
       const q = query(collection(db, "work_orders"), where("durum", "==", "Açık"));
       const snap = await getDocs(q);
       const data = snap.docs.map(document => {
@@ -25,7 +24,6 @@ export default function AktifIslerListesi() {
           gercekZaman: d.kayitTarihi ? d.kayitTarihi.toDate().getTime() : 0
         };
       });
-      // En acil olan (En eski veya en yeni) sıralaması - En yeni en üstte
       setOrders(data.sort((a, b) => b.gercekZaman - a.gercekZaman));
     } catch (error) { console.error(error); } finally { setLoading(false); }
   };
@@ -45,22 +43,25 @@ export default function AktifIslerListesi() {
     return () => unsubscribe();
   }, []);
 
+  // YENİ: İŞİ TAMAMLAYIP FORMA YÖNLENDİRME
   const handleIsiTamamla = async (islem: any) => {
     if (!window.confirm("Bu işi bitirdiğinizi onaylıyor musunuz? Onayladıktan sonra süresini girmek için Arıza Formu otomatik olarak açılacaktır.")) return;
 
     try {
-      // 1. İş Emrini Veritabanında "Kapalı" Yap
       await updateDoc(doc(db, "work_orders", islem.id), {
         durum: "Kapalı",
         tamamlayanKisi: userName,
         tamamlanmaTarihi: new Date()
       });
-
-      // 2. Teknisyeni Arıza Ekranına (Forma) Verilerle Birlikte Fırlat
       window.location.href = `/dashboard?hat=${encodeURIComponent(islem.hatAdi)}&ekipman=${encodeURIComponent(islem.ekipmanAdi)}&sorun=${encodeURIComponent(islem.sorunTipi)}&duruslu=${islem.isDuruslu ? 'true' : 'false'}&aciklama=${encodeURIComponent(islem.aciklama)}`;
     } catch (error) {
       alert("Hata oluştu.");
     }
+  };
+
+  const handleSil = async (id: string) => {
+    if (!window.confirm("Bu iş emrini iptal edip SİLMEK istediğinize emin misiniz?")) return;
+    try { await deleteDoc(doc(db, "work_orders", id)); fetchOrders(); } catch (error) { alert("Hata"); }
   };
 
   if (loading) return <div className="min-h-screen bg-gray-950 flex justify-center items-center text-white">Yükleniyor...</div>;
@@ -115,6 +116,10 @@ export default function AktifIslerListesi() {
                       >
                         ✅ İşi Tamamla
                       </button>
+                      {/* ADMİNLER YANLIŞ AÇILMIŞ BİR İŞ EMRİNİ DİREKT SİLEBİLİR */}
+                      {userRole === "admin" && (
+                         <button onClick={() => handleSil(o.id)} className="bg-red-900/50 hover:bg-red-600 text-red-400 hover:text-white text-xs px-3 py-2 rounded border border-red-800/50">Sil</button>
+                      )}
                     </td>
                   </tr>
                 ))}

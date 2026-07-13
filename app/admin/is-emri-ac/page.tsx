@@ -18,9 +18,18 @@ export default function IsEmriAc() {
   const [ekipmanAdi, setEkipmanAdi] = useState("");
   const [sorunTipi, setSorunTipi] = useState("");
   const [aciklama, setAciklama] = useState("");
-  
-  // YENİ: Duruş State'i
   const [isDuruslu, setIsDuruslu] = useState(false);
+
+  // YENİ: Sistemin Otomatik Yakaladığı Kilitli Saat State'leri
+  const [sistemSaati, setSistemSaati] = useState<Date | null>(null);
+  const [gosterilenSaatStr, setGosterilenSaatStr] = useState("");
+
+  // Sayfa açıldığında saati 1 kez yakala ve dondur
+  useEffect(() => {
+    const suAn = new Date();
+    setSistemSaati(suAn);
+    setGosterilenSaatStr(suAn.toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' }));
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -57,15 +66,14 @@ export default function IsEmriAc() {
         ekipmanAdi, 
         sorunTipi, 
         aciklama,
-        isDuruslu, // YENİ: Duruş bilgisini veritabanına at
+        isDuruslu,
         bildirenKisi: userName,
         durum: "Açık", 
-        kayitTarihi: new Date(),
+        kayitTarihi: sistemSaati, // Kilitlenen sistem saatini DB'ye at
         tamamlayanKisi: "",
         tamamlanmaTarihi: null
       });
       alert("İş Emri başarıyla açıldı! Teknisyenlerin ekranına yansıdı.");
-      setHatAdi(""); setEkipmanAdi(""); setSorunTipi(""); setAciklama(""); setSeciliHat(""); setIsDuruslu(false);
       window.location.href = "/admin"; 
     } catch (error) { alert("Hata oluştu."); } finally { setIsSubmitting(false); }
   };
@@ -85,16 +93,28 @@ export default function IsEmriAc() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          
+          {/* YENİ: KİLİTLİ SİSTEM SAATİ */}
+          <div className="bg-gray-800/50 p-4 rounded-xl border border-gray-700">
+            <label className="block text-sm font-bold text-gray-400 mb-2">Sistem Kayıt Saati (Otomatik Alındı - Değiştirilemez)</label>
+            <input 
+              type="text" 
+              value={gosterilenSaatStr} 
+              disabled 
+              className="w-full bg-gray-900 border border-gray-600 rounded-lg p-3 text-red-400 font-bold opacity-70 cursor-not-allowed text-center text-lg tracking-wider"
+            />
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm text-gray-400 mb-1">Sorun Yaşanan Hat</label>
-              <select value={hatAdi} onChange={(e) => { setHatAdi(e.target.value); setSeciliHat(e.target.value); setEkipmanAdi(""); }} className="w-full bg-gray-800 border-gray-700 rounded-lg p-3 text-white">
+              <select value={hatAdi} onChange={(e) => { setHatAdi(e.target.value); setSeciliHat(e.target.value); setEkipmanAdi(""); }} className="w-full bg-gray-800 border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-red-500">
                 <option value="">-- Hat Seçiniz --</option>{benzersizHatlar.map(h => <option key={h} value={h}>{h}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-sm text-gray-400 mb-1">Arızalı Ekipman</label>
-              <select value={ekipmanAdi} onChange={(e) => setEkipmanAdi(e.target.value)} disabled={!seciliHat} className="w-full bg-gray-800 border-gray-700 rounded-lg p-3 text-white disabled:opacity-50">
+              <select value={ekipmanAdi} onChange={(e) => setEkipmanAdi(e.target.value)} disabled={!seciliHat} className="w-full bg-gray-800 border-gray-700 rounded-lg p-3 text-white disabled:opacity-50 focus:outline-none focus:border-red-500">
                 <option value="">{seciliHat ? "-- Ekipman Seçiniz --" : "-- Önce Hat Seçiniz --"}</option>
                 {filtrelenmisEkipmanlar.map(e => <option key={e.id} value={e.ekipmanAdi}>{e.ekipmanAdi}</option>)}
               </select>
@@ -104,12 +124,11 @@ export default function IsEmriAc() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm text-gray-400 mb-1">Sorun Tipi</label>
-              <select value={sorunTipi} onChange={(e) => setSorunTipi(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-lg p-3 text-white">
+              <select value={sorunTipi} onChange={(e) => setSorunTipi(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-red-500">
                 <option value="">-- Seçiniz --</option><option value="Mekanik">Mekanik</option><option value="Elektrik">Elektrik</option><option value="Otomasyon">Otomasyon</option><option value="Diğer">Diğer</option>
               </select>
             </div>
 
-            {/* YENİ: Duruş Seçimi (Switch) */}
             <div className="flex flex-col justify-center">
               <label className="block text-sm font-medium text-gray-400 mb-3">Hat Duruşu Var Mı?</label>
               <label className="relative inline-flex items-center cursor-pointer">
@@ -124,10 +143,10 @@ export default function IsEmriAc() {
 
           <div>
             <label className="block text-sm text-gray-400 mb-1">Sorunun Detayı (Ne oldu?)</label>
-            <textarea value={aciklama} onChange={(e) => setAciklama(e.target.value)} rows={4} placeholder="Lütfen teknisyenin anlayacağı şekilde arızayı tarif ediniz..." className="w-full bg-gray-800 border-gray-700 rounded-lg p-3 text-white" />
+            <textarea value={aciklama} onChange={(e) => setAciklama(e.target.value)} rows={4} placeholder="Lütfen teknisyenin anlayacağı şekilde arızayı tarif ediniz..." className="w-full bg-gray-800 border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-red-500" />
           </div>
 
-          <button type="submit" disabled={isSubmitting} className="w-full bg-red-600 hover:bg-red-500 font-bold py-4 rounded-xl shadow-lg disabled:opacity-50 text-white">
+          <button type="submit" disabled={isSubmitting} className="w-full bg-red-600 hover:bg-red-500 font-bold py-4 rounded-xl shadow-lg disabled:opacity-50 text-white transition-all">
             {isSubmitting ? "Sisteme İletiliyor..." : "İş Emrini Gönder (Alarm Ver)"}
           </button>
         </form>

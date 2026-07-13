@@ -215,10 +215,16 @@ function DashboardIcerik() {
         </div>
 
         {/* HIZLI ERİŞİM BUTONLARI */}
-        <div className="mb-6 flex flex-wrap justify-center md:justify-end gap-3">
-          <a href="/dashboard/sayac" className="bg-yellow-600 hover:bg-yellow-500 text-white px-4 md:px-6 py-2 md:py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 text-sm md:text-base w-full md:w-auto justify-center">⚡ Elektrik Sayaç Okuma</a>
+         <div className="mb-6 flex flex-wrap justify-center md:justify-end gap-3">
+          {/* YENİ EKLENEN: TÜM AKTİF İŞLER BUTONU */}
+          <a href="/admin/aktif-isler" className="bg-red-900/60 hover:bg-red-600 text-red-100 border border-red-500/50 px-4 md:px-6 py-2 md:py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 text-sm md:text-base w-full md:w-auto justify-center transition">
+            <span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span></span>
+            Tüm Aktif İşleri Gör
+          </a>
+          
+          <a href="/dashboard/sayac" className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 md:px-6 py-2 md:py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 text-sm md:text-base w-full md:w-auto justify-center">⚡ Sayaç Okuma</a>
           <a href="/admin/is-listesi" className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 md:px-6 py-2 md:py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 text-sm md:text-base w-full md:w-auto justify-center">📋 Yapılan İşler</a>
-          <a href="/dashboard/mesai" className="bg-blue-600 hover:bg-blue-500 text-white px-4 md:px-6 py-2 md:py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 text-sm md:text-base w-full md:w-auto justify-center">⏰ Fazla Mesai Girişi Yap</a>
+          <a href="/dashboard/mesai" className="bg-teal-600 hover:bg-teal-500 text-white px-4 md:px-6 py-2 md:py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 text-sm md:text-base w-full md:w-auto justify-center">⏰ Fazla Mesai Girişi Yap</a>
         </div>
 
         <div className={`bg-gray-900 border p-6 md:p-8 rounded-2xl shadow-2xl transition-all ${isAutoFilled ? 'border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.3)]' : 'border-gray-800'}`}>

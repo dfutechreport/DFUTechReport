@@ -327,10 +327,16 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-4 mb-6 no-print">
+                   <div className="flex flex-wrap gap-4 mb-6 no-print">
             {(userRole === "admin" || userRole === "uretim") && (
               <Link href="/admin/is-emri-ac" className="bg-red-600 hover:bg-red-500 px-4 md:px-6 py-2 md:py-3 rounded-xl text-sm md:text-base font-bold shadow-[0_0_15px_rgba(220,38,38,0.5)] flex items-center gap-2">🚨 Yeni İş Emri Aç</Link>
             )}
+            {/* YENİ EKLENEN BUTON */}
+            <Link href="/admin/aktif-isler" className="bg-red-900/60 hover:bg-red-600 text-red-100 border border-red-500/50 px-4 md:px-6 py-2 md:py-3 rounded-xl text-sm md:text-base font-bold flex items-center gap-2">
+              <span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span></span>
+              Tüm Aktif İşleri Gör
+            </Link>
+            
             <Link href="/admin/tamamlanan-isler" className="bg-gray-700 hover:bg-gray-600 px-4 md:px-6 py-2 md:py-3 rounded-xl text-sm md:text-base font-semibold border border-gray-500">Tamamlanan İşler Arşivi</Link>
 
             {userRole === "admin" && (

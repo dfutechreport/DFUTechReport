@@ -9,7 +9,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 
 const arizaSemasi = yup.object().shape({
-  vardiya: yup.string().required("Vardiya seçimi zorunludur!"), // YENİ
+  vardiya: yup.string().required("Vardiya seçimi zorunludur!"),
   hatAdi: yup.string().required("Lütfen üretim hattını seçin!"),
   ekipmanAdi: yup.string().required("Lütfen arızalı ekipmanı seçin!"),
   sorunTipi: yup.string().required("Sorun tipini belirtin!"),
@@ -33,9 +33,9 @@ export default function PersonelDashboard() {
   const [userName, setUserName] = useState("");
   
   const [assets, setAssets] = useState<Asset[]>([]);
-  const [personelListesi, setPersonelListesi] = useState<UserInfo[]>([]); // YENİ: Sistemdeki onaylı personeller
-  const [seciliPersoneller, setSeciliPersoneller] = useState<string[]>([]); // YENİ: İşi yapan seçili kişiler
-  const [dropdownAcik, setDropdownAcik] = useState(false); // Dropdown menü durumu
+  const [personelListesi, setPersonelListesi] = useState<UserInfo[]>([]);
+  const [seciliPersoneller, setSeciliPersoneller] = useState<string[]>([]);
+  const [dropdownAcik, setDropdownAcik] = useState(false); 
 
   const [seciliHat, setSeciliHat] = useState("");
   const [hesaplananSure, setHesaplananSure] = useState(0);
@@ -45,13 +45,10 @@ export default function PersonelDashboard() {
   const [okunmayanDuyurular, setOkunmayanDuyurular] = useState<any[]>([]);
   const [showDuyuruModal, setShowDuyuruModal] = useState(false);
 
-  // Dropdown dışına tıklanınca kapanması için
   const dropdownRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setDropdownAcik(false);
-      }
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setDropdownAcik(false);
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -84,8 +81,6 @@ export default function PersonelDashboard() {
           const data = userSnap.data();
           setUserRole(data.role);
           setUserName(data.name);
-
-          // İşi yapanlara varsayılan olarak formu dolduran kişiyi ekle
           setSeciliPersoneller([data.name]);
 
           const okunanDuyuruIDleri = data.okunanDuyurular || []; 
@@ -102,16 +97,12 @@ export default function PersonelDashboard() {
     });
 
     const fetchGerekliVeriler = async () => {
-      // Hatları Çek
       const snap = await getDocs(collection(db, "assets"));
       setAssets(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Asset)));
-
-      // Onaylı Personelleri Çek (Dropdown için)
       const pQuery = query(collection(db, "users"), where("isApproved", "==", true));
       const pSnap = await getDocs(pQuery);
       setPersonelListesi(pSnap.docs.map(d => ({ id: d.id, name: d.data().name })));
     };
-
     fetchGerekliVeriler();
     return () => unsubscribe();
   }, []);
@@ -126,9 +117,7 @@ export default function PersonelDashboard() {
   };
 
   const handlePersonelSecim = (isim: string) => {
-    setSeciliPersoneller(prev => 
-      prev.includes(isim) ? prev.filter(p => p !== isim) : [...prev, isim]
-    );
+    setSeciliPersoneller(prev => prev.includes(isim) ? prev.filter(p => p !== isim) : [...prev, isim]);
   };
 
   const benzersizHatlar = Array.from(new Set(assets.map(a => a.hatAdi)));
@@ -136,16 +125,10 @@ export default function PersonelDashboard() {
 
   const formKaydet = async (data: FormData) => {
     if (seciliPersoneller.length === 0) return alert("Lütfen işi yapan en az 1 personel seçin!");
-
     setIsSubmitting(true); setBasariMesaji("");
     try {
       await addDoc(collection(db, "maintenance_logs"), {
-        ...data, 
-        isiYapanlar: seciliPersoneller, // YENİ: Seçilen personelleri dizi olarak kaydet
-        toplamSureDakika: hesaplananSure, 
-        bildirenKisi: userName, 
-        kayitTarihi: new Date(), 
-        durum: "Kapalı"
+        ...data, isiYapanlar: seciliPersoneller, toplamSureDakika: hesaplananSure, bildirenKisi: userName, kayitTarihi: new Date(), durum: "Kapalı"
       });
       setBasariMesaji("Kayıt başarıyla işlendi. Süre: " + hesaplananSure + " Dk");
       reset(); setSeciliHat(""); setHesaplananSure(0); setSeciliPersoneller([userName]);
@@ -182,7 +165,8 @@ export default function PersonelDashboard() {
             <p className="text-gray-400 mt-1">Hoş geldin, <span className="text-blue-400 font-medium">{userName}</span></p>
           </div>
           <div className="flex gap-3">
-            {(userRole === "admin" || userRole === "operator") && (
+            {/* YENİ: Uretim Yetkilisi de Panele Dönebilir */}
+            {(userRole === "admin" || userRole === "operator" || userRole === "uretim") && (
               <a href="/admin" className="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg transition text-sm flex items-center font-semibold text-blue-400">
                 {userRole === "admin" ? "Yönetim Paneline Dön" : "İzleme Paneline Dön"}
               </a>
@@ -192,53 +176,36 @@ export default function PersonelDashboard() {
         </div>
 
         <div className="mb-6 flex flex-wrap justify-center md:justify-end gap-3">
-          <a href="/dashboard/sayac" className="bg-yellow-600 hover:bg-yellow-500 text-white px-4 md:px-6 py-2 md:py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 text-sm md:text-base w-full md:w-auto justify-center">⚡ Elektrik Sayaç Okuma</a>
+          <a href="/dashboard/sayac" className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 md:px-6 py-2 md:py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 text-sm md:text-base w-full md:w-auto justify-center">⚡ Enerji Sayaç Okuma</a>
           <a href="/admin/is-listesi" className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 md:px-6 py-2 md:py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 text-sm md:text-base w-full md:w-auto justify-center">📋 Yapılan İşler</a>
-          <a href="/dashboard/mesai" className="bg-blue-600 hover:bg-blue-500 text-white px-4 md:px-6 py-2 md:py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 text-sm md:text-base w-full md:w-auto justify-center">⏰ Fazla Mesai Girişi Yap</a>
+          <a href="/dashboard/mesai" className="bg-teal-600 hover:bg-teal-500 text-white px-4 md:px-6 py-2 md:py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 text-sm md:text-base w-full md:w-auto justify-center">⏰ Fazla Mesai Girişi Yap</a>
         </div>
 
         <div className="bg-gray-900 border border-gray-800 p-6 md:p-8 rounded-2xl shadow-2xl">
           <h2 className="text-xl font-bold mb-6 text-orange-400">Yeni Arıza / Bakım Bildirimi</h2>
-
           {basariMesaji && <div className="mb-6 p-4 rounded-lg bg-green-900/30 text-green-400 font-medium border border-green-800/50">{basariMesaji}</div>}
 
           <form onSubmit={handleSubmit(formKaydet)} className="space-y-6">
-            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-800/30 p-4 rounded-xl border border-gray-700/50">
-              {/* YENİ: VARDİYA SEÇİMİ */}
               <div>
                 <label className="block text-sm font-bold text-blue-400 mb-2">Çalışılan Vardiya <span className="text-red-500">*</span></label>
                 <select {...register("vardiya")} className={`w-full bg-gray-800 border ${errors.vardiya ? 'border-red-500' : 'border-gray-600'} rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500`}>
-                  <option value="">-- Vardiya Seçiniz --</option>
-                  <option value="08:00 - 16:00">08:00 - 16:00 (Gündüz)</option>
-                  <option value="16:00 - 24:00">16:00 - 24:00 (Akşam)</option>
-                  <option value="24:00 - 08:00">24:00 - 08:00 (Gece)</option>
+                  <option value="">-- Vardiya Seçiniz --</option><option value="08:00 - 16:00">08:00 - 16:00 (Gündüz)</option><option value="16:00 - 24:00">16:00 - 24:00 (Akşam)</option><option value="24:00 - 08:00">24:00 - 08:00 (Gece)</option>
                 </select>
                 {errors.vardiya && <p className="text-red-500 text-xs mt-1">{errors.vardiya.message}</p>}
               </div>
 
-              {/* YENİ: İŞİ YAPANLAR (ÇOKLU SEÇİM DROPDOWN) */}
               <div className="relative" ref={dropdownRef}>
                 <label className="block text-sm font-bold text-blue-400 mb-2">İşi Yapan Ekip Üyeleri <span className="text-red-500">*</span></label>
-                <div 
-                  onClick={() => setDropdownAcik(!dropdownAcik)} 
-                  className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white cursor-pointer flex justify-between items-center"
-                >
+                <div onClick={() => setDropdownAcik(!dropdownAcik)} className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white cursor-pointer flex justify-between items-center">
                   <span className="truncate pr-2">{seciliPersoneller.length > 0 ? seciliPersoneller.join(", ") : "Personel Seçiniz..."}</span>
                   <svg className={`w-4 h-4 transition-transform ${dropdownAcik ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                 </div>
-                
-                {/* Çoklu Seçim Menüsü */}
                 {dropdownAcik && (
                   <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg shadow-2xl max-h-48 overflow-y-auto">
                     {personelListesi.map(p => (
                       <label key={p.id} className="flex items-center px-4 py-3 hover:bg-gray-700 cursor-pointer border-b border-gray-700/50 last:border-0">
-                        <input 
-                          type="checkbox" 
-                          checked={seciliPersoneller.includes(p.name)} 
-                          onChange={() => handlePersonelSecim(p.name)}
-                          className="w-4 h-4 text-blue-600 bg-gray-900 border-gray-600 rounded focus:ring-blue-600"
-                        />
+                        <input type="checkbox" checked={seciliPersoneller.includes(p.name)} onChange={() => handlePersonelSecim(p.name)} className="w-4 h-4 text-blue-600 bg-gray-900 border-gray-600 rounded" />
                         <span className="ml-3 text-sm text-gray-200">{p.name}</span>
                       </label>
                     ))}
@@ -251,8 +218,7 @@ export default function PersonelDashboard() {
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">Üretim Hattı</label>
                 <select {...register("hatAdi")} onChange={(e) => { setSeciliHat(e.target.value); setValue("hatAdi", e.target.value); setValue("ekipmanAdi", ""); }} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 focus:border-blue-500">
-                  <option value="">-- Hat Seçiniz --</option>
-                  {benzersizHatlar.map(hat => <option key={hat} value={hat}>{hat}</option>)}
+                  <option value="">-- Hat Seçiniz --</option>{benzersizHatlar.map(hat => <option key={hat} value={hat}>{hat}</option>)}
                 </select>
                 {errors.hatAdi && <p className="text-red-500 text-xs mt-1">{errors.hatAdi.message}</p>}
               </div>
@@ -260,8 +226,7 @@ export default function PersonelDashboard() {
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">Arızalı Ekipman</label>
                 <select {...register("ekipmanAdi")} disabled={!seciliHat} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 disabled:opacity-50">
-                  <option value="">{seciliHat ? "-- Ekipman Seçiniz --" : "-- Önce Hat Seçiniz --"}</option>
-                  {filtrelenmisEkipmanlar.map(ekp => <option key={ekp.id} value={ekp.ekipmanAdi}>{ekp.ekipmanAdi}</option>)}
+                  <option value="">{seciliHat ? "-- Ekipman Seçiniz --" : "-- Önce Hat Seçiniz --"}</option>{filtrelenmisEkipmanlar.map(ekp => <option key={ekp.id} value={ekp.ekipmanAdi}>{ekp.ekipmanAdi}</option>)}
                 </select>
                 {errors.ekipmanAdi && <p className="text-red-500 text-xs mt-1">{errors.ekipmanAdi.message}</p>}
               </div>
@@ -282,27 +247,16 @@ export default function PersonelDashboard() {
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input type="checkbox" className="sr-only peer" checked={value} onChange={onChange} />
                     <div className="w-14 h-7 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-red-600"></div>
-                    <span className="ml-3 text-sm font-medium text-gray-300">{value ? <span className="text-red-400 font-bold">Evet, Hattı Durdurdu</span> : "Hayır, Hat Çalışmaya Devam Etti"}</span>
+                    <span className="ml-3 text-sm font-medium text-gray-300">{value ? <span className="text-red-400 font-bold">Evet, Hattı Durdurdu</span> : "Hayır, Hat Çalıştı"}</span>
                   </label>
                 )} />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-800/50 p-4 rounded-xl border border-gray-700">
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">Arıza Başlangıç Saati</label>
-                <input type="datetime-local" {...register("baslangicSaati")} className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3" />
-                {errors.baslangicSaati && <p className="text-red-500 text-xs mt-1">{errors.baslangicSaati.message}</p>}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">Müdahale Bitiş Saati</label>
-                <input type="datetime-local" {...register("bitisSaati")} className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3" />
-                {errors.bitisSaati && <p className="text-red-500 text-xs mt-1">{errors.bitisSaati.message}</p>}
-              </div>
-              <div className="md:col-span-2 text-center pt-2">
-                <p className="text-sm text-gray-400">Otomatik Hesaplanan Süre:</p>
-                <p className="text-3xl font-bold text-blue-500">{hesaplananSure} <span className="text-lg text-gray-500">Dakika</span></p>
-              </div>
+              <div><label className="block text-sm font-medium text-gray-400 mb-2">Başlangıç Saati</label><input type="datetime-local" {...register("baslangicSaati")} className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3" />{errors.baslangicSaati && <p className="text-red-500 text-xs mt-1">{errors.baslangicSaati.message}</p>}</div>
+              <div><label className="block text-sm font-medium text-gray-400 mb-2">Bitiş Saati</label><input type="datetime-local" {...register("bitisSaati")} className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3" />{errors.bitisSaati && <p className="text-red-500 text-xs mt-1">{errors.bitisSaati.message}</p>}</div>
+              <div className="md:col-span-2 text-center pt-2"><p className="text-sm text-gray-400">Otomatik Hesaplanan Süre:</p><p className="text-3xl font-bold text-blue-500">{hesaplananSure} <span className="text-lg text-gray-500">Dakika</span></p></div>
             </div>
 
             <div>
@@ -311,10 +265,9 @@ export default function PersonelDashboard() {
               {errors.aciklama && <p className="text-red-500 text-xs mt-1">{errors.aciklama.message}</p>}
             </div>
 
-            <button type="submit" disabled={isSubmitting || hesaplananSure <= 0} className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-4 px-4 rounded-xl transition shadow-lg disabled:opacity-50">
+            <button type="submit" disabled={isSubmitting || hesaplananSure <= 0} className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-4 px-4 rounded-xl disabled:opacity-50">
               {isSubmitting ? "Kaydediliyor..." : "Arızayı Sisteme Kaydet"}
             </button>
-
           </form>
         </div>
       </div>

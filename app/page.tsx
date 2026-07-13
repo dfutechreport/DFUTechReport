@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { signInWithPopup, onAuthStateChanged, updateProfile } from "firebase/auth";
 import { collection, doc, getDoc, setDoc, getDocs, query, where, deleteDoc } from "firebase/firestore";
-import { auth, googleProvider, db } from "../lib/firebase";
+import { auth, googleProvider, db } from "./lib/firebase"; // Yolu kendi yapınıza göre düzeltin (../lib/firebase vb.)
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
@@ -17,19 +17,16 @@ export default function LoginPage() {
   const [tempUser, setTempUser] = useState<any>(null);
   const [gercekIsim, setGercekIsim] = useState("");
 
-  // YENİ: Manuel Kayıt Kontrolü İçin Geçici Rol Tutucu
   const [tempRoleInfo, setTempRoleInfo] = useState<any>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
-          // 1. Önce kullanıcının kendi UID'si ile kaydı var mı diye bak (Daha önce girmiş mi?)
           const userRef = doc(db, "users", user.uid);
           const userSnap = await getDoc(userRef);
 
           if (userSnap.exists()) {
-            // ZATEN SİSTEMDE VAR OLAN KULLANICI
             const userData = userSnap.data();
             if (!userData.isApproved) {
               setUserStatus("pending");
@@ -38,29 +35,23 @@ export default function LoginPage() {
               setUserStatus(userData.role);
             }
           } else {
-            // 2. UID İLE BULUNAMADI! PEKİ ADMİN BUNU E-POSTA İLE MANUEL EKLMİŞ Mİ?
             const email = user.email?.toLowerCase().trim();
             const manuelRef = doc(db, "users", email || "bilinmeyen");
             const manuelSnap = await getDoc(manuelRef);
 
             if (manuelSnap.exists()) {
-              // ADMİN MANUEL EKLEMİŞ! Kişinin yetkilerini al ve isim sorma ekranına taşı
               const manuelData = manuelSnap.data();
-              setTempRoleInfo(manuelData); // Adminin verdiği yetkileri hafızaya al
-              
+              setTempRoleInfo(manuelData); 
               setTempUser(user);
               setGercekIsim(manuelData.name || user.displayName || ""); 
               setShowNamePrompt(true);
             } else {
-              // 3. TAMAMEN YENİ KULLANICI (Ne daha önce girmiş, ne de admin eklemiş)
               setTempUser(user);
               setGercekIsim(user.displayName || ""); 
               setShowNamePrompt(true);
             }
           }
-        } catch (error) {
-          console.error("Veri çekme hatası:", error);
-        }
+        } catch (error) { console.error("Veri çekme hatası:", error); }
       }
     });
     return () => unsubscribe();
@@ -68,12 +59,7 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
     setLoading(true);
-    try {
-      await signInWithPopup(auth, googleProvider);
-    } catch (error) {
-      console.error(error);
-      setLoading(false);
-    }
+    try { await signInWithPopup(auth, googleProvider); } catch (error) { setLoading(false); }
   };
 
   const handleIsimKaydet = async (e: React.FormEvent) => {
@@ -83,53 +69,28 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await updateProfile(tempUser, { displayName: gercekIsim });
-
       const userRef = doc(db, "users", tempUser.uid);
 
-      // EĞER KULLANICIYI ADMİN MANUEL EKLEMİŞSE (Hafızada bilgi varsa)
       if (tempRoleInfo) {
-        // Yeni UID ile hesabı oluştur ama yetkileri adminin verdiği gibi yap!
         await setDoc(userRef, {
-          email: tempUser.email,
-          name: gercekIsim, 
-          role: tempRoleInfo.role, // Adminin verdiği rol
-          isApproved: true, // PEŞİNEN ONAYLI !
-          createdAt: new Date(),
-          manuelOnaylandi: true
+          email: tempUser.email, name: gercekIsim, role: tempRoleInfo.role, isApproved: true, createdAt: new Date(), manuelOnaylandi: true
         });
-
-        // Eski e-posta ID'li geçici çöp kaydı sil
         const email = tempUser.email?.toLowerCase().trim();
         await deleteDoc(doc(db, "users", email));
-
         setShowNamePrompt(false);
-        setUserStatus(tempRoleInfo.role); // Anında içeri al!
-
+        setUserStatus(tempRoleInfo.role); 
       } else {
-        // TAMAMEN YENİ VE ONAYSIZ KULLANICI KAYDI
         await setDoc(userRef, {
-          email: tempUser.email,
-          name: gercekIsim,
-          role: "pending",
-          isApproved: false,
-          createdAt: new Date()
+          email: tempUser.email, name: gercekIsim, role: "pending", isApproved: false, createdAt: new Date()
         });
-        setShowNamePrompt(false);
-        setUserStatus("pending");
+        setShowNamePrompt(false); setUserStatus("pending");
         setMessage(`Kayıt alındı, ${gercekIsim}. Yönetici onayı bekleniyor.`);
       }
-
-    } catch (error) {
-      console.error("Kayıt hatası:", error);
-      alert("İsim kaydedilirken bir hata oluştu.");
-    } finally {
-      setLoading(false);
-    }
+    } catch (error) { alert("İsim kaydedilirken bir hata oluştu."); } finally { setLoading(false); }
   };
 
   const handleEnterSystem = (url: string) => {
-    setTargetUrl(url);
-    setShowSplash(true); 
+    setTargetUrl(url); setShowSplash(true); 
     setTimeout(() => { window.location.href = url; }, 2200);
   };
 
@@ -167,25 +128,25 @@ export default function LoginPage() {
           <form onSubmit={handleIsimKaydet} className="space-y-4 animate-fade-in bg-gray-800 p-6 rounded-xl border border-gray-700">
             <h2 className="text-xl font-bold text-yellow-400">Son Bir Adım!</h2>
             <p className="text-gray-300 text-sm">
-              {tempRoleInfo 
-                ? "Hesabınız yönetici tarafından peşinen onaylandı! Sadece resmi adınızı teyit edin." 
-                : "Kurumsal kayıtlar için lütfen adınızı ve soyadınızı giriniz."}
+              {tempRoleInfo ? "Hesabınız yönetici tarafından peşinen onaylandı! Sadece resmi adınızı teyit edin." : "Kurumsal kayıtlar için lütfen adınızı ve soyadınızı giriniz."}
             </p>
             <input type="text" value={gercekIsim} onChange={(e) => setGercekIsim(e.target.value)} placeholder="Örn: Ahmet Yılmaz" className="w-full bg-gray-900 border border-gray-600 rounded-lg p-3 text-white focus:border-blue-500 text-center text-lg font-bold" required />
             <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition disabled:opacity-50">
               {loading ? "Sisteme Giriliyor..." : (tempRoleInfo ? "Doğrula ve İçeri Gir" : "Kaydımı Tamamla")}
             </button>
           </form>
-        ) : userStatus === "admin" || userStatus === "operator" ? (
+        ) : userStatus === "admin" || userStatus === "operator" || userStatus === "uretim" ? (
           <div className="space-y-4">
-            <div className="p-4 rounded-lg bg-green-900/30 text-green-400 border border-green-800/50">Giriş Başarılı (Yetki: {userStatus.toUpperCase()})</div>
+            <div className="p-4 rounded-lg bg-green-900/30 text-green-400 border border-green-800/50">
+              Giriş Başarılı (Yetki: {userStatus === "uretim" ? "ÜRETİM YETKİLİSİ" : userStatus.toUpperCase()})
+            </div>
             <button onClick={() => handleEnterSystem("/admin")} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-4 rounded-xl transition shadow-lg shadow-green-500/30">
               {userStatus === "admin" ? "Yönetim Paneline Git ➔" : "İzleme Paneline Git ➔"}
             </button>
           </div>
         ) : userStatus === "teknisyen" || userStatus === "user" ? (
           <div className="space-y-4">
-            <div className="p-4 rounded-lg bg-blue-900/30 text-blue-400 border border-blue-800/50">Giriş Başarılı (Yetki: Teknisyen)</div>
+            <div className="p-4 rounded-lg bg-blue-900/30 text-blue-400 border border-blue-800/50">Giriş Başarılı (Yetki: TEKNİSYEN)</div>
             <button onClick={() => handleEnterSystem("/dashboard")} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-4 rounded-xl transition shadow-lg shadow-blue-500/30">
               Arıza Formuna Git ➔
             </button>

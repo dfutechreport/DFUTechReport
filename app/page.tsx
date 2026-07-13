@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { signInWithPopup, onAuthStateChanged, updateProfile } from "firebase/auth";
-import { collection, doc, getDoc, setDoc, getDocs, query, where, deleteDoc } from "firebase/firestore";
-import { auth, googleProvider, db } from "./lib/firebase"; // Yolu kendi yapınıza göre düzeltin (../lib/firebase vb.)
+import { doc, getDoc, setDoc, deleteDoc } from "firebase/firestore";
+import { auth, googleProvider, db } from "../lib/firebase"; 
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
@@ -11,7 +11,6 @@ export default function LoginPage() {
   const [message, setMessage] = useState("");
   
   const [showSplash, setShowSplash] = useState(false);
-  const [targetUrl, setTargetUrl] = useState("");
 
   const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [tempUser, setTempUser] = useState<any>(null);
@@ -90,7 +89,7 @@ export default function LoginPage() {
   };
 
   const handleEnterSystem = (url: string) => {
-    setTargetUrl(url); setShowSplash(true); 
+    setShowSplash(true); 
     setTimeout(() => { window.location.href = url; }, 2200);
   };
 

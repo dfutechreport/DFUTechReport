@@ -18,6 +18,9 @@ export default function IsEmriAc() {
   const [ekipmanAdi, setEkipmanAdi] = useState("");
   const [sorunTipi, setSorunTipi] = useState("");
   const [aciklama, setAciklama] = useState("");
+  
+  // YENİ: Duruş State'i
+  const [isDuruslu, setIsDuruslu] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -28,7 +31,7 @@ export default function IsEmriAc() {
           const role = userSnap.data().role;
           setUserRole(role);
           setUserName(userSnap.data().name);
-          // Sadece Admin ve Üretim Yetkilisi iş emri açabilir (Operatör de açabilsin derseniz ekleyebilirsiniz)
+          
           if (role !== "admin" && role !== "uretim" && role !== "operator") window.location.href = "/";
           
           const snap = await getDocs(collection(db, "assets"));
@@ -50,16 +53,20 @@ export default function IsEmriAc() {
     setIsSubmitting(true);
     try {
       await addDoc(collection(db, "work_orders"), {
-        hatAdi, ekipmanAdi, sorunTipi, aciklama,
+        hatAdi, 
+        ekipmanAdi, 
+        sorunTipi, 
+        aciklama,
+        isDuruslu, // YENİ: Duruş bilgisini veritabanına at
         bildirenKisi: userName,
-        durum: "Açık", // Aktif bekleyen iş
+        durum: "Açık", 
         kayitTarihi: new Date(),
         tamamlayanKisi: "",
         tamamlanmaTarihi: null
       });
       alert("İş Emri başarıyla açıldı! Teknisyenlerin ekranına yansıdı.");
-      setHatAdi(""); setEkipmanAdi(""); setSorunTipi(""); setAciklama(""); setSeciliHat("");
-      window.location.href = "/admin"; // İş bitince panele dön
+      setHatAdi(""); setEkipmanAdi(""); setSorunTipi(""); setAciklama(""); setSeciliHat(""); setIsDuruslu(false);
+      window.location.href = "/admin"; 
     } catch (error) { alert("Hata oluştu."); } finally { setIsSubmitting(false); }
   };
 
@@ -94,11 +101,25 @@ export default function IsEmriAc() {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">Sorun Tipi</label>
-            <select value={sorunTipi} onChange={(e) => setSorunTipi(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-lg p-3 text-white">
-              <option value="">-- Seçiniz --</option><option value="Mekanik">Mekanik</option><option value="Elektrik">Elektrik</option><option value="Otomasyon">Otomasyon</option><option value="Diğer">Diğer</option>
-            </select>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Sorun Tipi</label>
+              <select value={sorunTipi} onChange={(e) => setSorunTipi(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-lg p-3 text-white">
+                <option value="">-- Seçiniz --</option><option value="Mekanik">Mekanik</option><option value="Elektrik">Elektrik</option><option value="Otomasyon">Otomasyon</option><option value="Diğer">Diğer</option>
+              </select>
+            </div>
+
+            {/* YENİ: Duruş Seçimi (Switch) */}
+            <div className="flex flex-col justify-center">
+              <label className="block text-sm font-medium text-gray-400 mb-3">Hat Duruşu Var Mı?</label>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" className="sr-only peer" checked={isDuruslu} onChange={(e) => setIsDuruslu(e.target.checked)} />
+                <div className="w-14 h-7 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-red-600"></div>
+                <span className="ml-3 text-sm font-medium text-gray-300">
+                  {isDuruslu ? <span className="text-red-400 font-bold">Evet, Hat Durdu (Kritik)</span> : "Hayır, Hat Çalışıyor"}
+                </span>
+              </label>
+            </div>
           </div>
 
           <div>

@@ -114,15 +114,17 @@ export default function AdminDashboard() {
     } catch (error) { console.error(error); }
   };
 
-  const handleIsiTamamla = async (islem: any) => {
-    if (!window.confirm("Bu işi bitirdiğinizi onaylıyor musunuz? Form otomatik açılacaktır.")) return;
+    const handleIsiTamamla = async (islem: any) => {
+    if (!window.confirm("Bu işi bitirdiğinizi onaylıyor musunuz? Onayladıktan sonra süresini girmek için form otomatik olarak açılacaktır.")) return;
     try {
       await updateDoc(doc(db, "work_orders", islem.id), {
         durum: "Kapalı",
         tamamlayanKisi: userName,
         tamamlanmaTarihi: new Date()
       });
-      window.location.href = `/dashboard?hat=${encodeURIComponent(islem.hatAdi)}&ekipman=${encodeURIComponent(islem.ekipmanAdi)}&sorun=${encodeURIComponent(islem.sorunTipi)}&aciklama=${encodeURIComponent(islem.aciklama)}`;
+
+      // YENİ: 'duruslu' bilgisini de URL'ye ekliyoruz (true veya false olarak)
+      window.location.href = `/dashboard?hat=${encodeURIComponent(islem.hatAdi)}&ekipman=${encodeURIComponent(islem.ekipmanAdi)}&sorun=${encodeURIComponent(islem.sorunTipi)}&duruslu=${islem.isDuruslu ? 'true' : 'false'}&aciklama=${encodeURIComponent(islem.aciklama)}`;
     } catch (error) {
       alert("Hata oluştu.");
     }

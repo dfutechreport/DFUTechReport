@@ -78,7 +78,7 @@ export default function PersonelDashboard() {
     const wQ = query(collection(db, "work_orders"), where("durum", "==", "Açık"));
     const wSnap = await getDocs(wQ);
     const data = wSnap.docs.map(d => ({ id: d.id, ...d.data(), gercekZaman: d.data().kayitTarihi ? d.data().kayitTarihi.toDate().getTime() : 0 }));
-    setAktifIsler(data.sort((a, b) => b.gercekZaman - a.gercekZaman).slice(0, 5)); // Sadece 5 tane
+    setAktifIsler(data.sort((a, b) => b.gercekZaman - a.gercekZaman).slice(0, 5)); // Sadece en yeni 5 işi gösterir
   };
 
   useEffect(() => {
@@ -94,7 +94,7 @@ export default function PersonelDashboard() {
           setUserName(data.name);
           setSeciliPersoneller([data.name]);
 
-          fetchAktifIsler(); 
+          fetchAktifIsler(); // Aktif işleri yükle
 
           const okunanDuyuruIDleri = data.okunanDuyurular || []; 
           const duyuruSnap = await getDocs(collection(db, "announcements"));
@@ -138,21 +138,29 @@ export default function PersonelDashboard() {
     if (!window.confirm("Bu işi bitirdiğinizi onaylıyor musunuz? Onayladıktan sonra süresini girmek için form otomatik olarak açılacaktır.")) return;
 
     try {
+      // 1. İş Emrini Veritabanında "Kapalı" Yap
       await updateDoc(doc(db, "work_orders", islem.id), {
         durum: "Kapalı",
         tamamlayanKisi: userName,
         tamamlanmaTarihi: new Date()
       });
 
+      // 2. Listeyi Güncelle (O iş listeden düşer, alttan yenisi gelir)
       fetchAktifIsler();
 
+      // 3. Alttaki Formu İş Emrindeki Verilerle Otomatik Doldur
       setSeciliHat(islem.hatAdi);
       setValue("hatAdi", islem.hatAdi);
-      setTimeout(() => setValue("ekipmanAdi", islem.ekipmanAdi), 100); 
-      setValue("sorunTipi", islem.sorunTipi);
-      setValue("aciklama", `(Üretim Bildirimi Çözüldü: ${islem.aciklama})\n- Müdahale Özeti: `);
       
-      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Select listesinin güncellenmesi için ufak bir gecikme ekliyoruz
+      setTimeout(() => {
+        setValue("ekipmanAdi", islem.ekipmanAdi);
+        setValue("sorunTipi", islem.sorunTipi);
+        setValue("aciklama", `(Üretim Bildirimi Çözüldü: ${islem.aciklama})\n- Müdahale Özeti: `);
+      }, 150);
+      
+      // 4. Sayfayı Aşağıdaki Forma Otomatik Kaydır
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       setBasariMesaji("Üretim bildirimi başarıyla kapatıldı! Lütfen harcadığınız süreyi girerek performansınızı kaydedin.");
 
     } catch (error) {
@@ -179,6 +187,7 @@ export default function PersonelDashboard() {
   return (
     <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8 relative">
       
+      {/* DUYURU MODALI */}
       {showDuyuruModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80 backdrop-blur-sm p-4">
           <div className="bg-gray-900 border-2 border-yellow-500 rounded-2xl shadow-2xl p-8 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
@@ -198,6 +207,7 @@ export default function PersonelDashboard() {
 
       <div className={`max-w-4xl mx-auto ${showDuyuruModal ? 'opacity-20 pointer-events-none' : ''}`}>
         
+        {/* HEADER */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-gray-800 pb-5 gap-4">
           <div>
             <p className="text-sm font-bold text-blue-500 mb-1 tracking-wider uppercase">DFU DONUK FIRINCILIK ÜRÜNLERİ A.Ş.</p>
@@ -214,30 +224,38 @@ export default function PersonelDashboard() {
           </div>
         </div>
 
+        {/* HIZLI ERİŞİM BUTONLARI */}
         <div className="mb-6 flex flex-wrap justify-center md:justify-end gap-3">
           <a href="/dashboard/sayac" className="bg-yellow-600 hover:bg-yellow-500 text-white px-4 md:px-6 py-2 md:py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 text-sm md:text-base w-full md:w-auto justify-center">⚡ Elektrik Sayaç Okuma</a>
           <a href="/admin/is-listesi" className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 md:px-6 py-2 md:py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 text-sm md:text-base w-full md:w-auto justify-center">📋 Yapılan İşler</a>
           <a href="/dashboard/mesai" className="bg-blue-600 hover:bg-blue-500 text-white px-4 md:px-6 py-2 md:py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 text-sm md:text-base w-full md:w-auto justify-center">⏰ Fazla Mesai Girişi Yap</a>
         </div>
 
-        {/* AKTİF BEKLEYEN İŞLER (ALARM LİSTESİ) */}
+        {/* YENİ EKLENEN: AKTİF BEKLEYEN İŞLER (ALARM LİSTESİ) */}
         {aktifIsler.length > 0 && (
-          <div className="bg-red-900/20 border-2 border-red-500/50 p-6 rounded-2xl mb-10">
-            <h2 className="text-xl font-bold text-red-400 mb-4 flex items-center gap-2">
-              <span className="relative flex h-4 w-4"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span></span>
+          <div className="bg-red-900/20 border-2 border-red-500/50 p-6 rounded-2xl mb-10 shadow-2xl">
+            <h2 className="text-xl font-bold text-red-400 mb-6 flex items-center gap-2">
+              <span className="relative flex h-4 w-4">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span>
+              </span>
               Üretimden Gelen Aktif Bildirimler (Müdahale Bekliyor)
             </h2>
             <div className="space-y-4">
               {aktifIsler.map(islem => (
-                <div key={islem.id} className="bg-gray-900 border border-red-800/50 p-5 rounded-xl shadow-lg relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div key={islem.id} className="bg-gray-900 border border-red-800/50 p-5 rounded-xl shadow-lg relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition hover:border-red-500/80">
                   <div className="absolute top-0 left-0 w-1 h-full bg-red-500"></div>
                   <div>
                     <p className="text-xs text-gray-400 mb-1">{islem.kayitTarihi?.toDate().toLocaleString('tr-TR')} | {islem.bildirenKisi}</p>
                     <p className="font-bold text-white text-lg">{islem.hatAdi} <span className="text-red-400 font-medium text-sm">({islem.ekipmanAdi})</span></p>
                     <p className="text-gray-300 text-sm mt-1">{islem.aciklama}</p>
                   </div>
+                  
                   {/* TEKNİSYEN İŞİ BİTİRİNCE BU BUTONA BASAR */}
-                  <button onClick={() => handleIsiTamamla(islem)} className="w-full md:w-auto whitespace-nowrap bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-lg transition shadow-[0_0_15px_rgba(22,163,74,0.4)]">
+                  <button 
+                    onClick={() => handleIsiTamamla(islem)} 
+                    className="w-full md:w-auto whitespace-nowrap bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-lg transition shadow-[0_0_15px_rgba(22,163,74,0.4)]"
+                  >
                     ✅ İşi Tamamla
                   </button>
                 </div>
@@ -246,6 +264,7 @@ export default function PersonelDashboard() {
           </div>
         )}
 
+        {/* ARIZA FORMU */}
         <div ref={formRef} className="bg-gray-900 border border-gray-800 p-6 md:p-8 rounded-2xl shadow-2xl transition-all">
           <h2 className="text-xl font-bold mb-6 text-orange-400">Yeni Arıza / Bakım Bildirimi</h2>
           {basariMesaji && <div className="mb-6 p-4 rounded-lg bg-green-900/30 text-green-400 font-medium border border-green-800/50">{basariMesaji}</div>}

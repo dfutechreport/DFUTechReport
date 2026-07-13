@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { collection, getDocs, addDoc, doc, getDoc, updateDoc, arrayUnion, query, where, orderBy } from "firebase/firestore";
+import { useState, useEffect, useRef, Suspense } from "react";
+import { collection, getDocs, addDoc, doc, getDoc, updateDoc, arrayUnion, query, where } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../../lib/firebase";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
+import { useSearchParams } from "next/navigation";
 
 const arizaSemasi = yup.object().shape({
   vardiya: yup.string().required("Vardiya seçimi zorunludur!"),
@@ -27,7 +28,7 @@ type FormData = yup.InferType<typeof arizaSemasi>;
 type Asset = { id: string; hatAdi: string; ekipmanAdi: string };
 type UserInfo = { id: string; name: string };
 
-export default function PersonelDashboard() {
+function DashboardIcerik() {
   const [userId, setUserId] = useState("");
   const [userRole, setUserRole] = useState("");
   const [userName, setUserName] = useState("");
@@ -45,9 +46,8 @@ export default function PersonelDashboard() {
   const [okunmayanDuyurular, setOkunmayanDuyurular] = useState<any[]>([]);
   const [showDuyuruModal, setShowDuyuruModal] = useState(false);
 
-  // AKTİF İŞ EMİRLERİ STATE'İ
-  const [aktifIsler, setAktifIsler] = useState<any[]>([]);
-  const formRef = useRef<HTMLDivElement>(null); 
+  // URL'den gelen verileri okumak için
+  const searchParams = useSearchParams();
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -74,16 +74,22 @@ export default function PersonelDashboard() {
     } else setHesaplananSure(0);
   }, [watchBaslangic, watchBitis]);
 
-  // YENİ: Aktif İş Emirlerini Veritabanından Çek
-  const fetchAktifIsler = async () => {
-    const wQ = query(collection(db, "work_orders"), where("durum", "==", "Açık"));
-    const wSnap = await getDocs(wQ);
-    const data = wSnap.docs.map(d => ({ 
-      id: d.id, ...d.data(), 
-      gercekZaman: d.data().kayitTarihi ? d.data().kayitTarihi.toDate().getTime() : 0 
-    }));
-    setAktifIsler(data.sort((a, b) => b.gercekZaman - a.gercekZaman).slice(0, 5)); // Sadece 5 tane
-  };
+  // YENİ: URL'den gelen otomatik doldurma verilerini yakala
+  useEffect(() => {
+    const otoHat = searchParams.get("hat");
+    const otoEkipman = searchParams.get("ekipman");
+    const otoSorun = searchParams.get("sorun");
+    const otoAciklama = searchParams.get("aciklama");
+
+    if (otoHat) {
+      setSeciliHat(otoHat);
+      setValue("hatAdi", otoHat);
+      if (otoEkipman) setTimeout(() => setValue("ekipmanAdi", otoEkipman), 300);
+      if (otoSorun) setValue("sorunTipi", otoSorun);
+      if (otoAciklama) setValue("aciklama", `(Üretim Bildirimi Çözüldü: ${otoAciklama})\n- Müdahale Özeti: `);
+      setBasariMesaji("✅ İlgili üretim bildirimi kapatıldı. Lütfen harcadığınız süreyi ve yapılan işlemi girerek performansınıza kaydedin.");
+    }
+  }, [searchParams, setValue]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -97,8 +103,6 @@ export default function PersonelDashboard() {
           setUserRole(data.role);
           setUserName(data.name);
           setSeciliPersoneller([data.name]);
-
-          fetchAktifIsler(); // İş emirlerini sayfa yüklenince çek
 
           const okunanDuyuruIDleri = data.okunanDuyurular || []; 
           const duyuruSnap = await getDocs(collection(db, "announcements"));
@@ -137,33 +141,6 @@ export default function PersonelDashboard() {
     setSeciliPersoneller(prev => prev.includes(isim) ? prev.filter(p => p !== isim) : [...prev, isim]);
   };
 
-  // YENİ: İŞ EMRİNİ TAMAMLAMA VE FORMU OTOMATİK DOLDURMA
-  const handleIsiTamamla = async (islem: any) => {
-    if (!window.confirm("Bu işi bitirdiğinizi onaylıyor musunuz? Onayladıktan sonra süresini girmek için form otomatik olarak açılacaktır.")) return;
-
-    try {
-      await updateDoc(doc(db, "work_orders", islem.id), {
-        durum: "Kapalı",
-        tamamlayanKisi: userName,
-        tamamlanmaTarihi: new Date()
-      });
-
-      fetchAktifIsler();
-
-      setSeciliHat(islem.hatAdi);
-      setValue("hatAdi", islem.hatAdi);
-      setTimeout(() => setValue("ekipmanAdi", islem.ekipmanAdi), 150); 
-      setValue("sorunTipi", islem.sorunTipi);
-      setValue("aciklama", `(Üretim Bildirimi Çözüldü: ${islem.aciklama})\n- Müdahale Özeti: `);
-      
-      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      setBasariMesaji("Üretim bildirimi başarıyla kapatıldı! Lütfen harcadığınız süreyi girerek performansınızı kaydedin.");
-
-    } catch (error) {
-      alert("Hata oluştu.");
-    }
-  };
-
   const benzersizHatlar = Array.from(new Set(assets.map(a => a.hatAdi)));
   const filtrelenmisEkipmanlar = assets.filter(a => a.hatAdi === seciliHat);
 
@@ -176,6 +153,9 @@ export default function PersonelDashboard() {
       });
       setBasariMesaji("Kayıt başarıyla işlendi. Süre: " + hesaplananSure + " Dk");
       reset(); setSeciliHat(""); setHesaplananSure(0); setSeciliPersoneller([userName]);
+      
+      // Temizlik (URL'yi siler ki mesaj hep kalmasın)
+      window.history.replaceState(null, "", "/dashboard");
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (error) { alert("Hata oluştu."); } finally { setIsSubmitting(false); }
   };
@@ -219,47 +199,15 @@ export default function PersonelDashboard() {
         </div>
 
         <div className="mb-6 flex flex-wrap justify-center md:justify-end gap-3">
-          <a href="/dashboard/sayac" className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 md:px-6 py-2 md:py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 text-sm md:text-base w-full md:w-auto justify-center">⚡ Elektrik Sayaç Okuma</a>
+          <a href="/dashboard/sayac" className="bg-yellow-600 hover:bg-yellow-500 text-white px-4 md:px-6 py-2 md:py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 text-sm md:text-base w-full md:w-auto justify-center">⚡ Elektrik Sayaç Okuma</a>
           <a href="/admin/is-listesi" className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 md:px-6 py-2 md:py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 text-sm md:text-base w-full md:w-auto justify-center">📋 Yapılan İşler</a>
-          <a href="/dashboard/mesai" className="bg-teal-600 hover:bg-teal-500 text-white px-4 md:px-6 py-2 md:py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 text-sm md:text-base w-full md:w-auto justify-center">⏰ Fazla Mesai Girişi Yap</a>
+          <a href="/dashboard/mesai" className="bg-blue-600 hover:bg-blue-500 text-white px-4 md:px-6 py-2 md:py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 text-sm md:text-base w-full md:w-auto justify-center">⏰ Fazla Mesai Girişi Yap</a>
         </div>
 
-        {/* EKSİK OLAN VE GERİ EKLENEN: AKTİF BEKLEYEN İŞLER (ALARM LİSTESİ) */}
-        {aktifIsler.length > 0 && (
-          <div className="bg-red-900/20 border-2 border-red-500/50 p-6 rounded-2xl mb-10 shadow-2xl">
-            <h2 className="text-xl font-bold text-red-400 mb-6 flex items-center gap-2">
-              <span className="relative flex h-4 w-4">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span>
-              </span>
-              Üretimden Gelen Aktif Bildirimler (Müdahale Bekliyor)
-            </h2>
-            <div className="space-y-4">
-              {aktifIsler.map(islem => (
-                <div key={islem.id} className="bg-gray-900 border border-red-800/50 p-5 rounded-xl shadow-lg relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition hover:border-red-500/80">
-                  <div className="absolute top-0 left-0 w-1 h-full bg-red-500"></div>
-                  <div>
-                    <p className="text-xs text-gray-400 mb-1">{islem.kayitTarihi?.toDate().toLocaleString('tr-TR')} | Bildiren: {islem.bildirenKisi}</p>
-                    <p className="font-bold text-white text-lg">{islem.hatAdi} <span className="text-red-400 font-medium text-sm">({islem.ekipmanAdi})</span></p>
-                    <p className="text-gray-300 text-sm mt-1">{islem.aciklama}</p>
-                  </div>
-                  
-                  {/* TEKNİSYEN İŞİ BİTİRİNCE BU BUTONA BASAR */}
-                  <button 
-                    onClick={() => handleIsiTamamla(islem)} 
-                    className="w-full md:w-auto whitespace-nowrap bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-lg transition shadow-[0_0_15px_rgba(22,163,74,0.4)]"
-                  >
-                    ✅ İşi Tamamla
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        {/* AKTİF İŞLER BİTİŞ */}
-
-        <div ref={formRef} className="bg-gray-900 border border-gray-800 p-6 md:p-8 rounded-2xl shadow-2xl transition-all">
+        <div className="bg-gray-900 border border-gray-800 p-6 md:p-8 rounded-2xl shadow-2xl transition-all">
           <h2 className="text-xl font-bold mb-6 text-orange-400">Yeni Arıza / Bakım Bildirimi</h2>
+          
+          {/* OTO DOLDURMA MESAJI BURADA ÇIKACAK */}
           {basariMesaji && <div className="mb-6 p-4 rounded-lg bg-green-900/30 text-green-400 font-medium border border-green-800/50">{basariMesaji}</div>}
 
           <form onSubmit={handleSubmit(formKaydet)} className="space-y-6">
@@ -349,5 +297,13 @@ export default function PersonelDashboard() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-950 text-white flex justify-center items-center">Yükleniyor...</div>}>
+      <DashboardIcerik />
+    </Suspense>
   );
 }

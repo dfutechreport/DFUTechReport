@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { collection, getDocs, addDoc, doc, getDoc, updateDoc, arrayUnion, query, where } from "firebase/firestore";
+import { collection, getDocs, addDoc, doc, getDoc, updateDoc, arrayUnion, query, where, orderBy } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../../lib/firebase";
 import { useForm, Controller } from "react-hook-form";
@@ -45,6 +45,10 @@ export default function PersonelDashboard() {
   const [okunmayanDuyurular, setOkunmayanDuyurular] = useState<any[]>([]);
   const [showDuyuruModal, setShowDuyuruModal] = useState(false);
 
+  // YENİ: Aktif İş Emirleri State'i
+  const [aktifIsler, setAktifIsler] = useState<any[]>([]);
+  const formRef = useRef<HTMLDivElement>(null); 
+
   const dropdownRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -70,6 +74,13 @@ export default function PersonelDashboard() {
     } else setHesaplananSure(0);
   }, [watchBaslangic, watchBitis]);
 
+  const fetchAktifIsler = async () => {
+    const wQ = query(collection(db, "work_orders"), where("durum", "==", "Açık"));
+    const wSnap = await getDocs(wQ);
+    const data = wSnap.docs.map(d => ({ id: d.id, ...d.data(), gercekZaman: d.data().kayitTarihi ? d.data().kayitTarihi.toDate().getTime() : 0 }));
+    setAktifIsler(data.sort((a, b) => b.gercekZaman - a.gercekZaman).slice(0, 5)); // Sadece 5 tane
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -82,6 +93,8 @@ export default function PersonelDashboard() {
           setUserRole(data.role);
           setUserName(data.name);
           setSeciliPersoneller([data.name]);
+
+          fetchAktifIsler(); 
 
           const okunanDuyuruIDleri = data.okunanDuyurular || []; 
           const duyuruSnap = await getDocs(collection(db, "announcements"));
@@ -118,6 +131,33 @@ export default function PersonelDashboard() {
 
   const handlePersonelSecim = (isim: string) => {
     setSeciliPersoneller(prev => prev.includes(isim) ? prev.filter(p => p !== isim) : [...prev, isim]);
+  };
+
+  // YENİ: İŞ EMRİNİ TAMAMLAMA VE FORMU OTOMATİK DOLDURMA
+  const handleIsiTamamla = async (islem: any) => {
+    if (!window.confirm("Bu işi bitirdiğinizi onaylıyor musunuz? Onayladıktan sonra süresini girmek için form otomatik olarak açılacaktır.")) return;
+
+    try {
+      await updateDoc(doc(db, "work_orders", islem.id), {
+        durum: "Kapalı",
+        tamamlayanKisi: userName,
+        tamamlanmaTarihi: new Date()
+      });
+
+      fetchAktifIsler();
+
+      setSeciliHat(islem.hatAdi);
+      setValue("hatAdi", islem.hatAdi);
+      setTimeout(() => setValue("ekipmanAdi", islem.ekipmanAdi), 100); 
+      setValue("sorunTipi", islem.sorunTipi);
+      setValue("aciklama", `(Üretim Bildirimi Çözüldü: ${islem.aciklama})\n- Müdahale Özeti: `);
+      
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setBasariMesaji("Üretim bildirimi başarıyla kapatıldı! Lütfen harcadığınız süreyi girerek performansınızı kaydedin.");
+
+    } catch (error) {
+      alert("Hata oluştu.");
+    }
   };
 
   const benzersizHatlar = Array.from(new Set(assets.map(a => a.hatAdi)));
@@ -165,7 +205,6 @@ export default function PersonelDashboard() {
             <p className="text-gray-400 mt-1">Hoş geldin, <span className="text-blue-400 font-medium">{userName}</span></p>
           </div>
           <div className="flex gap-3">
-            {/* YENİ: Uretim Yetkilisi de Panele Dönebilir */}
             {(userRole === "admin" || userRole === "operator" || userRole === "uretim") && (
               <a href="/admin" className="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg transition text-sm flex items-center font-semibold text-blue-400">
                 {userRole === "admin" ? "Yönetim Paneline Dön" : "İzleme Paneline Dön"}
@@ -176,12 +215,38 @@ export default function PersonelDashboard() {
         </div>
 
         <div className="mb-6 flex flex-wrap justify-center md:justify-end gap-3">
-          <a href="/dashboard/sayac" className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 md:px-6 py-2 md:py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 text-sm md:text-base w-full md:w-auto justify-center">⚡ Enerji Sayaç Okuma</a>
+          <a href="/dashboard/sayac" className="bg-yellow-600 hover:bg-yellow-500 text-white px-4 md:px-6 py-2 md:py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 text-sm md:text-base w-full md:w-auto justify-center">⚡ Elektrik Sayaç Okuma</a>
           <a href="/admin/is-listesi" className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 md:px-6 py-2 md:py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 text-sm md:text-base w-full md:w-auto justify-center">📋 Yapılan İşler</a>
-          <a href="/dashboard/mesai" className="bg-teal-600 hover:bg-teal-500 text-white px-4 md:px-6 py-2 md:py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 text-sm md:text-base w-full md:w-auto justify-center">⏰ Fazla Mesai Girişi Yap</a>
+          <a href="/dashboard/mesai" className="bg-blue-600 hover:bg-blue-500 text-white px-4 md:px-6 py-2 md:py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 text-sm md:text-base w-full md:w-auto justify-center">⏰ Fazla Mesai Girişi Yap</a>
         </div>
 
-        <div className="bg-gray-900 border border-gray-800 p-6 md:p-8 rounded-2xl shadow-2xl">
+        {/* AKTİF BEKLEYEN İŞLER (ALARM LİSTESİ) */}
+        {aktifIsler.length > 0 && (
+          <div className="bg-red-900/20 border-2 border-red-500/50 p-6 rounded-2xl mb-10">
+            <h2 className="text-xl font-bold text-red-400 mb-4 flex items-center gap-2">
+              <span className="relative flex h-4 w-4"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span></span>
+              Üretimden Gelen Aktif Bildirimler (Müdahale Bekliyor)
+            </h2>
+            <div className="space-y-4">
+              {aktifIsler.map(islem => (
+                <div key={islem.id} className="bg-gray-900 border border-red-800/50 p-5 rounded-xl shadow-lg relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-red-500"></div>
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">{islem.kayitTarihi?.toDate().toLocaleString('tr-TR')} | {islem.bildirenKisi}</p>
+                    <p className="font-bold text-white text-lg">{islem.hatAdi} <span className="text-red-400 font-medium text-sm">({islem.ekipmanAdi})</span></p>
+                    <p className="text-gray-300 text-sm mt-1">{islem.aciklama}</p>
+                  </div>
+                  {/* TEKNİSYEN İŞİ BİTİRİNCE BU BUTONA BASAR */}
+                  <button onClick={() => handleIsiTamamla(islem)} className="w-full md:w-auto whitespace-nowrap bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-lg transition shadow-[0_0_15px_rgba(22,163,74,0.4)]">
+                    ✅ İşi Tamamla
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div ref={formRef} className="bg-gray-900 border border-gray-800 p-6 md:p-8 rounded-2xl shadow-2xl transition-all">
           <h2 className="text-xl font-bold mb-6 text-orange-400">Yeni Arıza / Bakım Bildirimi</h2>
           {basariMesaji && <div className="mb-6 p-4 rounded-lg bg-green-900/30 text-green-400 font-medium border border-green-800/50">{basariMesaji}</div>}
 
@@ -236,7 +301,7 @@ export default function PersonelDashboard() {
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">Sorun Tipi</label>
                 <select {...register("sorunTipi")} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3">
-                  <option value="">-- Seçiniz --</option><option value="Mekanik">Mekanik</option><option value="Elektrik">Elektrik</option><option value="Otomasyon">Otomasyon / Yazılım</option>
+                  <option value="">-- Seçiniz --</option><option value="Mekanik">Mekanik</option><option value="Elektrik">Elektrik</option><option value="Otomasyon">Otomasyon</option><option value="Diğer">Diğer</option>
                 </select>
                 {errors.sorunTipi && <p className="text-red-500 text-xs mt-1">{errors.sorunTipi.message}</p>}
               </div>
@@ -260,7 +325,7 @@ export default function PersonelDashboard() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-2">Arıza Detayı ve Yapılan İşlem</label>
+              <label className="block text-sm font-medium text-gray-400 mb-2">Açıklama / Yapılan İşlem</label>
               <textarea {...register("aciklama")} rows={4} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3" />
               {errors.aciklama && <p className="text-red-500 text-xs mt-1">{errors.aciklama.message}</p>}
             </div>

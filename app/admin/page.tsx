@@ -10,11 +10,13 @@ import Link from "next/link";
 export default function AdminDashboard() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [userRole, setUserRole] = useState(""); 
+  const [userName, setUserName] = useState(""); 
   const [loading, setLoading] = useState(true);
   
   const [rawLogs, setRawLogs] = useState<any[]>([]);
   const [kpiOnayBekleyen, setKpiOnayBekleyen] = useState(0);
 
+  // Genel Bakım Filtreleri
   const [filterYil, setFilterYil] = useState("");
   const [filterAy, setFilterAy] = useState("");
   const [filterHat, setFilterHat] = useState("");
@@ -24,11 +26,17 @@ export default function AdminDashboard() {
   const [hatListesi, setHatListesi] = useState<string[]>([]);
   const [ekipmanListesi, setEkipmanListesi] = useState<string[]>([]);
   
-  const [filterEnerjiTipi, setFilterEnerjiTipi] = useState("Elektrik");
-  const [filterSayac, setFilterSayac] = useState("");
-  const [sayacListesi, setSayacListesi] = useState<string[]>([]);
+  // ENERJİ GRAFİĞİ BAĞIMSIZ FİLTRELERİ
+  const [filterElektrikSayac, setFilterElektrikSayac] = useState("");
+  const [filterDogalgazSayac, setFilterDogalgazSayac] = useState("");
+  const [filterSuSayac, setFilterSuSayac] = useState("");
+
+  const [elektrikSayacListesi, setElektrikSayacListesi] = useState<string[]>([]);
+  const [dogalgazSayacListesi, setDogalgazSayacListesi] = useState<string[]>([]);
+  const [suSayacListesi, setSuSayacListesi] = useState<string[]>([]);
   const [rawMeterLogs, setRawMeterLogs] = useState<any[]>([]); 
 
+  // PERSONEL PERFORMANS BAĞIMSIZ FİLTRELERİ
   const [filterPerfYil, setFilterPerfYil] = useState("");
   const [filterPerfAy, setFilterPerfAy] = useState("");
   const [filterPerfVardiya, setFilterPerfVardiya] = useState("");
@@ -36,6 +44,9 @@ export default function AdminDashboard() {
   const [filterPerfDurus, setFilterPerfDurus] = useState(""); 
   const [filterPerfSiralama, setFilterPerfSiralama] = useState("is"); 
   const [personelHavuzu, setPersonelHavuzu] = useState<string[]>([]); 
+
+  // Aktif İşler Alarm State'i
+  const [aktifIsler, setAktifIsler] = useState<any[]>([]);
 
   const [kpiToplamIs, setKpiToplamIs] = useState(0);
   const [kpiAylikDurus, setKpiAylikDurus] = useState(0);
@@ -56,8 +67,8 @@ export default function AdminDashboard() {
         if (userSnap.exists() && userSnap.data().isApproved) {
           const role = userSnap.data().role;
           setUserRole(role);
-          // DİKKAT: Üretim yetkilisi bu ekrana giremez, girmeye çalışırsa atılır!
-          if (role === "admin" || role === "operator") {
+          setUserName(userSnap.data().name);
+          if (role === "admin" || role === "operator" || role === "uretim") {
             setIsAdmin(true); 
             fetchIlkVeriler(); 
           }
@@ -73,11 +84,21 @@ export default function AdminDashboard() {
       const userQ = query(collection(db, "users"), where("isApproved", "==", false));
       setKpiOnayBekleyen((await getDocs(userQ)).size);
 
+      // Aktif işleri çek
+      const wQ = query(collection(db, "work_orders"), where("durum", "==", "Açık"));
+      const wSnap = await getDocs(wQ);
+      const wData = wSnap.docs.map(d => ({ 
+        id: d.id, ...d.data(), 
+        gercekZaman: d.data().kayitTarihi ? d.data().kayitTarihi.toDate().getTime() : 0 
+      }));
+      setAktifIsler(wData.sort((a, b) => b.gercekZaman - a.gercekZaman).slice(0, 5));
+
       const logs = (await getDocs(collection(db, "maintenance_logs"))).docs.map(doc => doc.data());
       setRawLogs(logs);
 
       const qMeter = query(collection(db, "meter_logs"), orderBy("tarih", "asc"));
-      setRawMeterLogs((await getDocs(qMeter)).docs.map(d => d.data()));
+      const meterSnap = await getDocs(qMeter);
+      setRawMeterLogs(meterSnap.docs.map(d => d.data()));
 
       const yillar = new Set<string>();
       const hatlar = new Set<string>();
@@ -93,6 +114,17 @@ export default function AdminDashboard() {
     } catch (error) { console.error(error); }
   };
 
+  // İşi Tamamlama Yönlendirmesi
+  const handleIsiTamamla = async (islem: any) => {
+    if (!window.confirm("Bu işi bitirdiğinizi onaylıyor musunuz? Form otomatik açılacaktır.")) return;
+    try {
+      window.location.href = `/dashboard?hat=${encodeURIComponent(islem.hatAdi)}&ekipman=${encodeURIComponent(islem.ekipmanAdi)}&sorun=${encodeURIComponent(islem.sorunTipi)}&duruslu=${islem.isDuruslu ? 'true' : 'false'}&aciklama=${encodeURIComponent(islem.aciklama)}`;
+    } catch (error) {
+      alert("Hata oluştu.");
+    }
+  };
+
+  // ENERJİ TÜKETİM (FARK) HESAPLAMASI
   useEffect(() => {
     if (rawMeterLogs.length === 0) return;
 
@@ -103,6 +135,7 @@ export default function AdminDashboard() {
 
     rawMeterLogs.forEach(log => {
       const tip = log.tip || "Elektrik";
+      
       if (tip === "Elektrik" && log.sayacAdi) elekSet.add(log.sayacAdi);
       if (tip === "Doğalgaz" && log.sayacAdi) dogSet.add(log.sayacAdi);
       if (tip === "Su" && log.sayacAdi) suSet.add(log.sayacAdi);
@@ -119,7 +152,11 @@ export default function AdminDashboard() {
     setDogalgazSayacListesi(Array.from(dogSet).sort());
     setSuSayacListesi(Array.from(suSet).sort());
 
-    const initAylar = () => ({ "01. Ay": 0, "02. Ay": 0, "03. Ay": 0, "04. Ay": 0, "05. Ay": 0, "06. Ay": 0, "07. Ay": 0, "08. Ay": 0, "09. Ay": 0, "10. Ay": 0, "11. Ay": 0, "12. Ay": 0 });
+    const initAylar = () => ({
+      "01. Ay": 0, "02. Ay": 0, "03. Ay": 0, "04. Ay": 0, "05. Ay": 0, "06. Ay": 0,
+      "07. Ay": 0, "08. Ay": 0, "09. Ay": 0, "10. Ay": 0, "11. Ay": 0, "12. Ay": 0
+    });
+
     const tuketimElektrik = initAylar();
     const tuketimDogalgaz = initAylar();
     const tuketimSu = initAylar();
@@ -130,7 +167,9 @@ export default function AdminDashboard() {
 
       for (let i = 1; i < okumalar.length; i++) {
         const tuketimFarki = Math.max(0, Number(okumalar[i].deger) - Number(okumalar[i - 1].deger)); 
-        const ayAnahtari = `${okumalar[i].tarih.split("-")[1]}. Ay`;
+        const ayStr = okumalar[i].tarih.split("-")[1]; 
+        const ayAnahtari = `${ayStr}. Ay`;
+
         if (tip === "Elektrik" && tuketimElektrik[ayAnahtari] !== undefined) tuketimElektrik[ayAnahtari] += tuketimFarki;
         else if (tip === "Doğalgaz" && tuketimDogalgaz[ayAnahtari] !== undefined) tuketimDogalgaz[ayAnahtari] += tuketimFarki;
         else if (tip === "Su" && tuketimSu[ayAnahtari] !== undefined) tuketimSu[ayAnahtari] += tuketimFarki;
@@ -138,11 +177,15 @@ export default function AdminDashboard() {
     });
 
     const formatData = (dataObj: any) => Object.keys(dataObj).map(ay => ({ ay, tuketim: dataObj[ay] })).filter(a => a.tuketim > 0);
+
     setGrafikElektrik(formatData(tuketimElektrik));
     setGrafikDogalgaz(formatData(tuketimDogalgaz));
     setGrafikSu(formatData(tuketimSu));
+
   }, [rawMeterLogs, filterElektrikSayac, filterDogalgazSayac, filterSuSayac]);
 
+
+  // BAKIM VE PERFORMANS HESAPLAMALARI
   useEffect(() => {
     if (rawLogs.length === 0) return;
 
@@ -150,6 +193,7 @@ export default function AdminDashboard() {
     const tumIslerData: Record<string, { adet: number, dakika: number }> = {};
     const durusluIslerData: Record<string, { adet: number, dakika: number }> = {};
     const personelAnaliz: Record<string, { isSayisi: number, eforDk: number }> = {};
+    
     const aktifEkipmanlar = new Set<string>();
     const tumPersoneller = new Set<string>(); 
 
@@ -166,6 +210,7 @@ export default function AdminDashboard() {
 
       const sure = Number(data.toplamSureDakika) || 0;
       const isEkibi = Array.isArray(data.isiYapanlar) && data.isiYapanlar.length > 0 ? data.isiYapanlar : [data.bildirenKisi || "Bilinmiyor"];
+      
       isEkibi.forEach((p: string) => tumPersoneller.add(p)); 
 
       if (grafikPass) {
@@ -218,14 +263,14 @@ export default function AdminDashboard() {
   const filtreleriTemizle = () => { setFilterYil(""); setFilterAy(""); setFilterHat(""); setFilterEkipman(""); };
   const perfFiltreleriTemizle = () => { setFilterPerfYil(""); setFilterPerfAy(""); setFilterPerfVardiya(""); setFilterPerfPersonel(""); setFilterPerfDurus(""); setFilterPerfSiralama("is"); };
 
-  if (loading) return <div className="min-h-screen bg-gray-950 flex justify-center items-center text-white">Sistem yükleniyor...</div>;
+  if (loading) return <div className="min-h-screen bg-gray-950 text-white flex justify-center items-center">Sistem yükleniyor...</div>;
   if (!isAdmin) return <div className="min-h-screen bg-gray-950 text-red-500 flex justify-center items-center">Yetkisiz Erişim!</div>;
 
   const OzelTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-gray-800 border border-gray-700 p-3 rounded-lg shadow-2xl z-50">
-          <p className="font-bold text-white mb-2">{label}</p>
+          <p className="font-bold text-white mb-2 border-b border-gray-700 pb-1">{label}</p>
           {payload.map((p: any, i: number) => (<p key={i} style={{color: p.color}} className="text-sm">{p.name}: <b>{p.value}</b></p>))}
         </div>
       );
@@ -234,7 +279,20 @@ export default function AdminDashboard() {
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{__html: `@media print { body { background: white !important; color: black !important; } .no-print { display: none !important; } .print-break { page-break-before: always; } .bg-gray-950, .bg-gray-900 { background: white !important; } .text-white, .text-gray-400 { color: black !important; } .border-gray-800, .border-gray-700 { border-color: #ddd !important; } .shadow-lg { box-shadow: none !important; } .perf-row { display: none !important; } .perf-row:nth-child(-n+5) { display: table-row !important; } .pdf-top5-mesaj { display: block !important; color: #EF4444 !important; font-size: 12px; font-weight: bold; margin-top: 8px;} }`}} />
+      <style dangerouslySetInnerHTML={{__html: `
+        @media print {
+          body { background: white !important; color: black !important; }
+          .no-print { display: none !important; }
+          .print-break { page-break-before: always; }
+          .bg-gray-950, .bg-gray-900 { background: white !important; }
+          .text-white, .text-gray-400 { color: black !important; }
+          .border-gray-800, .border-gray-700 { border-color: #ddd !important; }
+          .shadow-lg { box-shadow: none !important; }
+          .perf-row { display: none !important; }
+          .perf-row:nth-child(-n+5) { display: table-row !important; }
+          .pdf-top5-mesaj { display: block !important; color: #EF4444 !important; font-size: 12px; font-weight: bold; margin-top: 8px;}
+        }
+      `}} />
 
       <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8 overflow-x-hidden">
         <div className="max-w-7xl mx-auto">
@@ -243,7 +301,7 @@ export default function AdminDashboard() {
             <div className="flex items-center gap-4">
               <img src="/dfulogo.png" alt="Logo" className="h-12 w-auto object-contain bg-white rounded-lg p-1" />
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold">{userRole === "admin" ? "Yönetici Paneli" : "Operatör İzleme Paneli"}</h1>
+                <h1 className="text-2xl md:text-3xl font-bold">{userRole === "admin" ? "Yönetici Paneli" : userRole === "uretim" ? "Üretim İzleme Paneli" : "Operatör İzleme Paneli"}</h1>
                 <p className="text-gray-400 mt-1 text-sm md:text-base"><span className="font-bold text-gray-300">DFU Donuk Fırıncılık Ürünleri A.Ş.</span> | İş Zekası (BI)</p>
               </div>
             </div>
@@ -259,11 +317,10 @@ export default function AdminDashboard() {
           </div>
 
           <div className="flex flex-wrap gap-4 mb-6 no-print">
-            {userRole === "admin" && (
-              <>
-                <Link href="/admin/is-emri-ac" className="bg-red-600 hover:bg-red-500 px-4 md:px-6 py-2 md:py-3 rounded-xl text-sm md:text-base font-bold shadow-[0_0_15px_rgba(220,38,38,0.5)] flex items-center gap-2">🚨 Yeni İş Emri Aç</Link>
-              </>
+            {(userRole === "admin" || userRole === "uretim") && (
+              <Link href="/admin/is-emri-ac" className="bg-red-600 hover:bg-red-500 px-4 md:px-6 py-2 md:py-3 rounded-xl text-sm md:text-base font-bold shadow-[0_0_15px_rgba(220,38,38,0.5)] flex items-center gap-2">🚨 Yeni İş Emri Aç</Link>
             )}
+            
             <Link href="/admin/aktif-isler" className="bg-red-900/60 hover:bg-red-600 text-red-100 border border-red-500/50 px-4 md:px-6 py-2 md:py-3 rounded-xl text-sm md:text-base font-bold flex items-center gap-2">
               <span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span></span>
               Tüm Aktif İş Emirleri
@@ -278,10 +335,35 @@ export default function AdminDashboard() {
               </>
             )}
             <Link href="/admin/mesai" className="bg-teal-600 px-4 py-2 rounded-xl text-sm md:text-base font-semibold">Mesai Raporları</Link>
-            <Link href="/dashboard/sayac" className="bg-emerald-600 px-4 py-2 rounded-xl text-sm md:text-base text-white font-semibold">⚡ Elektrik Sayaç Okuma</Link>
+            <Link href="/dashboard/sayac" className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm md:text-base text-white">⚡ Sayaç Okuma</Link>
             <Link href="/admin/is-listesi" className="bg-indigo-600 px-4 py-2 rounded-xl text-sm md:text-base font-semibold">Yapılan İşler</Link>
             <Link href="/dashboard" className="bg-orange-600 px-4 py-2 rounded-xl ml-auto text-sm md:text-base font-semibold">Arıza Ekranı ➔</Link>
           </div>
+
+          {/* AKTİF BİLDİRİMLER ALARM KUTUSU */}
+          {aktifIsler.length > 0 && (
+            <div className="bg-red-900/20 border-2 border-red-500/50 p-6 rounded-2xl mb-10 shadow-2xl no-print">
+              <h2 className="text-xl font-bold text-red-400 mb-6 flex items-center gap-2">
+                <span className="relative flex h-4 w-4"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span></span>
+                Sahadan Gelen Aktif Bildirimler (Müdahale Bekleyen İş Emirleri)
+              </h2>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {aktifIsler.map(islem => (
+                  <div key={islem.id} className="bg-gray-900 border border-red-800/50 p-5 rounded-xl shadow-lg relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition hover:border-red-500/80">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-red-500"></div>
+                    <div>
+                      <p className="text-xs text-gray-400 mb-1">{islem.kayitTarihi?.toDate().toLocaleString('tr-TR')} | Bildiren: {islem.bildirenKisi}</p>
+                      <p className="font-bold text-white text-lg">{islem.hatAdi} <span className="text-red-400 font-medium text-sm">({islem.ekipmanAdi})</span></p>
+                      <p className="text-gray-300 text-sm mt-1 line-clamp-2">{islem.aciklama}</p>
+                    </div>
+                    <button onClick={() => handleIsiTamamla(islem)} className="w-full md:w-auto whitespace-nowrap bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-lg transition shadow-[0_0_15px_rgba(22,163,74,0.4)]">
+                      ✅ İşi Tamamla
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="hidden print:block text-center mb-8 border-b-2 border-black pb-4">
             <h2 className="text-2xl font-bold text-black">Bakım Yönetim Sistemi Özet Raporu</h2>
@@ -306,10 +388,11 @@ export default function AdminDashboard() {
             )}
           </div>
 
+          {/* 3'LÜ ENERJİ GRAFİĞİ BAĞIMSIZ FİLTRELERİYLE BİRLİKTE */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
             <div className="bg-gray-900 border border-yellow-500/30 p-4 rounded-2xl shadow-lg border-t-4 border-t-yellow-500">
               <div className="flex justify-between items-center mb-4 border-b border-gray-800 pb-2">
-                <h2 className="text-sm font-bold text-yellow-400 print:text-black">⚡ Elektrik Tüketimi (kWh)</h2>
+                <h2 className="text-sm font-bold text-yellow-400 print:text-black flex items-center gap-2">⚡ Elektrik Tüketimi (kWh)</h2>
               </div>
               <select value={filterElektrikSayac} onChange={(e) => setFilterElektrikSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 text-gray-300 rounded-lg p-2 text-xs mb-4 no-print focus:border-yellow-500">
                 <option value="">Tüm Elektrik Sayaçları</option>{elektrikSayacListesi.map(s => <option key={s} value={s}>{s}</option>)}
@@ -321,7 +404,7 @@ export default function AdminDashboard() {
 
             <div className="bg-gray-900 border border-red-500/30 p-4 rounded-2xl shadow-lg border-t-4 border-t-red-500">
               <div className="flex justify-between items-center mb-4 border-b border-gray-800 pb-2">
-                <h2 className="text-sm font-bold text-red-400 print:text-black">🔥 Doğalgaz Tüketimi (m³)</h2>
+                <h2 className="text-sm font-bold text-red-400 print:text-black flex items-center gap-2">🔥 Doğalgaz Tüketimi (m³)</h2>
               </div>
               <select value={filterDogalgazSayac} onChange={(e) => setFilterDogalgazSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 text-gray-300 rounded-lg p-2 text-xs mb-4 no-print focus:border-red-500">
                 <option value="">Tüm Doğalgaz Sayaçları</option>{dogalgazSayacListesi.map(s => <option key={s} value={s}>{s}</option>)}
@@ -333,7 +416,7 @@ export default function AdminDashboard() {
 
             <div className="bg-gray-900 border border-blue-500/30 p-4 rounded-2xl shadow-lg border-t-4 border-t-blue-500">
               <div className="flex justify-between items-center mb-4 border-b border-gray-800 pb-2">
-                <h2 className="text-sm font-bold text-blue-400 print:text-black">💧 Su Tüketimi (Ton)</h2>
+                <h2 className="text-sm font-bold text-blue-400 print:text-black flex items-center gap-2">💧 Su Tüketimi (Ton)</h2>
               </div>
               <select value={filterSuSayac} onChange={(e) => setFilterSuSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 text-gray-300 rounded-lg p-2 text-xs mb-4 no-print focus:border-blue-500">
                 <option value="">Tüm Su Sayaçları</option>{suSayacListesi.map(s => <option key={s} value={s}>{s}</option>)}
@@ -344,10 +427,9 @@ export default function AdminDashboard() {
             </div>
           </div>
 
+          {/* BAKIM MODÜLÜ FİLTRELERİ */}
           <div className="bg-gray-900 border border-blue-700/50 p-5 rounded-2xl mb-6 flex flex-wrap gap-4 items-end no-print shadow-[0_0_15px_rgba(59,130,246,0.1)]">
-            <div className="w-full mb-1 border-b border-gray-800 pb-2">
-              <h3 className="text-blue-500 font-bold flex items-center gap-2">Arıza ve Bakım Filtreleri</h3>
-            </div>
+            <div className="w-full mb-1 border-b border-gray-800 pb-2"><h3 className="text-blue-500 font-bold flex items-center gap-2"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg> Arıza ve Bakım Filtreleri</h3></div>
             <div className="flex-1 min-w-[120px]"><label className="block text-xs text-gray-400 mb-1">Yıl</label><select value={filterYil} onChange={(e) => setFilterYil(e.target.value)} className="w-full bg-gray-800 rounded-lg p-2 text-sm"><option value="">Tümü</option>{yilListesi.map(y => <option key={y} value={y}>{y}</option>)}</select></div>
             <div className="flex-1 min-w-[120px]"><label className="block text-xs text-gray-400 mb-1">Ay</label><select value={filterAy} onChange={(e) => setFilterAy(e.target.value)} className="w-full bg-gray-800 rounded-lg p-2 text-sm"><option value="">Tümü</option><option value="1">Ocak</option><option value="2">Şubat</option><option value="3">Mart</option><option value="4">Nisan</option><option value="5">Mayıs</option><option value="6">Haziran</option><option value="7">Temmuz</option><option value="8">Ağustos</option><option value="9">Eylül</option><option value="10">Ekim</option><option value="11">Kasım</option><option value="12">Aralık</option></select></div>
             <div className="flex-1 min-w-[120px]"><label className="block text-xs text-gray-400 mb-1">Üretim Hattı</label><select value={filterHat} onChange={(e) => { setFilterHat(e.target.value); setFilterEkipman(""); }} className="w-full bg-gray-800 rounded-lg p-2 text-sm"><option value="">Tümü</option>{hatListesi.map(h => <option key={h} value={h}>{h}</option>)}</select></div>

@@ -99,7 +99,7 @@ export default function TamamlananIsler() {
             <h1 className="text-2xl md:text-3xl font-bold text-green-400">Tamamlanmış İş Emirleri Arşivi</h1>
             <p className="text-gray-400 mt-1">Teknisyenler tarafından çözülen ve kapatılan iş taleplerinin arşivi.</p>
           </div>
-          <Link href={userRole === "uretim" ? "/admin/aktif-isler" : userRole === "admin" || userRole === "operator" ? "/admin" : "/dashboard"} className="bg-gray-800 px-4 py-2 rounded-lg text-sm transition">← Ana Ekrana Dön</Link>
+         <Link href={userRole === "uretim" || userRole === "admin" || userRole === "operator" ? "/admin" : "/dashboard"} className="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm transition">← İzleme Paneline Dön</Link>
         </div>
 
         {/* FİLTRELEME ÇUBUĞU */}

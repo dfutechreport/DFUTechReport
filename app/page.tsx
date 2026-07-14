@@ -140,10 +140,10 @@ export default function LoginPage() {
             <div className="p-4 rounded-lg bg-green-900/30 text-green-400 border border-green-800/50">Giriş Başarılı (Yetki: {userStatus.toUpperCase()})</div>
             <button onClick={() => handleEnterSystem("/admin")} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-4 rounded-xl shadow-lg">Yönetim Paneline Git ➔</button>
           </div>
-        ) : userStatus === "uretim" ? (
+         ) : userStatus === "uretim" ? (
           <div className="space-y-4">
             <div className="p-4 rounded-lg bg-red-900/30 text-red-400 border border-red-800/50">Giriş Başarılı (Yetki: ÜRETİM YETKİLİSİ)</div>
-            <button onClick={() => handleEnterSystem("/admin/aktif-isler")} className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-4 px-4 rounded-xl shadow-lg">Aktif İşler Paneline Git ➔</button>
+            <button onClick={() => handleEnterSystem("/admin")} className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-4 px-4 rounded-xl shadow-lg">İzleme Paneline Git ➔</button>
           </div>
         ) : userStatus === "teknisyen" || userStatus === "user" ? (
           <div className="space-y-4">

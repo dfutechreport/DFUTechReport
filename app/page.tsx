@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { signInWithPopup, onAuthStateChanged, updateProfile } from "firebase/auth";
-import { doc, getDoc, setDoc, deleteDoc } from "firebase/firestore";
-import { auth, googleProvider, db } from "../lib/firebase"; 
+import { collection, doc, getDoc, setDoc, getDocs, query, where, deleteDoc } from "firebase/firestore";
+import { auth, googleProvider, db } from "./lib/firebase";
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
@@ -11,6 +11,7 @@ export default function LoginPage() {
   const [message, setMessage] = useState("");
   
   const [showSplash, setShowSplash] = useState(false);
+  const [targetUrl, setTargetUrl] = useState("");
 
   const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [tempUser, setTempUser] = useState<any>(null);
@@ -134,21 +135,20 @@ export default function LoginPage() {
               {loading ? "Sisteme Giriliyor..." : (tempRoleInfo ? "Doğrula ve İçeri Gir" : "Kaydımı Tamamla")}
             </button>
           </form>
-        ) : userStatus === "admin" || userStatus === "operator" || userStatus === "uretim" ? (
+        ) : userStatus === "admin" || userStatus === "operator" ? (
           <div className="space-y-4">
-            <div className="p-4 rounded-lg bg-green-900/30 text-green-400 border border-green-800/50">
-              Giriş Başarılı (Yetki: {userStatus === "uretim" ? "ÜRETİM YETKİLİSİ" : userStatus.toUpperCase()})
-            </div>
-            <button onClick={() => handleEnterSystem("/admin")} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-4 rounded-xl transition shadow-lg shadow-green-500/30">
-              {userStatus === "admin" ? "Yönetim Paneline Git ➔" : "İzleme Paneline Git ➔"}
-            </button>
+            <div className="p-4 rounded-lg bg-green-900/30 text-green-400 border border-green-800/50">Giriş Başarılı (Yetki: {userStatus.toUpperCase()})</div>
+            <button onClick={() => handleEnterSystem("/admin")} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-4 rounded-xl shadow-lg">Yönetim Paneline Git ➔</button>
+          </div>
+        ) : userStatus === "uretim" ? (
+          <div className="space-y-4">
+            <div className="p-4 rounded-lg bg-red-900/30 text-red-400 border border-red-800/50">Giriş Başarılı (Yetki: ÜRETİM YETKİLİSİ)</div>
+            <button onClick={() => handleEnterSystem("/admin/aktif-isler")} className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-4 px-4 rounded-xl shadow-lg">Aktif İşler Paneline Git ➔</button>
           </div>
         ) : userStatus === "teknisyen" || userStatus === "user" ? (
           <div className="space-y-4">
             <div className="p-4 rounded-lg bg-blue-900/30 text-blue-400 border border-blue-800/50">Giriş Başarılı (Yetki: TEKNİSYEN)</div>
-            <button onClick={() => handleEnterSystem("/dashboard")} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-4 rounded-xl transition shadow-lg shadow-blue-500/30">
-              Arıza Formuna Git ➔
-            </button>
+            <button onClick={() => handleEnterSystem("/dashboard")} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-4 rounded-xl shadow-lg">Arıza Formuna Git ➔</button>
           </div>
         ) : userStatus === "pending" ? (
           <div className="p-4 rounded-lg bg-orange-900/30 text-orange-400 border border-orange-800/50">{message}</div>

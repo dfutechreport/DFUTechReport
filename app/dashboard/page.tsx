@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, Suspense } from "react";
+// DİKKAT: orderBy kelimesi buradan çıkarıldı (Vercel Hatası Çözümü)
 import { collection, getDocs, addDoc, doc, getDoc, updateDoc, arrayUnion, query, where } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../../lib/firebase";
@@ -183,6 +184,7 @@ function DashboardIcerik() {
       
       formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       setBasariMesaji("Üretim bildirimi başarıyla kapatıldı! Lütfen harcadığınız süreyi girerek performansınızı kaydedin.");
+
     } catch (error) {
       alert("Hata oluştu.");
     }
@@ -244,7 +246,6 @@ function DashboardIcerik() {
         </div>
 
         <div className="mb-6 flex flex-wrap justify-center md:justify-end gap-3">
-          {/* YENİ: İSMİ GÜNCELLENEN AKTİF İŞ EMİRLERİ BUTONU */}
           <a href="/admin/aktif-isler" className="bg-red-900/60 hover:bg-red-600 text-red-100 border border-red-500/50 px-4 md:px-6 py-2 md:py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 text-sm md:text-base w-full md:w-auto justify-center transition">
             <span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span></span>
             Tüm Aktif İş Emirleri
@@ -261,7 +262,7 @@ function DashboardIcerik() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span>
               </span>
-              Üretimden Gelen Aktif Bildirimler (Müdahale Bekleyen İş Emirleri)
+              Üretimden Gelen Aktif Bildirimler (Müdahale Bekliyor)
             </h2>
             <div className="space-y-4">
               {aktifIsler.map(islem => (
@@ -386,7 +387,7 @@ function DashboardIcerik() {
               {errors.aciklama && <p className="text-red-500 text-xs mt-1">{errors.aciklama.message}</p>}
             </div>
 
-            <button type="submit" disabled={isSubmitting || hesaplananSure <= 0} className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-4 px-4 rounded-xl transition shadow-lg disabled:opacity-50">
+            <button type="submit" disabled={isSubmitting || hesaplananSure <= 0} className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-4 px-4 rounded-xl disabled:opacity-50 transition-all">
               {isSubmitting ? "Kaydediliyor..." : "Performansıma Kaydet ve İşi Bitir"}
             </button>
           </form>

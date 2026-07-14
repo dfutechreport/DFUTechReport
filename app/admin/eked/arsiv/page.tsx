@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs, doc, getDoc, query, where, orderBy, deleteDoc } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, query, where, deleteDoc } from "firebase/firestore";
 import { auth, db } from "../../../../lib/firebase"; 
 import Link from "next/link";
 import { onAuthStateChanged } from "firebase/auth";
@@ -51,53 +51,92 @@ export default function EkedArsivi() {
   if (loading) return <div className="min-h-screen bg-gray-950 flex justify-center items-center text-white">Yükleniyor...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-gray-800 pb-5 gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-300 flex items-center gap-3">🗄️ EKED - LOTO Arşivi</h1>
-            <p className="text-gray-400 mt-1">Geçmişte yapılmış ve tamamlanarak kilidi açılmış güvenlik uygulamaları.</p>
+    <>
+      {/* PDF YAZDIRMA STİLLERİ */}
+      <style dangerouslySetInnerHTML={{__html: `
+        @media print {
+          body { background: white !important; color: black !important; }
+          .no-print { display: none !important; }
+          .print-break { page-break-before: always; }
+          .bg-gray-950, .bg-gray-900 { background: white !important; }
+          .text-white, .text-gray-400 { color: black !important; }
+          .border-gray-800, .border-gray-700 { border-color: #ddd !important; }
+          .shadow-lg { box-shadow: none !important; }
+        }
+      `}} />
+
+      <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8">
+        <div className="max-w-7xl mx-auto">
+          
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-gray-800 pb-5 gap-4">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-300 flex items-center gap-3 print:text-black">
+                <span className="no-print">🗄️</span> EKED - LOTO Arşivi (İSG)
+              </h1>
+              <p className="text-gray-400 mt-1 print:text-black">Geçmişte yapılmış ve tamamlanarak kilidi açılmış güvenlik uygulamaları.</p>
+            </div>
+            <div className="flex gap-3 no-print">
+              {/* YENİ: PDF ÇIKTISI AL BUTONU */}
+              <button 
+                onClick={() => window.print()} 
+                className="bg-white text-gray-900 font-bold px-4 py-2 rounded-lg shadow-lg hover:bg-gray-200 transition flex items-center gap-2 text-sm md:text-base"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                PDF Çıktısı Al
+              </button>
+              <Link href={userRole === "admin" || userRole === "operator" ? "/admin" : "/dashboard"} className="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm transition">
+                ← Panele Dön
+              </Link>
+            </div>
           </div>
-          <Link href={userRole === "admin" || userRole === "operator" ? "/admin" : "/dashboard"} className="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm transition">← Panele Dön</Link>
-        </div>
 
-        <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-lg overflow-x-auto">
-          {logs.length === 0 ? <div className="text-center py-10 text-gray-500">Arşivde kayıt bulunmuyor.</div> : (
-            <table className="w-full text-left text-sm whitespace-nowrap md:whitespace-normal">
-              <thead>
-                <tr className="border-b border-gray-800 text-gray-400">
-                  <th className="pb-3 px-2">Uygulama Tarihi</th>
-                  <th className="pb-3 px-2">Kaldırılma (Tamamlanma) Zamanı</th>
-                  <th className="pb-3 px-2">Uygulayan Personel</th>
-                  <th className="pb-3 px-2">Uygulama Yeri</th>
-                  <th className="pb-3 px-2 text-green-500">Durum</th>
-                  {userRole === "admin" && <th className="pb-3 px-2 text-right">Aksiyon</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {logs.map(log => (
-                  <tr key={log.id} className="border-b border-gray-800 hover:bg-gray-800/50 transition">
-                    <td className="py-4 px-2 text-gray-300">{log.tarih}</td>
-                    <td className="py-4 px-2 text-gray-400 text-xs">{log.kapatmaStr}</td>
-                    <td className="py-4 px-2 font-medium text-blue-300">{log.personel}</td>
-                    <td className="py-4 px-2 text-gray-200">{log.yer}</td>
-                    <td className="py-4 px-2">
-                      <span className="bg-green-900/30 text-green-400 text-xs px-2 py-1 rounded border border-green-800/50">✅ Kilit Açıldı</span>
-                    </td>
-                    {userRole === "admin" && (
-                      <td className="py-4 px-2 text-right space-x-2">
-                        <button onClick={() => handleSil(log.id)} className="bg-red-900/50 hover:bg-red-600 text-red-400 hover:text-white text-xs px-3 py-2 rounded">Sil</button>
-                      </td>
-                    )}
+          {/* Sadece PDF'te çıkacak başlık */}
+          <div className="hidden print:block text-center mb-8 border-b-2 border-black pb-4">
+            <h2 className="text-2xl font-bold text-black">İSG - Tamamlanmış EKED (LOTO) Kayıt Raporu</h2>
+            <p className="text-sm text-gray-500 mt-1">Oluşturulma Tarihi: {new Date().toLocaleString('tr-TR')}</p>
+          </div>
+
+          <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-lg overflow-x-auto">
+            {logs.length === 0 ? (
+              <div className="text-center py-10 text-gray-500">Arşivde kayıt bulunmuyor.</div>
+            ) : (
+              <table className="w-full text-left text-sm whitespace-nowrap md:whitespace-normal">
+                <thead>
+                  <tr className="border-b border-gray-800 text-gray-400 print:text-black">
+                    <th className="pb-3 px-2">Uygulama Tarihi</th>
+                    <th className="pb-3 px-2">Kaldırılma (Tamamlanma) Zamanı</th>
+                    <th className="pb-3 px-2">Uygulayan Personel</th>
+                    <th className="pb-3 px-2">Uygulama Yeri</th>
+                    <th className="pb-3 px-2 text-green-500 print:text-black">Durum</th>
+                    {userRole === "admin" && <th className="pb-3 px-2 text-right no-print">Aksiyon</th>}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+                </thead>
+                <tbody>
+                  {logs.map(log => (
+                    <tr key={log.id} className="border-b border-gray-800 print:border-gray-300 hover:bg-gray-800/50 transition">
+                      <td className="py-4 px-2 text-gray-300 print:text-black">{log.tarih}</td>
+                      <td className="py-4 px-2 text-gray-400 text-xs print:text-black font-bold">{log.kapatmaStr}</td>
+                      <td className="py-4 px-2 font-medium text-blue-300 print:text-black">{log.personel}</td>
+                      <td className="py-4 px-2 text-gray-200 print:text-black">{log.yer}</td>
+                      <td className="py-4 px-2">
+                        <span className="bg-green-900/30 text-green-400 print:text-green-700 print:font-bold text-xs px-2 py-1 rounded border border-green-800/50 print:border-none">
+                          Kilit Açıldı
+                        </span>
+                      </td>
+                      {userRole === "admin" && (
+                        <td className="py-4 px-2 text-right space-x-2 no-print">
+                          <button onClick={() => handleSil(log.id)} className="bg-red-900/50 hover:bg-red-600 text-red-400 hover:text-white text-xs px-3 py-2 rounded">Sil</button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
 
+        </div>
       </div>
-    </div>
+    </>
   );
 }

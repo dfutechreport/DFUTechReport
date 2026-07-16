@@ -105,6 +105,8 @@ export default function PersonelYonetimi() {
                     <option value="teknisyen">Teknisyen</option>
                     <option value="operator">Operatör</option>
                     <option value="uretim">Üretim Yetkilisi</option>
+                    {/* YENİ: İK Rolü */}
+                    <option value="ik">İnsan Kaynakları (İK)</option>
                     <option value="admin">Admin</option>
                   </select>
                 </div>
@@ -143,6 +145,7 @@ export default function PersonelYonetimi() {
                               <option value="teknisyen">Teknisyen</option>
                               <option value="operator">Operatör</option>
                               <option value="uretim">Üretim Yetkilisi</option>
+                              <option value="ik">İnsan Kaynakları</option>
                               <option value="admin">Admin</option>
                             </select>
                           ) : <span className="text-gray-500">Bekliyor</span>}
@@ -152,8 +155,7 @@ export default function PersonelYonetimi() {
                             <>
                               <button onClick={() => handleApprove(u.id, "teknisyen")} className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-2 py-1 rounded">Teknisyen</button>
                               <button onClick={() => handleApprove(u.id, "operator")} className="bg-gray-600 hover:bg-gray-500 text-white text-xs px-2 py-1 rounded">Operatör</button>
-                              <button onClick={() => handleApprove(u.id, "uretim")} className="bg-purple-600 hover:bg-purple-500 text-white text-xs px-2 py-1 rounded">Üretim Yt.</button>
-                              <button onClick={() => handleApprove(u.id, "admin")} className="bg-green-700 hover:bg-green-600 text-white text-xs px-2 py-1 rounded">Admin</button>
+                              <button onClick={() => handleApprove(u.id, "ik")} className="bg-teal-600 hover:bg-teal-500 text-white text-xs px-2 py-1 rounded">İK Yap</button>
                             </>
                           ) : (
                             <button onClick={() => handleRevoke(u.id, u.email)} className="bg-red-900/50 text-red-400 text-xs px-2 py-1 rounded border border-red-800/50">Erişimi Kes</button>

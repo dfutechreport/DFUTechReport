@@ -314,7 +314,7 @@ function DashboardIcerik() {
 
         <div ref={formRef} className={`bg-gray-900 border p-6 md:p-8 rounded-2xl shadow-2xl transition-all ${isAutoFilled ? 'border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.3)]' : 'border-gray-800'}`}>
           <h2 className={`text-xl font-bold mb-6 flex items-center gap-2 ${isAutoFilled ? 'text-green-400' : 'text-orange-400'}`}>
-            {isAutoFilled ? "✅ Otomatik Dolduruldu (İş Emri Kapatıldı)" : "Yeni Arıza / Bakım Bildirimi"}
+            {isAutoFilled ? "✅ Otomatik Dolduruldu (İş Emri Kapatıldı)" : "Yeni Vardiya / Bakım Raporu"}
           </h2>
           
           {basariMesaji && <div className="mb-6 p-4 rounded-lg bg-green-900/30 text-green-400 font-medium border border-green-800/50">{basariMesaji}</div>}

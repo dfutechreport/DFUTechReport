@@ -352,7 +352,7 @@ export default function AdminDashboard() {
                 <Link href="/dashboard/sayac" className="bg-emerald-600 hover:bg-emerald-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">⚡ Sayaç Okuma</Link>
                 <Link href="/admin/mesai" className="bg-teal-600 hover:bg-teal-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">⏰ Mesai Raporu</Link>
                 <Link href="/admin/is-listesi" className="bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">📋 Yapılan İşler</Link>
-                <Link href="/dashboard" className="bg-orange-600 hover:bg-orange-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">🛠️ Arıza Ekranı</Link>
+                <Link href="/dashboard" className="bg-orange-600 hover:bg-orange-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">🛠️ Vardiya Raporu Girişi</Link>
               </>
             )}
           </div>

@@ -153,7 +153,9 @@ export default function LoginPage() {
         ) : userStatus === "teknisyen" || userStatus === "user" ? (
           <div className="space-y-4">
             <div className="p-4 rounded-lg bg-blue-900/30 text-blue-400 border border-blue-800/50">Giriş Başarılı (Yetki: TEKNİSYEN)</div>
-            <button onClick={() => handleEnterSystem("/dashboard")} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-4 rounded-xl shadow-lg">Arıza Formuna Git ➔</button>
+            <button onClick={() => handleEnterSystem("/dashboard")} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-4 rounded-xl shadow-lg">
+              Vardiya Raporu Girişine Git ➔
+            </button>
           </div>
         ) : userStatus === "pending" ? (
           <div className="p-4 rounded-lg bg-orange-900/30 text-orange-400 border border-orange-800/50">{message}</div>

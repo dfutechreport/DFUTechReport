@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, Suspense } from "react";
-import { collection, getDocs, addDoc, doc, getDoc, updateDoc, arrayUnion, query, where } from "firebase/firestore";
+import { collection, getDocs, addDoc, doc, getDoc, updateDoc, arrayUnion, query, where, orderBy } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../../lib/firebase";
 import { useForm, Controller } from "react-hook-form";
@@ -23,7 +23,6 @@ const arizaSemasi = yup.object().shape({
     return new Date(value) >= new Date(baslangicSaati);
   }),
   aciklama: yup.string().min(10, "Açıklama en az 10 karakter olmalıdır!").required(),
-  // YENİ: Yedek Parça alanları (Zorunlu değil)
   yedekParcaKodu: yup.string(),
   yedekParcaMiktar: yup.number().transform((value) => (isNaN(value) ? undefined : value)).nullable(),
   yedekParcaBirim: yup.string()
@@ -173,7 +172,6 @@ function DashboardIcerik() {
 
   const handleIsiTamamla = async (islem: any) => {
     if (!window.confirm("Bu işi bitirdiğinizi onaylıyor musunuz? Onayladıktan sonra süresini girmek için form otomatik olarak açılacaktır.")) return;
-
     try {
       await updateDoc(doc(db, "work_orders", islem.id), {
         durum: "Kapalı", tamamlayanKisi: userName, tamamlanmaTarihi: new Date()
@@ -205,7 +203,6 @@ function DashboardIcerik() {
         bildirenKisi: userName, 
         kayitTarihi: new Date(), 
         durum: "Kapalı",
-        // Veritabanına Yedek Parça kaydedilir (Boşsa null gider)
         yedekParcaKodu: data.yedekParcaKodu || "",
         yedekParcaMiktar: data.yedekParcaMiktar || 0,
         yedekParcaBirim: data.yedekParcaBirim || "Adet"
@@ -255,6 +252,7 @@ function DashboardIcerik() {
           </div>
         </div>
 
+        {/* STANDARTLAŞTIRILMIŞ HIZLI ERİŞİM MENÜSÜ (GRID) */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-8 no-print">
           <Link href="/admin/aktif-isler" className="bg-red-900/60 hover:bg-red-600 border border-red-500/50 text-red-100 p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">
             <span className="relative flex h-2 w-2 mr-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span></span>
@@ -266,16 +264,20 @@ function DashboardIcerik() {
           <Link href="/dashboard/kontrol-formlari" className="bg-cyan-600 hover:bg-cyan-500 text-white p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(6,182,212,0.4)] transition">✅ Kontrol Formları</Link>
           <Link href="/dashboard/sayac" className="bg-emerald-600 hover:bg-emerald-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">⚡ Sayaç Okuma</Link>
           <Link href="/dashboard/mesai" className="bg-teal-600 hover:bg-teal-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">⏰ Fazla Mesai</Link>
-          {/* YENİ EKLENEN YEDEK PARÇA BUTONU (Sadece Admin / Operatör Görür) */}
+          
           {(userRole === "admin" || userRole === "operator") && (
             <Link href="/admin/yedek-parca" className="bg-fuchsia-700 hover:bg-fuchsia-600 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(192,38,211,0.4)] transition">⚙️ Yedek Parça</Link>
           )}
         </div>
 
+        {/* AKTİF İŞ EMİRLERİ (ALARM LİSTESİ) */}
         {aktifIsler.length > 0 && (
           <div className="bg-red-900/20 border-2 border-red-500/50 p-6 rounded-2xl mb-10 shadow-2xl">
             <h2 className="text-xl font-bold text-red-400 mb-6 flex items-center gap-2">
-              <span className="relative flex h-4 w-4"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span></span>
+              <span className="relative flex h-4 w-4">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span>
+              </span>
               Üretimden Gelen Aktif Bildirimler (Müdahale Bekliyor)
             </h2>
             <div className="space-y-4">
@@ -296,6 +298,7 @@ function DashboardIcerik() {
           </div>
         )}
 
+        {/* EKED - LOTO GÜVENLİK ALARMI */}
         {aktifEked.length > 0 && (
           <div className="bg-yellow-900/20 border-2 border-yellow-500/50 p-6 rounded-2xl mb-10 shadow-[0_0_20px_rgba(202,138,4,0.15)] relative overflow-hidden">
             <div className="absolute inset-0 opacity-10 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#ca8a04_10px,#ca8a04_20px)]"></div>
@@ -306,7 +309,10 @@ function DashboardIcerik() {
             <div className="space-y-3 relative z-10">
               {aktifEked.map(eked => (
                 <div key={eked.id} className="bg-gray-900 border border-yellow-700/50 p-4 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                  <div><p className="text-xs text-yellow-500/80 mb-1">{eked.tarih} | Kilitli Bırakan: {eked.personel}</p><p className="font-bold text-white text-lg">📍 {eked.yer}</p></div>
+                  <div>
+                    <p className="text-xs text-yellow-500/80 mb-1">{eked.tarih} | Kilitli Bırakan: {eked.personel}</p>
+                    <p className="font-bold text-white text-lg">📍 {eked.yer}</p>
+                  </div>
                   <span className="bg-yellow-600 text-black font-bold text-xs px-3 py-1 rounded animate-pulse">ENERJİ KESİK</span>
                 </div>
               ))}
@@ -328,6 +334,7 @@ function DashboardIcerik() {
                 <select {...register("vardiya")} className={`w-full bg-gray-800 border ${errors.vardiya ? 'border-red-500' : 'border-gray-600'} rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500`}>
                   <option value="">-- Vardiya Seçiniz --</option><option value="08:00 - 16:00">08:00 - 16:00 (Gündüz)</option><option value="16:00 - 24:00">16:00 - 24:00 (Akşam)</option><option value="24:00 - 08:00">24:00 - 08:00 (Gece)</option>
                 </select>
+                {errors.vardiya && <p className="text-red-500 text-xs mt-1">{errors.vardiya.message}</p>}
               </div>
 
               <div className="relative" ref={dropdownRef}>
@@ -352,16 +359,29 @@ function DashboardIcerik() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">Üretim Hattı</label>
-                <select {...register("hatAdi")} disabled={isAutoFilled} onChange={(e) => { setSeciliHat(e.target.value); setValue("hatAdi", e.target.value); setValue("ekipmanAdi", ""); }} className={`w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 focus:border-blue-500 ${isAutoFilled ? 'opacity-60 cursor-not-allowed' : ''}`}>
+                <select 
+                  {...register("hatAdi")} 
+                  disabled={isAutoFilled}
+                  onChange={(e) => { setSeciliHat(e.target.value); setValue("hatAdi", e.target.value); setValue("ekipmanAdi", ""); }} 
+                  className={`w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 focus:border-blue-500 ${isAutoFilled ? 'opacity-60 cursor-not-allowed' : ''}`}
+                >
                   <option value="">-- Hat Seçiniz --</option>{benzersizHatlar.map(hat => <option key={hat} value={hat}>{hat}</option>)}
                 </select>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">Arızalı Ekipman</label>
-                <select {...register("ekipmanAdi")} disabled={!seciliHat || isAutoFilled} className={`w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 ${(!seciliHat || isAutoFilled) ? 'opacity-60 cursor-not-allowed' : ''}`}>
+                <select 
+                  {...register("ekipmanAdi")} 
+                  disabled={!seciliHat || isAutoFilled} 
+                  className={`w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 ${(!seciliHat || isAutoFilled) ? 'opacity-60 cursor-not-allowed' : ''}`}
+                >
                   <option value="">{seciliHat ? "-- Ekipman Seçiniz --" : "-- Önce Hat Seçiniz --"}</option>
-                  {filtrelenmisEkipmanlar.length > 0 ? (filtrelenmisEkipmanlar.map(ekp => <option key={ekp.id} value={ekp.ekipmanAdi}>{ekp.ekipmanAdi}</option>)) : isAutoFilled ? (<option value={watch("ekipmanAdi")}>{watch("ekipmanAdi")}</option>) : null}
+                  {filtrelenmisEkipmanlar.length > 0 ? (
+                    filtrelenmisEkipmanlar.map(ekp => <option key={ekp.id} value={ekp.ekipmanAdi}>{ekp.ekipmanAdi}</option>)
+                  ) : isAutoFilled ? (
+                    <option value={watch("ekipmanAdi")}>{watch("ekipmanAdi")}</option>
+                  ) : null}
                 </select>
               </div>
             </div>
@@ -369,7 +389,11 @@ function DashboardIcerik() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">Sorun Tipi</label>
-                <select {...register("sorunTipi")} disabled={isAutoFilled} className={`w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 ${isAutoFilled ? 'opacity-60 cursor-not-allowed' : ''}`}>
+                <select 
+                  {...register("sorunTipi")} 
+                  disabled={isAutoFilled}
+                  className={`w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 ${isAutoFilled ? 'opacity-60 cursor-not-allowed' : ''}`}
+                >
                   <option value="">-- Seçiniz --</option><option value="Mekanik">Mekanik</option><option value="Elektrik">Elektrik</option><option value="Otomasyon">Otomasyon</option><option value="Diğer">Diğer</option>
                 </select>
               </div>
@@ -386,7 +410,7 @@ function DashboardIcerik() {
               </div>
             </div>
 
-            {/* YENİ EKLENEN YEDEK PARÇA KUTUSU */}
+            {/* YEDEK PARÇA KUTUSU */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-fuchsia-900/10 p-4 rounded-xl border border-fuchsia-800/30">
               <div className="md:col-span-3 mb-[-10px]"><p className="text-fuchsia-400 font-bold text-sm flex items-center gap-2">⚙️ Kullanılan Yedek Parça <span className="text-gray-500 font-normal text-xs">(Kullanılmadıysa boş bırakın)</span></p></div>
               <div>

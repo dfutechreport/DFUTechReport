@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs, doc, getDoc, query, where, orderBy } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../../lib/firebase"; 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts';
@@ -46,7 +46,9 @@ export default function AdminDashboard() {
   const [personelHavuzu, setPersonelHavuzu] = useState<string[]>([]); 
 
   const [kpiToplamIs, setKpiToplamIs] = useState(0);
+  const [kpiToplamSure, setKpiToplamSure] = useState(0);
   const [kpiAylikDurus, setKpiAylikDurus] = useState(0);
+  const [kpiDurusluIsSayisi, setKpiDurusluIsSayisi] = useState(0);
   
   const [grafikDurusVerisi, setGrafikDurusVerisi] = useState<any[]>([]);
   const [grafikTumIslerVerisi, setGrafikTumIslerVerisi] = useState<any[]>([]);
@@ -111,8 +113,23 @@ export default function AdminDashboard() {
     } catch (error) { console.error(error); }
   };
 
+  const handleIsiTamamla = async (islem: any) => {
+    if (!window.confirm("Bu işi bitirdiğinizi onaylıyor musunuz? Form otomatik açılacaktır.")) return;
+    try {
+      await updateDoc(doc(db, "work_orders", islem.id), {
+        durum: "Kapalı",
+        tamamlayanKisi: userName,
+        tamamlanmaTarihi: new Date()
+      });
+      window.location.href = `/dashboard?hat=${encodeURIComponent(islem.hatAdi)}&ekipman=${encodeURIComponent(islem.ekipmanAdi)}&sorun=${encodeURIComponent(islem.sorunTipi)}&duruslu=${islem.isDuruslu ? 'true' : 'false'}&aciklama=${encodeURIComponent(islem.aciklama)}`;
+    } catch (error) {
+      alert("Hata oluştu.");
+    }
+  };
+
   useEffect(() => {
     if (rawMeterLogs.length === 0) return;
+
     const sayacGruplari: Record<string, any[]> = {};
     const elekSet = new Set<string>();
     const dogSet = new Set<string>();
@@ -120,6 +137,7 @@ export default function AdminDashboard() {
 
     rawMeterLogs.forEach(log => {
       const tip = log.tip || "Elektrik";
+      
       if (tip === "Elektrik" && log.sayacAdi) elekSet.add(log.sayacAdi);
       if (tip === "Doğalgaz" && log.sayacAdi) dogSet.add(log.sayacAdi);
       if (tip === "Su" && log.sayacAdi) suSet.add(log.sayacAdi);
@@ -144,9 +162,11 @@ export default function AdminDashboard() {
     Object.keys(sayacGruplari).forEach(sayacAdi => {
       const okumalar = sayacGruplari[sayacAdi];
       const tip = okumalar[0].tip || "Elektrik"; 
+
       for (let i = 1; i < okumalar.length; i++) {
         const tuketimFarki = Math.max(0, Number(okumalar[i].deger) - Number(okumalar[i - 1].deger)); 
         const ayAnahtari = `${okumalar[i].tarih.split("-")[1]}. Ay`;
+
         if (tip === "Elektrik" && tuketimElektrik[ayAnahtari] !== undefined) tuketimElektrik[ayAnahtari] += tuketimFarki;
         else if (tip === "Doğalgaz" && tuketimDogalgaz[ayAnahtari] !== undefined) tuketimDogalgaz[ayAnahtari] += tuketimFarki;
         else if (tip === "Su" && tuketimSu[ayAnahtari] !== undefined) tuketimSu[ayAnahtari] += tuketimFarki;
@@ -154,6 +174,7 @@ export default function AdminDashboard() {
     });
 
     const formatData = (dataObj: any) => Object.keys(dataObj).map(ay => ({ ay, tuketim: dataObj[ay] })).filter(a => a.tuketim > 0);
+
     setGrafikElektrik(formatData(tuketimElektrik));
     setGrafikDogalgaz(formatData(tuketimDogalgaz));
     setGrafikSu(formatData(tuketimSu));
@@ -163,7 +184,11 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (rawLogs.length === 0) return;
 
-    let toplamDurusDk = 0; let toplamIsAdedi = 0;
+    let toplamDurusDk = 0; 
+    let toplamIsAdedi = 0;
+    let toplamMudahaleDk = 0;
+    let durusluIsAdedi = 0;
+
     const tumIslerData: Record<string, { adet: number, dakika: number }> = {};
     const durusluIslerData: Record<string, { adet: number, dakika: number }> = {};
     const personelAnaliz: Record<string, { isSayisi: number, eforDk: number }> = {};
@@ -184,6 +209,7 @@ export default function AdminDashboard() {
 
       const sure = Number(data.toplamSureDakika) || 0;
       const isEkibi = Array.isArray(data.isiYapanlar) && data.isiYapanlar.length > 0 ? data.isiYapanlar : [data.bildirenKisi || "Bilinmiyor"];
+      
       isEkibi.forEach((p: string) => tumPersoneller.add(p)); 
 
       if (grafikPass) {
@@ -191,11 +217,14 @@ export default function AdminDashboard() {
         const groupKey = filterHat ? (data.ekipmanAdi || "Belirsiz") : (data.hatAdi || "Belirsiz");
         
         toplamIsAdedi++;
+        toplamMudahaleDk += sure;
+
         if (!tumIslerData[groupKey]) tumIslerData[groupKey] = { adet: 0, dakika: 0 };
         tumIslerData[groupKey].adet += 1; tumIslerData[groupKey].dakika += sure;
 
         if (data.isDuruslu) {
           toplamDurusDk += sure;
+          durusluIsAdedi++;
           if (!durusluIslerData[groupKey]) durusluIslerData[groupKey] = { adet: 0, dakika: 0 };
           durusluIslerData[groupKey].adet += 1; durusluIslerData[groupKey].dakika += sure;
         }
@@ -222,6 +251,8 @@ export default function AdminDashboard() {
     setPersonelHavuzu(Array.from(tumPersoneller).sort());
     setKpiAylikDurus(toplamDurusDk);
     setKpiToplamIs(toplamIsAdedi);
+    setKpiToplamSure(toplamMudahaleDk);
+    setKpiDurusluIsSayisi(durusluIsAdedi);
 
     setGrafikTumIslerVerisi(Object.keys(tumIslerData).map(k => ({ isim: k, ...tumIslerData[k] })).sort((a, b) => b.adet - a.adet));
     setGrafikDurusVerisi(Object.keys(durusluIslerData).map(k => ({ isim: k, ...durusluIslerData[k] })).sort((a, b) => b.dakika - a.dakika));
@@ -250,9 +281,25 @@ export default function AdminDashboard() {
     } return null;
   };
 
+  const durusAdetYuzde = kpiToplamIs > 0 ? ((kpiDurusluIsSayisi / kpiToplamIs) * 100).toFixed(1) : "0";
+  const durusSureYuzde = kpiToplamSure > 0 ? ((kpiAylikDurus / kpiToplamSure) * 100).toFixed(1) : "0";
+
   return (
     <>
-      <style dangerouslySetInnerHTML={{__html: `@media print { body { background: white !important; color: black !important; } .no-print { display: none !important; } .print-break { page-break-before: always; } .bg-gray-950, .bg-gray-900 { background: white !important; } .text-white, .text-gray-400 { color: black !important; } .border-gray-800, .border-gray-700 { border-color: #ddd !important; } .shadow-lg { box-shadow: none !important; } .perf-row { display: none !important; } .perf-row:nth-child(-n+5) { display: table-row !important; } .pdf-top5-mesaj { display: block !important; color: #EF4444 !important; font-size: 12px; font-weight: bold; margin-top: 8px;} }`}} />
+      <style dangerouslySetInnerHTML={{__html: `
+        @media print {
+          body { background: white !important; color: black !important; }
+          .no-print { display: none !important; }
+          .print-break { page-break-before: always; }
+          .bg-gray-950, .bg-gray-900 { background: white !important; }
+          .text-white, .text-gray-400 { color: black !important; }
+          .border-gray-800, .border-gray-700 { border-color: #ddd !important; }
+          .shadow-lg { box-shadow: none !important; }
+          .perf-row { display: none !important; }
+          .perf-row:nth-child(-n+5) { display: table-row !important; }
+          .pdf-top5-mesaj { display: block !important; color: #EF4444 !important; font-size: 12px; font-weight: bold; margin-top: 8px;}
+        }
+      `}} />
 
       <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8 overflow-x-hidden">
         <div className="max-w-7xl mx-auto">
@@ -276,20 +323,43 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* STANDARTLAŞTIRILMIŞ HIZLI ERİŞİM MENÜSÜ */}
+          <div className="hidden print:block text-center mb-6 border-b-2 border-black pb-4">
+            <h2 className="text-2xl font-bold text-black">Bakım Yönetim Sistemi Özet Raporu</h2>
+            <p className="text-gray-600">Rapor Kapsamı: {filterYil || "Tüm Yıllar"} - {filterAy ? `${filterAy}. Ay` : "Tüm Aylar"} | Hat: {filterHat || "Tümü"}</p>
+            <p className="text-sm text-gray-500 mt-1">Oluşturulma Tarihi: {new Date().toLocaleString('tr-TR')}</p>
+          </div>
+
+          {userRole !== "uretim" && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              <div className="bg-gray-900 border border-gray-800 p-4 md:p-5 rounded-2xl shadow-lg">
+                <p className="text-xs md:text-sm text-gray-400 font-semibold mb-1">Toplam Yapılan İş</p>
+                <h3 className="text-2xl md:text-3xl font-bold text-green-400">{kpiToplamIs} <span className="text-sm text-gray-500 font-normal">Adet</span></h3>
+                <p className="text-xs text-gray-500 mt-2 font-medium">Toplam Efor: <span className="text-white">{kpiToplamSure} dk</span></p>
+              </div>
+              <div className="bg-gray-900 border border-gray-800 p-4 md:p-5 rounded-2xl shadow-lg">
+                <p className="text-xs md:text-sm text-gray-400 font-semibold mb-1">Duruşlu İş Sayısı</p>
+                <h3 className="text-2xl md:text-3xl font-bold text-red-400">{kpiDurusluIsSayisi} <span className="text-sm text-gray-500 font-normal">Adet</span></h3>
+                <p className="text-xs text-gray-500 mt-2 font-medium">Kritik Duruş: <span className="text-white">{kpiAylikDurus} dk</span></p>
+              </div>
+              <div className="bg-gray-900 border border-orange-500/30 p-4 md:p-5 rounded-2xl shadow-[0_0_15px_rgba(249,115,22,0.1)] relative overflow-hidden">
+                <p className="text-xs md:text-sm text-orange-300 font-semibold mb-1 relative z-10">Duruş Yüzdesi (Adet)</p>
+                <h3 className="text-2xl md:text-3xl font-bold text-orange-400 relative z-10">%{durusAdetYuzde}</h3>
+                <p className="text-xs text-gray-400 mt-2 relative z-10">Tüm arızalara oranı</p>
+              </div>
+              <div className="bg-gray-900 border border-blue-500/30 p-4 md:p-5 rounded-2xl shadow-[0_0_15px_rgba(59,130,246,0.1)] relative overflow-hidden">
+                <p className="text-xs md:text-sm text-blue-300 font-semibold mb-1 relative z-10">Duruş Yüzdesi (Süre)</p>
+                <h3 className="text-2xl md:text-3xl font-bold text-blue-400 relative z-10">%{durusSureYuzde}</h3>
+                <p className="text-xs text-gray-400 mt-2 relative z-10">Toplam efora oranı</p>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-8 no-print">
             {(userRole === "admin" || userRole === "uretim") && (
-              <Link href="/admin/is-emri-ac" className="bg-red-600 hover:bg-red-500 text-white p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(220,38,38,0.5)] transition">
-                🚨 Yeni İş Emri
-              </Link>
+              <Link href="/admin/is-emri-ac" className="bg-red-600 hover:bg-red-500 text-white p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(220,38,38,0.5)] transition">🚨 Yeni İş Emri</Link>
             )}
-            <Link href="/admin/aktif-isler" className="bg-red-900/60 hover:bg-red-600 border border-red-500/50 text-red-100 p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">
-              <span className="relative flex h-2 w-2 mr-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span></span>
-              Aktif İş Emirleri
-            </Link>
-            <Link href="/admin/tamamlanan-isler" className="bg-gray-700 hover:bg-gray-600 border border-gray-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">
-              🗄️ Tamamlanan İş Emirleri
-            </Link>
+            <Link href="/admin/aktif-isler" className="bg-red-900/60 hover:bg-red-600 border border-red-500/50 text-red-100 p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition"><span className="relative flex h-2 w-2 mr-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span></span>Aktif İşler</Link>
+            <Link href="/admin/tamamlanan-isler" className="bg-gray-700 hover:bg-gray-600 border border-gray-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">🗄️ Tamamlanan İşler</Link>
 
             {userRole === "admin" && (
               <>
@@ -299,66 +369,45 @@ export default function AdminDashboard() {
               </>
             )}
 
-                       {userRole !== "uretim" && (
+            {userRole !== "uretim" && (
               <>
                 <Link href="/admin/eked" className="bg-yellow-600 hover:bg-yellow-500 text-black p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(202,138,4,0.4)] transition">🔒 EKED Takip</Link>
                 <Link href="/admin/eked/arsiv" className="bg-gray-700 hover:bg-gray-600 border border-gray-500 text-gray-200 p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">🗄️ EKED Arşivi</Link>
-                
                 <Link href="/dashboard/kontrol-formlari" className="bg-cyan-600 hover:bg-cyan-500 text-white p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(6,182,212,0.4)] transition">✅ Kontrol Formları</Link>
-
-                {/* YENİ EKLENEN YEDEK PARÇA BUTONU (Sadece Admin / Operatör Görür) */}
                 {(userRole === "admin" || userRole === "operator") && (
                   <Link href="/admin/yedek-parca" className="bg-fuchsia-700 hover:bg-fuchsia-600 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(192,38,211,0.4)] transition">⚙️ Yedek Parça</Link>
                 )}
-
                 <Link href="/admin/is-listesi" className="bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">📋 Yapılan İşler</Link>
                 <Link href="/dashboard/sayac" className="bg-emerald-600 hover:bg-emerald-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">⚡ Sayaç Okuma</Link>
                 <Link href="/admin/mesai" className="bg-teal-600 hover:bg-teal-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">⏰ Mesai Raporları</Link>
-                <Link href="/dashboard" className="bg-orange-600 hover:bg-orange-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">🛠️ Vardiya Raporu Girişi</Link>
+                <Link href="/dashboard" className="bg-orange-600 hover:bg-orange-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">🛠️ Vardiya Raporu</Link>
               </>
             )}
           </div>
 
-          {/* AKTİF İŞ EMİRLERİ KUTUSU */}
           {aktifIsler.length > 0 && (
-            <div className="bg-red-900/20 border-2 border-red-500/50 p-6 rounded-2xl mb-6 shadow-2xl no-print">
-              <h2 className="text-xl font-bold text-red-400 mb-6 flex items-center gap-2">
-                <span className="relative flex h-4 w-4">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span>
-                </span>
-                Sahadan Gelen Aktif Bildirimler (Müdahale Bekleyen İş Emirleri)
-              </h2>
+            <div className="bg-red-900/20 border-2 border-red-500/50 p-6 rounded-2xl mb-10 shadow-2xl no-print">
+              <h2 className="text-xl font-bold text-red-400 mb-6 flex items-center gap-2"><span className="relative flex h-4 w-4"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span></span> Sahadan Gelen Aktif Bildirimler (Müdahale Bekleyen İş Emirleri)</h2>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {aktifIsler.map(islem => (
                   <div key={islem.id} className="bg-gray-900 border border-red-800/50 p-5 rounded-xl shadow-lg relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition hover:border-red-500/80">
                     <div className="absolute top-0 left-0 w-1 h-full bg-red-500"></div>
-                    <div>
-                      <p className="text-xs text-gray-400 mb-1">{islem.kayitTarihi?.toDate().toLocaleString('tr-TR')} | Bildiren: {islem.bildirenKisi}</p>
-                      <p className="font-bold text-white text-lg">{islem.hatAdi} <span className="text-red-400 font-medium text-sm">({islem.ekipmanAdi})</span></p>
-                      <p className="text-gray-300 text-sm mt-1 line-clamp-2">{islem.aciklama}</p>
-                    </div>
+                    <div><p className="text-xs text-gray-400 mb-1">{islem.kayitTarihi?.toDate().toLocaleString('tr-TR')} | Bildiren: {islem.bildirenKisi}</p><p className="font-bold text-white text-lg">{islem.hatAdi} <span className="text-red-400 font-medium text-sm">({islem.ekipmanAdi})</span></p><p className="text-gray-300 text-sm mt-1 line-clamp-2">{islem.aciklama}</p></div>
+                    {userRole !== "uretim" && <button onClick={() => handleIsiTamamla(islem)} className="w-full md:w-auto whitespace-nowrap bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-lg transition shadow-[0_0_15px_rgba(22,163,74,0.4)]">✅ İşi Tamamla</button>}
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* EKED GÜVENLİK ALARMI */}
           {userRole !== "uretim" && aktifEked.length > 0 && (
             <div className="bg-yellow-900/20 border-2 border-yellow-500/50 p-6 rounded-2xl mb-10 shadow-[0_0_20px_rgba(202,138,4,0.15)] relative overflow-hidden no-print">
               <div className="absolute inset-0 opacity-10 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#ca8a04_10px,#ca8a04_20px)]"></div>
-              <h2 className="text-xl font-bold text-yellow-500 mb-4 flex items-center gap-2 relative z-10">
-                <span className="relative flex h-4 w-4"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span><span className="relative inline-flex rounded-full h-4 w-4 bg-yellow-500"></span></span>
-                DİKKAT: Sahada Aktif Kilitli (EKED) Alanlar Var!
-              </h2>
+              <h2 className="text-xl font-bold text-yellow-500 mb-4 flex items-center gap-2 relative z-10"><span className="relative flex h-4 w-4"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span><span className="relative inline-flex rounded-full h-4 w-4 bg-yellow-500"></span></span> DİKKAT: Sahada Aktif Kilitli (EKED) Alanlar Var!</h2>
               <div className="space-y-3 relative z-10">
                 {aktifEked.map(eked => (
                   <div key={eked.id} className="bg-gray-900 border border-yellow-700/50 p-4 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div>
-                      <p className="text-xs text-yellow-500/80 mb-1">{eked.tarih} | Kilitli Bırakan: {eked.personel}</p>
-                      <p className="font-bold text-white text-lg">📍 {eked.yer}</p>
-                    </div>
+                    <div><p className="text-xs text-yellow-500/80 mb-1">{eked.tarih} | Kilitli Bırakan: {eked.personel}</p><p className="font-bold text-white text-lg">📍 {eked.yer}</p></div>
                     <span className="bg-yellow-600 text-black font-bold text-xs px-3 py-1 rounded animate-pulse">ENERJİ KESİK</span>
                   </div>
                 ))}
@@ -366,77 +415,28 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* SADECE ADMİN/OPERATÖR İÇİN OLAN GRAFİKLER */}
           {userRole !== "uretim" && (
             <>
-              <div className="hidden print:block text-center mb-8 border-b-2 border-black pb-4">
-                <h2 className="text-2xl font-bold text-black">Bakım Yönetim Sistemi Özet Raporu</h2>
-                <p className="text-gray-600">Rapor Kapsamı: {filterYil || "Tüm Yıllar"} - {filterAy ? `${filterAy}. Ay` : "Tüm Aylar"} | Hat: {filterHat || "Tümü"}</p>
-                <p className="text-sm text-gray-500 mt-1">Oluşturulma Tarihi: {new Date().toLocaleString('tr-TR')}</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl">
-                  <h3 className="text-gray-400 text-sm font-semibold mb-2 print:text-black">Filtrelenen İş Emri / Arıza</h3>
-                  <p className="text-3xl md:text-4xl font-bold text-green-500 print:text-black">{kpiToplamIs}</p>
-                </div>
-                <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl">
-                  <h3 className="text-gray-400 text-sm font-semibold mb-2 print:text-black">Filtrelenen Toplam Duruş</h3>
-                  <p className="text-3xl md:text-4xl font-bold text-red-500 print:text-black">{kpiAylikDurus} <span className="text-lg">dk</span></p>
-                </div>
-                {userRole === "admin" && (
-                  <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl">
-                    <h3 className="text-gray-400 text-sm font-semibold mb-2 print:text-black">Onay Bekleyen Personel</h3>
-                    <p className="text-3xl md:text-4xl font-bold text-blue-500 print:text-black">{kpiOnayBekleyen}</p>
-                  </div>
-                )}
-              </div>
-
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
                 <div className="bg-gray-900 border border-yellow-500/30 p-4 rounded-2xl shadow-lg border-t-4 border-t-yellow-500">
-                  <div className="flex justify-between items-center mb-4 border-b border-gray-800 pb-2">
-                    <h2 className="text-sm font-bold text-yellow-400 print:text-black flex items-center gap-2">⚡ Elektrik Tüketimi (kWh)</h2>
-                  </div>
-                  <select value={filterElektrikSayac} onChange={(e) => setFilterElektrikSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 text-gray-300 rounded-lg p-2 text-xs mb-4 no-print focus:border-yellow-500">
-                    <option value="">Tüm Elektrik Sayaçları</option>
-                    {elektrikSayacListesi.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                  {grafikElektrik.length === 0 ? <div className="h-40 flex justify-center items-center text-gray-500 text-xs border border-dashed border-gray-800 rounded-lg">Veri yok</div> : (
-                    <div className="h-48 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikElektrik}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="ay" tick={{fontSize: 10, fill: '#9CA3AF'}} /><YAxis tick={{fontSize: 10, fill: '#9CA3AF'}} width={35} /><Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} /><Bar name="Tüketim" dataKey="tuketim" fill="#EAB308" maxBarSize={40}><LabelList dataKey="tuketim" position="top" fill="#EAB308" fontSize={10} fontWeight="bold" /></Bar></BarChart></ResponsiveContainer></div>
-                  )}
+                  <div className="flex justify-between items-center mb-4 border-b border-gray-800 pb-2"><h2 className="text-sm font-bold text-yellow-400 print:text-black flex items-center gap-2">⚡ Elektrik Tüketimi (kWh)</h2></div>
+                  <select value={filterElektrikSayac} onChange={(e) => setFilterElektrikSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 text-gray-300 rounded-lg p-2 text-xs mb-4 no-print focus:border-yellow-500"><option value="">Tüm Elektrik Sayaçları</option>{elektrikSayacListesi.map(s => <option key={s} value={s}>{s}</option>)}</select>
+                  {grafikElektrik.length === 0 ? <div className="h-40 flex justify-center items-center text-gray-500 text-xs border border-dashed border-gray-800 rounded-lg">Veri yok</div> : <div className="h-48 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikElektrik}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="ay" tick={{fontSize: 10, fill: '#9CA3AF'}} /><YAxis tick={{fontSize: 10, fill: '#9CA3AF'}} width={35} /><Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} /><Bar name="Tüketim" dataKey="tuketim" fill="#EAB308" maxBarSize={40}><LabelList dataKey="tuketim" position="top" fill="#EAB308" fontSize={10} fontWeight="bold" /></Bar></BarChart></ResponsiveContainer></div>}
                 </div>
-
                 <div className="bg-gray-900 border border-red-500/30 p-4 rounded-2xl shadow-lg border-t-4 border-t-red-500">
-                  <div className="flex justify-between items-center mb-4 border-b border-gray-800 pb-2">
-                    <h2 className="text-sm font-bold text-red-400 print:text-black flex items-center gap-2">🔥 Doğalgaz Tüketimi (m³)</h2>
-                  </div>
-                  <select value={filterDogalgazSayac} onChange={(e) => setFilterDogalgazSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 text-gray-300 rounded-lg p-2 text-xs mb-4 no-print focus:border-red-500">
-                    <option value="">Tüm Doğalgaz Sayaçları</option>
-                    {dogalgazSayacListesi.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                  {grafikDogalgaz.length === 0 ? <div className="h-40 flex justify-center items-center text-gray-500 text-xs border border-dashed border-gray-800 rounded-lg">Veri yok</div> : (
-                    <div className="h-48 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikDogalgaz}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="ay" tick={{fontSize: 10, fill: '#9CA3AF'}} /><YAxis tick={{fontSize: 10, fill: '#9CA3AF'}} width={35} /><Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} /><Bar name="Tüketim" dataKey="tuketim" fill="#EF4444" maxBarSize={40}><LabelList dataKey="tuketim" position="top" fill="#EF4444" fontSize={10} fontWeight="bold" /></Bar></BarChart></ResponsiveContainer></div>
-                  )}
+                  <div className="flex justify-between items-center mb-4 border-b border-gray-800 pb-2"><h2 className="text-sm font-bold text-red-400 print:text-black flex items-center gap-2">🔥 Doğalgaz Tüketimi (m³)</h2></div>
+                  <select value={filterDogalgazSayac} onChange={(e) => setFilterDogalgazSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 text-gray-300 rounded-lg p-2 text-xs mb-4 no-print focus:border-red-500"><option value="">Tüm Doğalgaz Sayaçları</option>{dogalgazSayacListesi.map(s => <option key={s} value={s}>{s}</option>)}</select>
+                  {grafikDogalgaz.length === 0 ? <div className="h-40 flex justify-center items-center text-gray-500 text-xs border border-dashed border-gray-800 rounded-lg">Veri yok</div> : <div className="h-48 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikDogalgaz}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="ay" tick={{fontSize: 10, fill: '#9CA3AF'}} /><YAxis tick={{fontSize: 10, fill: '#9CA3AF'}} width={35} /><Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} /><Bar name="Tüketim" dataKey="tuketim" fill="#EF4444" maxBarSize={40}><LabelList dataKey="tuketim" position="top" fill="#EF4444" fontSize={10} fontWeight="bold" /></Bar></BarChart></ResponsiveContainer></div>}
                 </div>
-
                 <div className="bg-gray-900 border border-blue-500/30 p-4 rounded-2xl shadow-lg border-t-4 border-t-blue-500">
-                  <div className="flex justify-between items-center mb-4 border-b border-gray-800 pb-2">
-                    <h2 className="text-sm font-bold text-blue-400 print:text-black flex items-center gap-2">💧 Su Tüketimi (Ton)</h2>
-                  </div>
-                  <select value={filterSuSayac} onChange={(e) => setFilterSuSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 text-gray-300 rounded-lg p-2 text-xs mb-4 no-print focus:border-blue-500">
-                    <option value="">Tüm Su Sayaçları</option>
-                    {suSayacListesi.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                  {grafikSu.length === 0 ? <div className="h-40 flex justify-center items-center text-gray-500 text-xs border border-dashed border-gray-800 rounded-lg">Veri yok</div> : (
-                    <div className="h-48 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikSu}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="ay" tick={{fontSize: 10, fill: '#9CA3AF'}} /><YAxis tick={{fontSize: 10, fill: '#9CA3AF'}} width={35} /><Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} /><Bar name="Tüketim" dataKey="tuketim" fill="#3B82F6" maxBarSize={40}><LabelList dataKey="tuketim" position="top" fill="#3B82F6" fontSize={10} fontWeight="bold" /></Bar></BarChart></ResponsiveContainer></div>
-                  )}
+                  <div className="flex justify-between items-center mb-4 border-b border-gray-800 pb-2"><h2 className="text-sm font-bold text-blue-400 print:text-black flex items-center gap-2">💧 Su Tüketimi (Ton)</h2></div>
+                  <select value={filterSuSayac} onChange={(e) => setFilterSuSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 text-gray-300 rounded-lg p-2 text-xs mb-4 no-print focus:border-blue-500"><option value="">Tüm Su Sayaçları</option>{suSayacListesi.map(s => <option key={s} value={s}>{s}</option>)}</select>
+                  {grafikSu.length === 0 ? <div className="h-40 flex justify-center items-center text-gray-500 text-xs border border-dashed border-gray-800 rounded-lg">Veri yok</div> : <div className="h-48 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikSu}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="ay" tick={{fontSize: 10, fill: '#9CA3AF'}} /><YAxis tick={{fontSize: 10, fill: '#9CA3AF'}} width={35} /><Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} /><Bar name="Tüketim" dataKey="tuketim" fill="#3B82F6" maxBarSize={40}><LabelList dataKey="tuketim" position="top" fill="#3B82F6" fontSize={10} fontWeight="bold" /></Bar></BarChart></ResponsiveContainer></div>}
                 </div>
               </div>
 
               <div className="bg-gray-900 border border-blue-700/50 p-5 rounded-2xl mb-6 flex flex-wrap gap-4 items-end no-print shadow-[0_0_15px_rgba(59,130,246,0.1)]">
-                <div className="w-full mb-1 border-b border-gray-800 pb-2">
-                  <h3 className="text-blue-500 font-bold flex items-center gap-2">Arıza ve Bakım Filtreleri</h3>
-                </div>
+                <div className="w-full mb-1 border-b border-gray-800 pb-2"><h3 className="text-blue-500 font-bold flex items-center gap-2">Arıza ve Bakım Filtreleri</h3></div>
                 <div className="flex-1 min-w-[120px]"><label className="block text-xs text-gray-400 mb-1">Yıl</label><select value={filterYil} onChange={(e) => setFilterYil(e.target.value)} className="w-full bg-gray-800 rounded-lg p-2 text-sm"><option value="">Tümü</option>{yilListesi.map(y => <option key={y} value={y}>{y}</option>)}</select></div>
                 <div className="flex-1 min-w-[120px]"><label className="block text-xs text-gray-400 mb-1">Ay</label><select value={filterAy} onChange={(e) => setFilterAy(e.target.value)} className="w-full bg-gray-800 rounded-lg p-2 text-sm"><option value="">Tümü</option><option value="1">Ocak</option><option value="2">Şubat</option><option value="3">Mart</option><option value="4">Nisan</option><option value="5">Mayıs</option><option value="6">Haziran</option><option value="7">Temmuz</option><option value="8">Ağustos</option><option value="9">Eylül</option><option value="10">Ekim</option><option value="11">Kasım</option><option value="12">Aralık</option></select></div>
                 <div className="flex-1 min-w-[120px]"><label className="block text-xs text-gray-400 mb-1">Üretim Hattı</label><select value={filterHat} onChange={(e) => { setFilterHat(e.target.value); setFilterEkipman(""); }} className="w-full bg-gray-800 rounded-lg p-2 text-sm"><option value="">Tümü</option>{hatListesi.map(h => <option key={h} value={h}>{h}</option>)}</select></div>
@@ -451,7 +451,6 @@ export default function AdminDashboard() {
                     <div className="h-72 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikTumIslerVerisi} margin={{ top: 25, right: 5, left: -25, bottom: 5 }}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="isim" tick={{fontSize: 10, fill: '#9CA3AF'}} interval={0} angle={-15} textAnchor="end" /><YAxis tick={{fontSize: 10, fill: '#9CA3AF'}} /><Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} trigger="hover" /><Legend wrapperStyle={{ fontSize: '11px', paddingTop: '15px' }} /><Bar name="İş Adedi" dataKey="adet" fill="#10B981" maxBarSize={40}><LabelList dataKey="adet" position="top" fill="#10B981" fontSize={11} fontWeight="bold" /></Bar><Bar name="Süre (Dk)" dataKey="dakika" fill="#3B82F6" maxBarSize={40}><LabelList dataKey="dakika" position="top" fill="#3B82F6" fontSize={11} fontWeight="bold" /></Bar></BarChart></ResponsiveContainer></div>
                   ) : <div className="h-48 flex justify-center items-center text-gray-500 border border-dashed border-gray-800 rounded-xl">Filtreye uygun veri yok</div>}
                 </div>
-
                 <div className="bg-gray-900 border border-gray-800 p-4 md:p-6 rounded-2xl">
                   <h2 className="text-lg font-bold mb-6 text-red-400 print:text-black">Sadece Duruşlu Arızalar</h2>
                   {grafikDurusVerisi.length > 0 ? (
@@ -466,7 +465,7 @@ export default function AdminDashboard() {
                   <div className="flex-1 min-w-[120px]"><label className="block text-xs text-gray-400 mb-1">Yıl</label><select value={filterPerfYil} onChange={(e) => setFilterPerfYil(e.target.value)} className="w-full bg-gray-900 rounded-lg p-2 text-sm"><option value="">Tümü</option>{yilListesi.map(y => <option key={y} value={y}>{y}</option>)}</select></div>
                   <div className="flex-1 min-w-[120px]"><label className="block text-xs text-gray-400 mb-1">Ay</label><select value={filterPerfAy} onChange={(e) => setFilterPerfAy(e.target.value)} className="w-full bg-gray-900 rounded-lg p-2 text-sm"><option value="">Tümü</option><option value="1">Ocak</option><option value="2">Şubat</option><option value="3">Mart</option><option value="4">Nisan</option><option value="5">Mayıs</option><option value="6">Haziran</option><option value="7">Temmuz</option><option value="8">Ağustos</option><option value="9">Eylül</option><option value="10">Ekim</option><option value="11">Kasım</option><option value="12">Aralık</option></select></div>
                   <div className="flex-1 min-w-[120px]"><label className="block text-xs text-gray-400 mb-1">Vardiya</label><select value={filterPerfVardiya} onChange={(e) => setFilterPerfVardiya(e.target.value)} className="w-full bg-gray-900 rounded-lg p-2 text-sm"><option value="">Tümü</option><option value="08:00 - 16:00">08:00 - 16:00</option><option value="16:00 - 24:00">16:00 - 24:00</option><option value="24:00 - 08:00">24:00 - 08:00</option></select></div>
-                  <div className="flex-1 min-w-[120px]"><label className="block text-xs text-gray-400 mb-1">Personel Seçimi</label><select value={filterPerfPersonel} onChange={(e) => setFilterPerfPersonel(e.target.value)} className="w-full bg-gray-900 rounded-lg p-2 text-sm"><option value="">Tüm Ekipler</option>{personelHavuzu.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
+                  <div className="flex-1 min-w-[120px]"><label className="block text-xs text-gray-400 mb-1">Personel</label><select value={filterPerfPersonel} onChange={(e) => setFilterPerfPersonel(e.target.value)} className="w-full bg-gray-900 rounded-lg p-2 text-sm"><option value="">Tüm Ekipler</option>{personelHavuzu.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
                   <div className="flex-1 min-w-[120px]"><label className="block text-xs text-gray-400 mb-1">Arıza Tipi</label><select value={filterPerfDurus} onChange={(e) => setFilterPerfDurus(e.target.value)} className="w-full bg-gray-900 rounded-lg p-2 text-sm"><option value="">Tümü</option><option value="duruslu">Duruşlu</option><option value="durussuz">Duruşsuz</option></select></div>
                   <div className="flex-1 min-w-[120px]"><label className="block text-xs text-blue-400 mb-1 font-bold">Sıralama</label><select value={filterPerfSiralama} onChange={(e) => setFilterPerfSiralama(e.target.value)} className="w-full bg-blue-900/30 text-blue-400 rounded-lg p-2 text-sm"><option value="is">En Çok İş</option><option value="efor">En Çok Efor</option></select></div>
                   <button onClick={() => { setFilterPerfYil(""); setFilterPerfAy(""); setFilterPerfVardiya(""); setFilterPerfPersonel(""); setFilterPerfDurus(""); setFilterPerfSiralama("is"); }} className="bg-gray-700 px-4 py-2 rounded-lg text-sm h-9">Sıfırla</button>
@@ -485,7 +484,7 @@ export default function AdminDashboard() {
                       {personelPerformans.map((p, index) => {
                         const ortalama = p.isSayisi > 0 ? (p.eforDk / p.isSayisi).toFixed(1) : "0";
                         return (
-                          <tr key={index} className="border-b border-gray-800 print:border-gray-300 perf-row">
+                          <tr key={index} className="border-b border-gray-800 print:border-gray-300 perf-row hover:bg-gray-800/50 transition">
                             <td className="py-4 px-2 font-medium text-blue-300 print:text-black">{index === 0 ? "🥇 " : index === 1 ? "🥈 " : index === 2 ? "🥉 " : ""}{p.isim}</td>
                             <td className="py-4 px-2 text-green-400 print:text-black">{p.isSayisi} Adet</td>
                             <td className="py-4 px-2 text-gray-300 print:text-black">{p.eforDk} Dakika</td>

@@ -17,7 +17,7 @@ export default function AdminDashboard() {
   const [kpiOnayBekleyen, setKpiOnayBekleyen] = useState(0);
 
   const [aktifIsler, setAktifIsler] = useState<any[]>([]);
-  const [aktifEked, setAktifEked] = useState<any[]>([]); // YENİ: Aktif EKED Alarm State
+  const [aktifEked, setAktifEked] = useState<any[]>([]); 
 
   const [filterYil, setFilterYil] = useState("");
   const [filterAy, setFilterAy] = useState("");
@@ -83,10 +83,12 @@ export default function AdminDashboard() {
 
       const wQ = query(collection(db, "work_orders"), where("durum", "==", "Açık"));
       const wSnap = await getDocs(wQ);
-      const wData = wSnap.docs.map(d => ({ id: d.id, ...d.data(), gercekZaman: d.data().kayitTarihi ? d.data().kayitTarihi.toDate().getTime() : 0 }));
+      const wData = wSnap.docs.map(d => ({ 
+        id: d.id, ...d.data(), 
+        gercekZaman: d.data().kayitTarihi ? d.data().kayitTarihi.toDate().getTime() : 0 
+      }));
       setAktifIsler(wData.sort((a, b) => b.gercekZaman - a.gercekZaman).slice(0, 5));
 
-      // YENİ: Aktif EKED Çekimi
       const eQ = query(collection(db, "eked_logs"), where("durum", "==", "Açık"));
       const eSnap = await getDocs(eQ);
       setAktifEked(eSnap.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -115,8 +117,15 @@ export default function AdminDashboard() {
   const handleIsiTamamla = async (islem: any) => {
     if (!window.confirm("Bu işi bitirdiğinizi onaylıyor musunuz? Form otomatik açılacaktır.")) return;
     try {
+      await updateDoc(doc(db, "work_orders", islem.id), {
+        durum: "Kapalı",
+        tamamlayanKisi: userName,
+        tamamlanmaTarihi: new Date()
+      });
       window.location.href = `/dashboard?hat=${encodeURIComponent(islem.hatAdi)}&ekipman=${encodeURIComponent(islem.ekipmanAdi)}&sorun=${encodeURIComponent(islem.sorunTipi)}&duruslu=${islem.isDuruslu ? 'true' : 'false'}&aciklama=${encodeURIComponent(islem.aciklama)}`;
-    } catch (error) { alert("Hata oluştu."); }
+    } catch (error) {
+      alert("Hata oluştu.");
+    }
   };
 
   useEffect(() => {
@@ -129,6 +138,7 @@ export default function AdminDashboard() {
 
     rawMeterLogs.forEach(log => {
       const tip = log.tip || "Elektrik";
+      
       if (tip === "Elektrik" && log.sayacAdi) elekSet.add(log.sayacAdi);
       if (tip === "Doğalgaz" && log.sayacAdi) dogSet.add(log.sayacAdi);
       if (tip === "Su" && log.sayacAdi) suSet.add(log.sayacAdi);
@@ -145,7 +155,11 @@ export default function AdminDashboard() {
     setDogalgazSayacListesi(Array.from(dogSet).sort());
     setSuSayacListesi(Array.from(suSet).sort());
 
-    const initAylar = () => ({ "01. Ay": 0, "02. Ay": 0, "03. Ay": 0, "04. Ay": 0, "05. Ay": 0, "06. Ay": 0, "07. Ay": 0, "08. Ay": 0, "09. Ay": 0, "10. Ay": 0, "11. Ay": 0, "12. Ay": 0 });
+    const initAylar = () => ({
+      "01. Ay": 0, "02. Ay": 0, "03. Ay": 0, "04. Ay": 0, "05. Ay": 0, "06. Ay": 0,
+      "07. Ay": 0, "08. Ay": 0, "09. Ay": 0, "10. Ay": 0, "11. Ay": 0, "12. Ay": 0
+    });
+
     const tuketimElektrik = initAylar();
     const tuketimDogalgaz = initAylar();
     const tuketimSu = initAylar();
@@ -197,6 +211,7 @@ export default function AdminDashboard() {
 
       const sure = Number(data.toplamSureDakika) || 0;
       const isEkibi = Array.isArray(data.isiYapanlar) && data.isiYapanlar.length > 0 ? data.isiYapanlar : [data.bildirenKisi || "Bilinmiyor"];
+      
       isEkibi.forEach((p: string) => tumPersoneller.add(p)); 
 
       if (grafikPass) {
@@ -264,6 +279,8 @@ export default function AdminDashboard() {
     } return null;
   };
 
+  const enerjiTema = "yellow"; 
+
   return (
     <>
       <style dangerouslySetInnerHTML={{__html: `
@@ -303,43 +320,39 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-4 mb-6 no-print">
+          {/* STANDARTLAŞTIRILMIŞ HIZLI ERİŞİM MENÜSÜ (GRID) */}
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-8 no-print">
             {(userRole === "admin" || userRole === "uretim") && (
-              <Link href="/admin/is-emri-ac" className="bg-red-600 hover:bg-red-500 px-4 md:px-6 py-2 md:py-3 rounded-xl text-sm md:text-base font-bold shadow-[0_0_15px_rgba(220,38,38,0.5)] flex items-center gap-2">🚨 Yeni İş Emri Aç</Link>
+              <Link href="/admin/is-emri-ac" className="bg-red-600 hover:bg-red-500 text-white p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(220,38,38,0.5)] transition">
+                🚨 Yeni İş Emri
+              </Link>
             )}
             
-            <Link href="/admin/aktif-isler" className="bg-red-900/60 hover:bg-red-600 text-red-100 border border-red-500/50 px-4 md:px-6 py-2 md:py-3 rounded-xl text-sm md:text-base font-bold flex items-center gap-2">
-              <span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span></span>
-              Tüm Aktif İş Emirleri
+            <Link href="/admin/aktif-isler" className="bg-red-900/60 hover:bg-red-600 border border-red-500/50 text-red-100 p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">
+              <span className="relative flex h-2 w-2 mr-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span></span>
+              Aktif İşler
             </Link>
-            <Link href="/admin/tamamlanan-isler" className="bg-gray-700 hover:bg-gray-600 px-4 md:px-6 py-2 md:py-3 rounded-xl text-sm md:text-base font-semibold border border-gray-500">Tamamlanan İş Emirleri</Link>
-
-            {/* YENİ EKLENEN EKED LOTO BUTONLARI */}
-            {userRole !== "uretim" && (
-              <>
-                <Link href="/admin/eked" className="bg-yellow-600 hover:bg-yellow-500 text-black px-4 md:px-6 py-2 md:py-3 rounded-xl font-bold shadow-[0_0_15px_rgba(202,138,4,0.4)] flex items-center gap-2 text-sm md:text-base w-full md:w-auto justify-center">
-                  🔒 EKED - LOTO Takip
-                </Link>
-                <Link href="/admin/eked/arsiv" className="bg-gray-700 hover:bg-gray-600 text-gray-200 border border-gray-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-bold flex items-center gap-2 text-sm md:text-base w-full md:w-auto justify-center">
-                  🗄️ EKED Arşivi
-                </Link>
-              </>
-            )}
+            
+            <Link href="/admin/tamamlanan-isler" className="bg-gray-700 hover:bg-gray-600 border border-gray-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">
+              🗄️ Arşivlenen İşler
+            </Link>
 
             {userRole === "admin" && (
               <>
-                <Link href="/admin/ekipmanlar" className="bg-blue-600 hover:bg-blue-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm md:text-base">Hat/Ekipman</Link>
-                <Link href="/admin/personel" className="bg-purple-600 hover:bg-purple-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm md:text-base">Personel Onay</Link>
-                <Link href="/admin/duyurular" className="bg-yellow-600 hover:bg-yellow-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm md:text-base">Duyuru Yayınla</Link>
+                <Link href="/admin/ekipmanlar" className="bg-blue-600 hover:bg-blue-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">⚙️ Hat / Ekipman</Link>
+                <Link href="/admin/personel" className="bg-purple-600 hover:bg-purple-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">👤 Personel Onay</Link>
+                <Link href="/admin/duyurular" className="bg-yellow-600 hover:bg-yellow-500 text-black p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">📢 Duyuru Yayınla</Link>
               </>
             )}
             
             {userRole !== "uretim" && (
               <>
-                <Link href="/admin/mesai" className="bg-teal-600 hover:bg-teal-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm md:text-base">Mesai Raporları</Link>
-                <Link href="/dashboard/sayac" className="bg-emerald-600 hover:bg-emerald-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm md:text-base text-white">⚡ Sayaç Okuma</Link>
-                <Link href="/admin/is-listesi" className="bg-indigo-600 hover:bg-indigo-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold text-sm md:text-base">Yapılan İşler</Link>
-                <Link href="/dashboard" className="bg-orange-600 hover:bg-orange-500 px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold ml-auto text-sm md:text-base">Arıza Ekranı ➔</Link>
+                <Link href="/admin/eked" className="bg-yellow-600 hover:bg-yellow-500 text-black p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(202,138,4,0.4)] transition">🔒 EKED Takip</Link>
+                <Link href="/admin/eked/arsiv" className="bg-gray-700 hover:bg-gray-600 border border-gray-500 text-gray-200 p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">🗄️ EKED Arşivi</Link>
+                <Link href="/dashboard/sayac" className="bg-emerald-600 hover:bg-emerald-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">⚡ Sayaç Okuma</Link>
+                <Link href="/admin/mesai" className="bg-teal-600 hover:bg-teal-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">⏰ Mesai Raporu</Link>
+                <Link href="/admin/is-listesi" className="bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">📋 Yapılan İşler</Link>
+                <Link href="/dashboard" className="bg-orange-600 hover:bg-orange-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">🛠️ Arıza Ekranı</Link>
               </>
             )}
           </div>
@@ -348,7 +361,10 @@ export default function AdminDashboard() {
           {aktifIsler.length > 0 && (
             <div className="bg-red-900/20 border-2 border-red-500/50 p-6 rounded-2xl mb-10 shadow-2xl no-print">
               <h2 className="text-xl font-bold text-red-400 mb-6 flex items-center gap-2">
-                <span className="relative flex h-4 w-4"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span></span>
+                <span className="relative flex h-4 w-4">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span>
+                </span>
                 Sahadan Gelen Aktif Bildirimler (Müdahale Bekleyen İş Emirleri)
               </h2>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -371,7 +387,7 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* YENİ EKLENEN: AKTİF EKED - LOTO GÜVENLİK ALARMI (Üretim Hariç Herkese) */}
+          {/* AKTİF EKED - LOTO GÜVENLİK ALARMI */}
           {userRole !== "uretim" && aktifEked.length > 0 && (
             <div className="bg-yellow-900/20 border-2 border-yellow-500/50 p-6 rounded-2xl mb-10 shadow-[0_0_20px_rgba(202,138,4,0.15)] relative overflow-hidden no-print">
               <div className="absolute inset-0 opacity-10 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#ca8a04_10px,#ca8a04_20px)]"></div>
@@ -418,6 +434,7 @@ export default function AdminDashboard() {
                 )}
               </div>
 
+              {/* ENERJİ GRAFİKLERİ */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
                 <div className="bg-gray-900 border border-yellow-500/30 p-4 rounded-2xl shadow-lg border-t-4 border-t-yellow-500">
                   <div className="flex justify-between items-center mb-4 border-b border-gray-800 pb-2">
@@ -456,8 +473,11 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
+              {/* BAKIM FİLTRELERİ */}
               <div className="bg-gray-900 border border-blue-700/50 p-5 rounded-2xl mb-6 flex flex-wrap gap-4 items-end no-print shadow-[0_0_15px_rgba(59,130,246,0.1)]">
-                <div className="w-full mb-1 border-b border-gray-800 pb-2"><h3 className="text-blue-500 font-bold flex items-center gap-2"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg> Arıza ve Bakım Filtreleri</h3></div>
+                <div className="w-full mb-1 border-b border-gray-800 pb-2">
+                  <h3 className="text-blue-500 font-bold flex items-center gap-2"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg> Arıza ve Bakım Filtreleri</h3>
+                </div>
                 <div className="flex-1 min-w-[120px]"><label className="block text-xs text-gray-400 mb-1">Yıl</label><select value={filterYil} onChange={(e) => setFilterYil(e.target.value)} className="w-full bg-gray-800 rounded-lg p-2 text-sm"><option value="">Tümü</option>{yilListesi.map(y => <option key={y} value={y}>{y}</option>)}</select></div>
                 <div className="flex-1 min-w-[120px]"><label className="block text-xs text-gray-400 mb-1">Ay</label><select value={filterAy} onChange={(e) => setFilterAy(e.target.value)} className="w-full bg-gray-800 rounded-lg p-2 text-sm"><option value="">Tümü</option><option value="1">Ocak</option><option value="2">Şubat</option><option value="3">Mart</option><option value="4">Nisan</option><option value="5">Mayıs</option><option value="6">Haziran</option><option value="7">Temmuz</option><option value="8">Ağustos</option><option value="9">Eylül</option><option value="10">Ekim</option><option value="11">Kasım</option><option value="12">Aralık</option></select></div>
                 <div className="flex-1 min-w-[120px]"><label className="block text-xs text-gray-400 mb-1">Üretim Hattı</label><select value={filterHat} onChange={(e) => { setFilterHat(e.target.value); setFilterEkipman(""); }} className="w-full bg-gray-800 rounded-lg p-2 text-sm"><option value="">Tümü</option>{hatListesi.map(h => <option key={h} value={h}>{h}</option>)}</select></div>
@@ -472,7 +492,6 @@ export default function AdminDashboard() {
                     <div className="h-72 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikTumIslerVerisi} margin={{ top: 25, right: 5, left: -25, bottom: 5 }}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="isim" tick={{fontSize: 10, fill: '#9CA3AF'}} interval={0} angle={-15} textAnchor="end" /><YAxis tick={{fontSize: 10, fill: '#9CA3AF'}} /><Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} trigger="hover" /><Legend wrapperStyle={{ fontSize: '11px', paddingTop: '15px' }} /><Bar name="İş Adedi" dataKey="adet" fill="#10B981" maxBarSize={40}><LabelList dataKey="adet" position="top" fill="#10B981" fontSize={11} fontWeight="bold" /></Bar><Bar name="Süre (Dk)" dataKey="dakika" fill="#3B82F6" maxBarSize={40}><LabelList dataKey="dakika" position="top" fill="#3B82F6" fontSize={11} fontWeight="bold" /></Bar></BarChart></ResponsiveContainer></div>
                   ) : <div className="h-48 flex justify-center items-center text-gray-500 border border-dashed border-gray-800 rounded-xl">Filtreye uygun veri yok</div>}
                 </div>
-
                 <div className="bg-gray-900 border border-gray-800 p-4 md:p-6 rounded-2xl">
                   <h2 className="text-lg font-bold mb-6 text-red-400 print:text-black">Sadece Duruşlu Arızalar</h2>
                   {grafikDurusVerisi.length > 0 ? (
@@ -492,7 +511,9 @@ export default function AdminDashboard() {
                   <div className="flex-1 min-w-[120px]"><label className="block text-xs text-blue-400 mb-1 font-bold">Sıralama</label><select value={filterPerfSiralama} onChange={(e) => setFilterPerfSiralama(e.target.value)} className="w-full bg-blue-900/30 text-blue-400 rounded-lg p-2 text-sm"><option value="is">En Çok İş</option><option value="efor">En Çok Efor</option></select></div>
                   <button onClick={() => { setFilterPerfYil(""); setFilterPerfAy(""); setFilterPerfVardiya(""); setFilterPerfPersonel(""); setFilterPerfDurus(""); setFilterPerfSiralama("is"); }} className="bg-gray-700 px-4 py-2 rounded-lg text-sm h-9">Sıfırla</button>
                 </div>
+                
                 <p className="hidden print:block pdf-top5-mesaj mb-2">* Bu rapor otomatik olarak en yüksek performans gösteren ilk 5 personeli listelemektedir.</p>
+
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse text-sm md:text-base">
                     <thead>
@@ -518,6 +539,7 @@ export default function AdminDashboard() {
               </div>
             </>
           )}
+
         </div>
       </div>
     </>

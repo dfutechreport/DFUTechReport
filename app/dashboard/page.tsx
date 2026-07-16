@@ -169,6 +169,7 @@ function DashboardIcerik() {
 
   const handleIsiTamamla = async (islem: any) => {
     if (!window.confirm("Bu işi bitirdiğinizi onaylıyor musunuz? Onayladıktan sonra süresini girmek için form otomatik olarak açılacaktır.")) return;
+
     try {
       await updateDoc(doc(db, "work_orders", islem.id), {
         durum: "Kapalı", tamamlayanKisi: userName, tamamlanmaTarihi: new Date()
@@ -228,20 +229,20 @@ function DashboardIcerik() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-gray-800 pb-5 gap-4">
           <div>
             <p className="text-sm font-bold text-blue-500 mb-1 tracking-wider uppercase">DFU DONUK FIRINCILIK ÜRÜNLERİ A.Ş.</p>
-            <h1 className="text-2xl md:text-3xl font-bold">Arıza Bildirim Paneli</h1>
+            <h1 className="text-2xl md:text-3xl font-bold">Vardiya Raporu / Arıza Paneli</h1>
             <p className="text-gray-400 mt-1">Hoş geldin, <span className="text-blue-400 font-medium">{userName}</span></p>
           </div>
           <div className="flex gap-3">
             {(userRole === "admin" || userRole === "operator" || userRole === "uretim") && (
-              <Link href="/admin" className="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg transition text-sm flex items-center font-semibold text-blue-400">
+              <a href="/admin" className="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg transition text-sm flex items-center font-semibold text-blue-400">
                 {userRole === "admin" ? "Yönetim Paneline Dön" : "İzleme Paneline Dön"}
-              </Link>
+              </a>
             )}
             <button onClick={() => { auth.signOut(); window.location.href="/"; }} className="bg-red-900/50 hover:bg-red-600 text-red-400 px-4 py-2 rounded-lg border border-red-800/50">Çıkış</button>
           </div>
         </div>
 
-        {/* STANDARTLAŞTIRILMIŞ HIZLI ERİŞİM MENÜSÜ (GRID) */}
+        {/* STANDARTLAŞTIRILMIŞ HIZLI ERİŞİM MENÜSÜ */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-8 no-print">
           <Link href="/admin/aktif-isler" className="bg-red-900/60 hover:bg-red-600 border border-red-500/50 text-red-100 p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">
             <span className="relative flex h-2 w-2 mr-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span></span>
@@ -256,6 +257,12 @@ function DashboardIcerik() {
           <Link href="/admin/eked/arsiv" className="bg-gray-700 hover:bg-gray-600 border border-gray-500 text-gray-200 p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">
             🗄️ EKED Arşivi
           </Link>
+          
+          {/* YENİ: KONTROL FORMLARI BUTONU */}
+          <Link href="/dashboard/kontrol-formlari" className="bg-cyan-600 hover:bg-cyan-500 text-white p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(6,182,212,0.4)] transition">
+            ✅ Kontrol Formları
+          </Link>
+
           <Link href="/dashboard/sayac" className="bg-emerald-600 hover:bg-emerald-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">
             ⚡ Sayaç Okuma
           </Link>
@@ -264,6 +271,7 @@ function DashboardIcerik() {
           </Link>
         </div>
 
+        {/* AKTİF İŞ EMİRLERİ (ALARM LİSTESİ) */}
         {aktifIsler.length > 0 && (
           <div className="bg-red-900/20 border-2 border-red-500/50 p-6 rounded-2xl mb-10 shadow-2xl">
             <h2 className="text-xl font-bold text-red-400 mb-6 flex items-center gap-2">

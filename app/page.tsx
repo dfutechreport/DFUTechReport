@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { signInWithPopup, onAuthStateChanged, updateProfile } from "firebase/auth";
-import { collection, doc, getDoc, setDoc, getDocs, query, where, deleteDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, deleteDoc } from "firebase/firestore";
 import { auth, googleProvider, db } from "./lib/firebase";
 
 export default function LoginPage() {

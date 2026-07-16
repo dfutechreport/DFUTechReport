@@ -329,6 +329,7 @@ export default function AdminDashboard() {
             <p className="text-sm text-gray-500 mt-1">Oluşturulma Tarihi: {new Date().toLocaleString('tr-TR')}</p>
           </div>
 
+                    {/* YENİ: 4'LÜ OEE / DURUŞ PENCERESİ (EN ÜSTTE) */}
           {userRole !== "uretim" && (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
               <div className="bg-gray-900 border border-gray-800 p-4 md:p-5 rounded-2xl shadow-lg">
@@ -336,17 +337,27 @@ export default function AdminDashboard() {
                 <h3 className="text-2xl md:text-3xl font-bold text-green-400">{kpiToplamIs} <span className="text-sm text-gray-500 font-normal">Adet</span></h3>
                 <p className="text-xs text-gray-500 mt-2 font-medium">Toplam Efor: <span className="text-white">{kpiToplamSure} dk</span></p>
               </div>
+              
               <div className="bg-gray-900 border border-gray-800 p-4 md:p-5 rounded-2xl shadow-lg">
                 <p className="text-xs md:text-sm text-gray-400 font-semibold mb-1">Duruşlu İş Sayısı</p>
                 <h3 className="text-2xl md:text-3xl font-bold text-red-400">{kpiDurusluIsSayisi} <span className="text-sm text-gray-500 font-normal">Adet</span></h3>
                 <p className="text-xs text-gray-500 mt-2 font-medium">Kritik Duruş: <span className="text-white">{kpiAylikDurus} dk</span></p>
               </div>
-              <div className="bg-gray-900 border border-orange-500/30 p-4 md:p-5 rounded-2xl shadow-[0_0_15px_rgba(249,115,22,0.1)] relative overflow-hidden">
-                <p className="text-xs md:text-sm text-orange-300 font-semibold mb-1 relative z-10">Duruş Yüzdesi (Adet)</p>
-                <h3 className="text-2xl md:text-3xl font-bold text-orange-400 relative z-10">%{durusAdetYuzde}</h3>
-                <p className="text-xs text-gray-400 mt-2 relative z-10">Tüm arızalara oranı</p>
+              
+              {/* YENİ: ADET YÜZDESİ YERİNE ALTLI ÜSTLÜ SÜRE KIYASLAMASI */}
+              <div className="bg-gray-900 border border-orange-500/30 p-4 md:p-5 rounded-2xl shadow-[0_0_15px_rgba(249,115,22,0.1)] relative overflow-hidden flex flex-col justify-center">
+                <div className="flex justify-between items-center border-b border-gray-700/50 pb-2 mb-2">
+                  <span className="text-xs md:text-sm text-green-400 font-bold">Toplam Çalışma:</span>
+                  <span className="text-lg md:text-xl font-bold text-white">{kpiToplamSure} <span className="text-xs text-gray-400">dk</span></span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs md:text-sm text-red-400 font-bold">Toplam Duruş:</span>
+                  <span className="text-lg md:text-xl font-bold text-white">{kpiAylikDurus} <span className="text-xs text-gray-400">dk</span></span>
+                </div>
               </div>
+
               <div className="bg-gray-900 border border-blue-500/30 p-4 md:p-5 rounded-2xl shadow-[0_0_15px_rgba(59,130,246,0.1)] relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-2 opacity-10"><svg className="w-12 h-12 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"></path></svg></div>
                 <p className="text-xs md:text-sm text-blue-300 font-semibold mb-1 relative z-10">Duruş Yüzdesi (Süre)</p>
                 <h3 className="text-2xl md:text-3xl font-bold text-blue-400 relative z-10">%{durusSureYuzde}</h3>
                 <p className="text-xs text-gray-400 mt-2 relative z-10">Toplam efora oranı</p>

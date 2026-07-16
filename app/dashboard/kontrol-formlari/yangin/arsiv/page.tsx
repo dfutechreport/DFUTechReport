@@ -38,40 +38,63 @@ export default function YanginArsivi() {
   if (loading) return <div className="min-h-screen bg-gray-950 flex justify-center items-center text-white">Yükleniyor...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8 border-b border-gray-800 pb-5">
-          <h1 className="text-2xl font-bold text-red-500">🗄️ Yangın Pompaları Arşivi</h1>
-          <Link href="/dashboard/kontrol-formlari" className="bg-gray-800 px-4 py-2 rounded-lg text-sm transition">← Menüye Dön</Link>
-        </div>
+    <>
+      <style dangerouslySetInnerHTML={{__html: `
+        @media print {
+          body { background: white !important; color: black !important; }
+          .no-print { display: none !important; }
+          .bg-gray-950, .bg-gray-900 { background: white !important; }
+          .text-white, .text-gray-400 { color: black !important; }
+          .border-gray-800, .border-gray-700 { border-color: #ddd !important; }
+          .shadow-lg { box-shadow: none !important; }
+        }
+      `}} />
 
-        <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-lg overflow-x-auto">
-          {logs.length === 0 ? <div className="text-center text-gray-500 py-10">Kayıt yok.</div> : (
-            <table className="w-full text-left text-sm whitespace-nowrap">
-              <thead>
-                <tr className="border-b border-gray-800 text-gray-400">
-                  <th className="pb-3 px-2">Tarih / Vardiya</th><th className="pb-3 px-2">Personel</th>
-                  <th className="pb-3 px-2 text-red-400">Sızıntı / Kaçak</th>
-                  <th className="pb-3 px-2">Dizel Pompa</th><th className="pb-3 px-2">Elektrikli Pompa</th>
-                  {userRole === "admin" && <th className="pb-3 px-2 text-right">Aksiyon</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {logs.map(log => (
-                  <tr key={log.id} className="border-b border-gray-800 hover:bg-gray-800/50">
-                    <td className="py-4 px-2 font-bold">{log.tarih} <br/><span className="text-xs text-gray-500">{log.vardiya}</span></td>
-                    <td className="py-4 px-2 text-blue-300">{log.personel}</td>
-                    <td className="py-4 px-2 text-xs">{log.kacakDurum === "YOK" ? <span className="text-green-400">YOK</span> : <span className="text-red-400">VAR: {log.kacakDetay}</span>}</td>
-                    <td className="py-4 px-2 text-xs">{log.dizelPompaOk ? <span className="text-green-400">Sağlam</span> : <span className="text-red-400">Arıza: {log.dizelHata}</span>}</td>
-                    <td className="py-4 px-2 text-xs">{log.elektrikliPompaOk ? <span className="text-green-400">Sağlam</span> : <span className="text-red-400">Arıza: {log.elektrikliHata}</span>}</td>
-                    {userRole === "admin" && <td className="py-4 px-2 text-right"><button onClick={() => handleSil(log.id)} className="bg-red-900/50 text-red-400 px-3 py-1 rounded text-xs">Sil</button></td>}
+      <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-gray-800 pb-5 gap-4">
+            <h1 className="text-2xl font-bold text-red-500 print:text-black">🗄️ Yangın Pompaları Arşivi</h1>
+            <div className="flex gap-3 no-print">
+              <button onClick={() => window.print()} className="bg-white text-gray-900 font-bold px-4 py-2 rounded-lg shadow-lg hover:bg-gray-200 transition flex items-center gap-2 text-sm">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg> PDF Çıktısı Al
+              </button>
+              <Link href="/dashboard/kontrol-formlari" className="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm transition">← Menüye Dön</Link>
+            </div>
+          </div>
+
+          <div className="hidden print:block text-center mb-8 border-b-2 border-black pb-4">
+            <h2 className="text-2xl font-bold text-black">Yangın Pompaları Periyodik Kontrol Dökümü</h2>
+            <p className="text-sm text-gray-500 mt-1">Oluşturulma Tarihi: {new Date().toLocaleString('tr-TR')}</p>
+          </div>
+
+          <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-lg overflow-x-auto print:border-none print:shadow-none print:p-0">
+            {logs.length === 0 ? <div className="text-center text-gray-500 py-10">Kayıt yok.</div> : (
+              <table className="w-full text-left text-sm whitespace-nowrap">
+                <thead>
+                  <tr className="border-b border-gray-800 text-gray-400 print:text-black">
+                    <th className="pb-3 px-2">Tarih / Vardiya</th><th className="pb-3 px-2">Personel</th>
+                    <th className="pb-3 px-2 text-red-400 print:text-black">Sızıntı / Kaçak</th>
+                    <th className="pb-3 px-2">Dizel Pompa</th><th className="pb-3 px-2">Elektrikli Pompa</th>
+                    {userRole === "admin" && <th className="pb-3 px-2 text-right no-print">Aksiyon</th>}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+                </thead>
+                <tbody>
+                  {logs.map(log => (
+                    <tr key={log.id} className="border-b border-gray-800 print:border-gray-300 hover:bg-gray-800/50">
+                      <td className="py-4 px-2 font-bold print:text-black">{log.tarih} <br/><span className="text-xs text-gray-500 print:text-black">{log.vardiya}</span></td>
+                      <td className="py-4 px-2 text-blue-300 print:text-black">{log.personel}</td>
+                      <td className="py-4 px-2 text-xs print:text-black">{log.kacakDurum === "YOK" ? <span className="text-green-400 print:text-black font-bold">YOK</span> : <span className="text-red-400 print:text-black font-bold">VAR: {log.kacakDetay}</span>}</td>
+                      <td className="py-4 px-2 text-xs print:text-black">{log.dizelPompaOk ? <span className="text-green-400 print:text-black font-bold">Sağlam</span> : <span className="text-red-400 print:text-black font-bold">Arıza: {log.dizelHata}</span>}</td>
+                      <td className="py-4 px-2 text-xs print:text-black">{log.elektrikliPompaOk ? <span className="text-green-400 print:text-black font-bold">Sağlam</span> : <span className="text-red-400 print:text-black font-bold">Arıza: {log.elektrikliHata}</span>}</td>
+                      {userRole === "admin" && <td className="py-4 px-2 text-right no-print"><button onClick={() => handleSil(log.id)} className="bg-red-900/50 text-red-400 px-3 py-1 rounded text-xs">Sil</button></td>}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, Suspense } from "react";
-import { collection, getDocs, addDoc, doc, getDoc, updateDoc, arrayUnion, query, where, orderBy } from "firebase/firestore";
+import { collection, getDocs, addDoc, doc, getDoc, updateDoc, arrayUnion, query, where } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../../lib/firebase";
 import { useForm, Controller } from "react-hook-form";
@@ -53,6 +53,12 @@ function DashboardIcerik() {
   const [aktifIsler, setAktifIsler] = useState<any[]>([]);
   const [aktifEked, setAktifEked] = useState<any[]>([]); 
   const [isAutoFilled, setIsAutoFilled] = useState(false);
+
+  // YENİ: KPI KARTLARI İÇİN STATE'LER
+  const [kpiToplamIs, setKpiToplamIs] = useState(0);
+  const [kpiToplamSure, setKpiToplamSure] = useState(0);
+  const [kpiAylikDurus, setKpiAylikDurus] = useState(0);
+  const [kpiDurusluIsSayisi, setKpiDurusluIsSayisi] = useState(0);
 
   const searchParams = useSearchParams();
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -107,7 +113,9 @@ function DashboardIcerik() {
     }
   }, [searchParams, setValue, assets]);
 
-  const fetchAktifAlarmlar = async () => {
+  // ALARMLAR VE KPI HESAPLAMA (Teknisyen Ekranı İçin)
+  const fetchAktifAlarmlarVeKPI = async () => {
+    // 1. Alarmlar
     const wQ = query(collection(db, "work_orders"), where("durum", "==", "Açık"));
     const wSnap = await getDocs(wQ);
     const dataW = wSnap.docs.map(d => ({ id: d.id, ...d.data(), gercekZaman: d.data().kayitTarihi ? d.data().kayitTarihi.toDate().getTime() : 0 }));
@@ -116,6 +124,26 @@ function DashboardIcerik() {
     const eQ = query(collection(db, "eked_logs"), where("durum", "==", "Açık"));
     const eSnap = await getDocs(eQ);
     setAktifEked(eSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+
+    // 2. KPI Kartları İçin Tüm İşleri Çek (İsterseniz sadece bulunduğunuz yıla/aya göre filtreleyebilirsiniz, şimdilik genel özet)
+    const logsSnap = await getDocs(collection(db, "maintenance_logs"));
+    let topDurusDk = 0; let topIs = 0; let topMudahaleDk = 0; let durusIsSayisi = 0;
+
+    logsSnap.forEach((document) => {
+      const data = document.data();
+      const sure = Number(data.toplamSureDakika) || 0;
+      topIs++;
+      topMudahaleDk += sure;
+      if (data.isDuruslu) {
+        topDurusDk += sure;
+        durusIsSayisi++;
+      }
+    });
+
+    setKpiToplamIs(topIs);
+    setKpiToplamSure(topMudahaleDk);
+    setKpiAylikDurus(topDurusDk);
+    setKpiDurusluIsSayisi(durusIsSayisi);
   };
 
   useEffect(() => {
@@ -131,7 +159,7 @@ function DashboardIcerik() {
           setUserName(data.name);
           setSeciliPersoneller([data.name]);
 
-          fetchAktifAlarmlar(); 
+          fetchAktifAlarmlarVeKPI(); 
 
           const okunanDuyuruIDleri = data.okunanDuyurular || []; 
           const duyuruSnap = await getDocs(collection(db, "announcements"));
@@ -172,11 +200,12 @@ function DashboardIcerik() {
 
   const handleIsiTamamla = async (islem: any) => {
     if (!window.confirm("Bu işi bitirdiğinizi onaylıyor musunuz? Onayladıktan sonra süresini girmek için form otomatik olarak açılacaktır.")) return;
+
     try {
       await updateDoc(doc(db, "work_orders", islem.id), {
         durum: "Kapalı", tamamlayanKisi: userName, tamamlanmaTarihi: new Date()
       });
-      fetchAktifAlarmlar();
+      fetchAktifAlarmlarVeKPI();
       setSeciliHat(islem.hatAdi);
       setValue("hatAdi", islem.hatAdi);
       setValue("isDuruslu", islem.isDuruslu);
@@ -211,8 +240,12 @@ function DashboardIcerik() {
       reset(); setSeciliHat(""); setHesaplananSure(0); setSeciliPersoneller([userName]); setIsAutoFilled(false);
       window.history.replaceState(null, "", "/dashboard");
       window.scrollTo({ top: 0, behavior: "smooth" });
+      
+      fetchAktifAlarmlarVeKPI(); // Kayıttan sonra KPI'ları anında yenile
     } catch (error) { alert("Hata oluştu."); } finally { setIsSubmitting(false); }
   };
+
+  const durusSureYuzde = kpiToplamSure > 0 ? ((kpiAylikDurus / kpiToplamSure) * 100).toFixed(1) : "0";
 
   return (
     <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8 relative">
@@ -252,7 +285,38 @@ function DashboardIcerik() {
           </div>
         </div>
 
-        {/* STANDARTLAŞTIRILMIŞ HIZLI ERİŞİM MENÜSÜ (GRID) */}
+        {/* YENİ: KPI KARTLARI (Teknisyen Ekranı İçin) */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="bg-gray-900 border border-gray-800 p-4 rounded-2xl shadow-lg">
+            <p className="text-xs text-gray-400 font-semibold mb-1">Toplam Yapılan İş</p>
+            <h3 className="text-2xl font-bold text-green-400">{kpiToplamIs} <span className="text-xs text-gray-500 font-normal">Adet</span></h3>
+            <p className="text-[10px] text-gray-500 mt-2 font-medium">Toplam Efor: <span className="text-white">{kpiToplamSure} dk</span></p>
+          </div>
+          
+          <div className="bg-gray-900 border border-gray-800 p-4 rounded-2xl shadow-lg">
+            <p className="text-xs text-gray-400 font-semibold mb-1">Duruşlu İş Sayısı</p>
+            <h3 className="text-2xl font-bold text-red-400">{kpiDurusluIsSayisi} <span className="text-xs text-gray-500 font-normal">Adet</span></h3>
+            <p className="text-[10px] text-gray-500 mt-2 font-medium">Kritik Duruş: <span className="text-white">{kpiAylikDurus} dk</span></p>
+          </div>
+          
+          <div className="bg-gray-900 border border-orange-500/30 p-4 rounded-2xl shadow-[0_0_10px_rgba(249,115,22,0.1)] flex flex-col justify-center">
+            <div className="flex justify-between items-center border-b border-gray-700/50 pb-1 mb-1">
+              <span className="text-[10px] text-green-400 font-bold">Çalışma:</span>
+              <span className="text-sm font-bold text-white">{kpiToplamSure} <span className="text-[10px] text-gray-400">dk</span></span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] text-red-400 font-bold">Duruş:</span>
+              <span className="text-sm font-bold text-white">{kpiAylikDurus} <span className="text-[10px] text-gray-400">dk</span></span>
+            </div>
+          </div>
+
+          <div className="bg-gray-900 border border-blue-500/30 p-4 rounded-2xl shadow-[0_0_10px_rgba(59,130,246,0.1)] relative overflow-hidden">
+            <p className="text-xs text-blue-300 font-semibold mb-1 relative z-10">Duruş Yüzdesi (Süre)</p>
+            <h3 className="text-2xl font-bold text-blue-400 relative z-10">%{durusSureYuzde}</h3>
+            <p className="text-[10px] text-gray-400 mt-2 relative z-10">Toplam efora oranı</p>
+          </div>
+        </div>
+
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-8 no-print">
           <Link href="/admin/aktif-isler" className="bg-red-900/60 hover:bg-red-600 border border-red-500/50 text-red-100 p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">
             <span className="relative flex h-2 w-2 mr-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span></span>
@@ -264,13 +328,11 @@ function DashboardIcerik() {
           <Link href="/dashboard/kontrol-formlari" className="bg-cyan-600 hover:bg-cyan-500 text-white p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(6,182,212,0.4)] transition">✅ Kontrol Formları</Link>
           <Link href="/dashboard/sayac" className="bg-emerald-600 hover:bg-emerald-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">⚡ Sayaç Okuma</Link>
           <Link href="/dashboard/mesai" className="bg-teal-600 hover:bg-teal-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">⏰ Fazla Mesai</Link>
-          
           {(userRole === "admin" || userRole === "operator") && (
             <Link href="/admin/yedek-parca" className="bg-fuchsia-700 hover:bg-fuchsia-600 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(192,38,211,0.4)] transition">⚙️ Yedek Parça</Link>
           )}
         </div>
 
-        {/* AKTİF İŞ EMİRLERİ (ALARM LİSTESİ) */}
         {aktifIsler.length > 0 && (
           <div className="bg-red-900/20 border-2 border-red-500/50 p-6 rounded-2xl mb-10 shadow-2xl">
             <h2 className="text-xl font-bold text-red-400 mb-6 flex items-center gap-2">
@@ -298,7 +360,6 @@ function DashboardIcerik() {
           </div>
         )}
 
-        {/* EKED - LOTO GÜVENLİK ALARMI */}
         {aktifEked.length > 0 && (
           <div className="bg-yellow-900/20 border-2 border-yellow-500/50 p-6 rounded-2xl mb-10 shadow-[0_0_20px_rgba(202,138,4,0.15)] relative overflow-hidden">
             <div className="absolute inset-0 opacity-10 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#ca8a04_10px,#ca8a04_20px)]"></div>
@@ -410,7 +471,6 @@ function DashboardIcerik() {
               </div>
             </div>
 
-            {/* YEDEK PARÇA KUTUSU */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-fuchsia-900/10 p-4 rounded-xl border border-fuchsia-800/30">
               <div className="md:col-span-3 mb-[-10px]"><p className="text-fuchsia-400 font-bold text-sm flex items-center gap-2">⚙️ Kullanılan Yedek Parça <span className="text-gray-500 font-normal text-xs">(Kullanılmadıysa boş bırakın)</span></p></div>
               <div>

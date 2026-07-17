@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs, doc, getDoc, deleteDoc, query, orderBy } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, deleteDoc, addDoc, query, orderBy } from "firebase/firestore";
 import { auth, db } from "../../../lib/firebase"; 
 import Link from "next/link";
 import { onAuthStateChanged } from "firebase/auth";
@@ -10,6 +10,12 @@ export default function PanoListesi() {
   const [panolar, setPanolar] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState("");
+  const [userName, setUserName] = useState("");
+
+  // YENİ: Pano Kayıt State'leri
+  const [panoAdi, setPanoAdi] = useState("");
+  const [panoYeri, setPanoYeri] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchPanolar = async () => {
     try {
@@ -33,6 +39,7 @@ export default function PanoListesi() {
             window.location.href = "/";
           } else {
             setUserRole(role);
+            setUserName(userSnap.data().name);
             fetchPanolar();
           }
         } else window.location.href = "/";
@@ -40,6 +47,22 @@ export default function PanoListesi() {
     });
     return () => unsubscribe();
   }, []);
+
+  // YENİ: Pano Ekleme Fonksiyonu
+  const handlePanoEkle = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!panoAdi || !panoYeri) return alert("Lütfen pano adı ve yerini girin.");
+    
+    setIsSubmitting(true);
+    try {
+      await addDoc(collection(db, "electrical_panels"), {
+        panoAdi, panoYeri, ekleyenPersonel: userName, kayitTarihi: new Date()
+      });
+      alert("Pano başarıyla eklendi!");
+      setPanoAdi(""); setPanoYeri("");
+      fetchPanolar(); // Tabloyu yenile
+    } catch (error) { alert("Hata oluştu."); } finally { setIsSubmitting(false); }
+  };
 
   const handleSil = async (id: string) => {
     if (!window.confirm("Bu panoyu sistemden kalıcı olarak silmek istediğinize emin misiniz?")) return;
@@ -55,13 +78,28 @@ export default function PanoListesi() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-gray-800 pb-5 gap-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-indigo-400">🔌 Sistemdeki Elektrik Panoları</h1>
-            <p className="text-gray-400 mt-1">Tesis genelindeki panoların listesi ve kontrol erişimi.</p>
+            <p className="text-gray-400 mt-1">Tesis genelindeki panoların kaydı, listesi ve kontrol erişimi.</p>
           </div>
           <Link href={userRole === "admin" || userRole === "operator" || userRole === "isg" ? "/admin" : "/dashboard"} className="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm transition">← Panele Dön</Link>
         </div>
 
+        {/* YENİ: PANO EKLEME FORMU (Üstte) */}
+        <div className="bg-gray-900 border border-indigo-500/50 p-6 rounded-2xl shadow-[0_0_15px_rgba(99,102,241,0.15)] mb-8 flex flex-col md:flex-row gap-4 items-end">
+          <div className="w-full md:w-auto flex-1">
+            <label className="block text-sm text-indigo-300 font-bold mb-1">Yeni Pano Adı</label>
+            <input type="text" value={panoAdi} onChange={e => setPanoAdi(e.target.value)} placeholder="Örn: MCC Ana Dağıtım" className="w-full bg-gray-800 border-gray-700 rounded-lg p-3 text-white focus:border-indigo-500 outline-none" />
+          </div>
+          <div className="w-full md:w-auto flex-1">
+            <label className="block text-sm text-indigo-300 font-bold mb-1">Panonun Yeri (Hat/Bölge)</label>
+            <input type="text" value={panoYeri} onChange={e => setPanoYeri(e.target.value)} placeholder="Örn: Kruvasan Hattı" className="w-full bg-gray-800 border-gray-700 rounded-lg p-3 text-white focus:border-indigo-500 outline-none" />
+          </div>
+          <button onClick={handlePanoEkle} disabled={isSubmitting} className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-8 py-3 rounded-lg shadow-lg disabled:opacity-50 h-[48px]">
+            {isSubmitting ? "Ekleniyor..." : "Sisteme Ekle"}
+          </button>
+        </div>
+
         <div className="bg-gray-900 border border-gray-800 p-4 md:p-6 rounded-2xl shadow-lg overflow-x-auto">
-          {panolar.length === 0 ? <div className="text-center py-10 text-gray-500">Kayıtlı pano bulunmuyor.</div> : (
+          {panolar.length === 0 ? <div className="text-center py-10 text-gray-500">Kayıtlı pano bulunmuyor. Lütfen yukarıdan ekleyin.</div> : (
             <table className="w-full text-left text-sm whitespace-nowrap md:whitespace-normal">
               <thead>
                 <tr className="border-b border-gray-800 text-gray-400">
@@ -79,7 +117,6 @@ export default function PanoListesi() {
                     <td className="py-4 px-2 text-gray-500 text-xs">{pano.ekleyenPersonel}</td>
                     <td className="py-4 px-2 text-right space-x-2 flex justify-end">
                       
-                      {/* KONTROL FORMU BUTONU - TIKLAYINCA ID ve İSİM URL ÜZERİNDEN GİDECEK */}
                       <Link 
                         href={`/dashboard/pano-kontrol?id=${pano.id}&isim=${encodeURIComponent(pano.panoAdi)}&yer=${encodeURIComponent(pano.panoYeri)}`} 
                         className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-4 py-2 rounded-lg shadow-lg transition"
@@ -97,6 +134,7 @@ export default function PanoListesi() {
             </table>
           )}
         </div>
+
       </div>
     </div>
   );

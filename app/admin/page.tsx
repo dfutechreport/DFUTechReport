@@ -286,7 +286,7 @@ export default function AdminDashboard() {
                 <Link href="/admin/personel" className="bg-purple-600 hover:bg-purple-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">👤 Personel Onay</Link>
               </>
             )}
-            {(userRole === "admin" || userRole === "operator" || userRole === "teknisyen") && (<Link href="/dashboard/pano-kayit" className="bg-indigo-700 hover:bg-indigo-600 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(67,56,202,0.4)] transition">🔌 Pano Kayıt</Link>)}
+            
             {(userRole === "admin" || userRole === "operator" || userRole === "isg" || userRole === "teknisyen") && (
               <>
                 <Link href="/dashboard/pano-listesi" className="bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">🔌 Pano Listesi</Link>

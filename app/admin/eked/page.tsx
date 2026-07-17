@@ -96,7 +96,7 @@ export default function EkedTakip() {
             </h1>
             <p className="text-gray-400 mt-1">Sahadaki kilitli (enerjisi kesilmiş) emniyetli alanların takibi.</p>
           </div>
-          <Link href={userRole === "admin" || userRole === "operator" ? "/admin" : "/dashboard"} className="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm transition">← Panele Dön</Link>
+          <Link href={userRole === "admin" || userRole === "operator" || userRole === "isg" ? "/admin" : "/dashboard"} className="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm transition">← Panele Dön</Link>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

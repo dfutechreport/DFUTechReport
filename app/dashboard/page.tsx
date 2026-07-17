@@ -50,11 +50,13 @@ function DashboardIcerik() {
   const [okunmayanDuyurular, setOkunmayanDuyurular] = useState<any[]>([]);
   const [showDuyuruModal, setShowDuyuruModal] = useState(false);
 
+  // ALARM STATE'LERİ
   const [aktifIsler, setAktifIsler] = useState<any[]>([]);
   const [aktifEked, setAktifEked] = useState<any[]>([]); 
+  const [aktifIsgAlarmlari, setAktifIsgAlarmlari] = useState<any[]>([]); // YENİ: KAR İSG Alarmları
+
   const [isAutoFilled, setIsAutoFilled] = useState(false);
 
-  // YENİ: KPI KARTLARI İÇİN STATE'LER
   const [kpiToplamIs, setKpiToplamIs] = useState(0);
   const [kpiToplamSure, setKpiToplamSure] = useState(0);
   const [kpiAylikDurus, setKpiAylikDurus] = useState(0);
@@ -114,15 +116,23 @@ function DashboardIcerik() {
   }, [searchParams, setValue, assets]);
 
   const fetchAktifAlarmlarVeKPI = async () => {
+    // 1. İş Emirlerini İkiye Böl (KAR vs Normal İşler)
     const wQ = query(collection(db, "work_orders"), where("durum", "==", "Açık"));
     const wSnap = await getDocs(wQ);
     const dataW = wSnap.docs.map(d => ({ id: d.id, ...d.data(), gercekZaman: d.data().kayitTarihi ? d.data().kayitTarihi.toDate().getTime() : 0 }));
-    setAktifIsler(dataW.sort((a, b) => b.gercekZaman - a.gercekZaman).slice(0, 5));
+    
+    const isgAlarmlari = dataW.filter(d => d.ekipmanAdi === "KAR devreye alma");
+    const normalIsler = dataW.filter(d => d.ekipmanAdi !== "KAR devreye alma");
 
+    setAktifIsgAlarmlari(isgAlarmlari.sort((a, b) => b.gercekZaman - a.gercekZaman));
+    setAktifIsler(normalIsler.sort((a, b) => b.gercekZaman - a.gercekZaman).slice(0, 5));
+
+    // 2. EKED Alarmları
     const eQ = query(collection(db, "eked_logs"), where("durum", "==", "Açık"));
     const eSnap = await getDocs(eQ);
     setAktifEked(eSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
+    // 3. KPI Hesaplamaları
     const logsSnap = await getDocs(collection(db, "maintenance_logs"));
     let topDurusDk = 0; let topIs = 0; let topMudahaleDk = 0; let durusIsSayisi = 0;
 
@@ -223,21 +233,13 @@ function DashboardIcerik() {
     setIsSubmitting(true); setBasariMesaji("");
     try {
       await addDoc(collection(db, "maintenance_logs"), {
-        ...data, 
-        isiYapanlar: seciliPersoneller, 
-        toplamSureDakika: hesaplananSure, 
-        bildirenKisi: userName, 
-        kayitTarihi: new Date(), 
-        durum: "Kapalı",
-        yedekParcaKodu: data.yedekParcaKodu || "",
-        yedekParcaMiktar: data.yedekParcaMiktar || 0,
-        yedekParcaBirim: data.yedekParcaBirim || "Adet"
+        ...data, isiYapanlar: seciliPersoneller, toplamSureDakika: hesaplananSure, bildirenKisi: userName, kayitTarihi: new Date(), durum: "Kapalı",
+        yedekParcaKodu: data.yedekParcaKodu || "", yedekParcaMiktar: data.yedekParcaMiktar || 0, yedekParcaBirim: data.yedekParcaBirim || "Adet"
       });
       setBasariMesaji("Kayıt başarıyla işlendi. Süre: " + hesaplananSure + " Dk");
       reset(); setSeciliHat(""); setHesaplananSure(0); setSeciliPersoneller([userName]); setIsAutoFilled(false);
       window.history.replaceState(null, "", "/dashboard");
       window.scrollTo({ top: 0, behavior: "smooth" });
-      
       fetchAktifAlarmlarVeKPI(); 
     } catch (error) { alert("Hata oluştu."); } finally { setIsSubmitting(false); }
   };
@@ -283,41 +285,14 @@ function DashboardIcerik() {
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div className="bg-gray-900 border border-gray-800 p-4 rounded-2xl shadow-lg">
-            <p className="text-xs text-gray-400 font-semibold mb-1">Toplam Yapılan İş</p>
-            <h3 className="text-2xl font-bold text-green-400">{kpiToplamIs} <span className="text-xs text-gray-500 font-normal">Adet</span></h3>
-            <p className="text-[10px] text-gray-500 mt-2 font-medium">Toplam Efor: <span className="text-white">{kpiToplamSure} dk</span></p>
-          </div>
-          
-          <div className="bg-gray-900 border border-gray-800 p-4 rounded-2xl shadow-lg">
-            <p className="text-xs text-gray-400 font-semibold mb-1">Duruşlu İş Sayısı</p>
-            <h3 className="text-2xl font-bold text-red-400">{kpiDurusluIsSayisi} <span className="text-xs text-gray-500 font-normal">Adet</span></h3>
-            <p className="text-[10px] text-gray-500 mt-2 font-medium">Kritik Duruş: <span className="text-white">{kpiAylikDurus} dk</span></p>
-          </div>
-          
-          <div className="bg-gray-900 border border-orange-500/30 p-4 rounded-2xl shadow-[0_0_10px_rgba(249,115,22,0.1)] flex flex-col justify-center">
-            <div className="flex justify-between items-center border-b border-gray-700/50 pb-1 mb-1">
-              <span className="text-[10px] text-green-400 font-bold">Çalışma:</span>
-              <span className="text-sm font-bold text-white">{kpiToplamSure} <span className="text-[10px] text-gray-400">dk</span></span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-[10px] text-red-400 font-bold">Duruş:</span>
-              <span className="text-sm font-bold text-white">{kpiAylikDurus} <span className="text-[10px] text-gray-400">dk</span></span>
-            </div>
-          </div>
-
-          <div className="bg-gray-900 border border-blue-500/30 p-4 rounded-2xl shadow-[0_0_10px_rgba(59,130,246,0.1)] relative overflow-hidden">
-            <p className="text-xs text-blue-300 font-semibold mb-1 relative z-10">Duruş Yüzdesi (Süre)</p>
-            <h3 className="text-2xl font-bold text-blue-400 relative z-10">%{durusSureYuzde}</h3>
-            <p className="text-[10px] text-gray-400 mt-2 relative z-10">Toplam efora oranı</p>
-          </div>
+          <div className="bg-gray-900 border border-gray-800 p-4 rounded-2xl shadow-lg"><p className="text-xs text-gray-400 font-semibold mb-1">Toplam Yapılan İş</p><h3 className="text-2xl font-bold text-green-400">{kpiToplamIs} <span className="text-xs text-gray-500 font-normal">Adet</span></h3><p className="text-[10px] text-gray-500 mt-2 font-medium">Toplam Efor: <span className="text-white">{kpiToplamSure} dk</span></p></div>
+          <div className="bg-gray-900 border border-gray-800 p-4 rounded-2xl shadow-lg"><p className="text-xs text-gray-400 font-semibold mb-1">Duruşlu İş Sayısı</p><h3 className="text-2xl font-bold text-red-400">{kpiDurusluIsSayisi} <span className="text-xs text-gray-500 font-normal">Adet</span></h3><p className="text-[10px] text-gray-500 mt-2 font-medium">Kritik Duruş: <span className="text-white">{kpiAylikDurus} dk</span></p></div>
+          <div className="bg-gray-900 border border-orange-500/30 p-4 rounded-2xl shadow-[0_0_10px_rgba(249,115,22,0.1)] flex flex-col justify-center"><div className="flex justify-between items-center border-b border-gray-700/50 pb-1 mb-1"><span className="text-[10px] text-green-400 font-bold">Çalışma:</span><span className="text-sm font-bold text-white">{kpiToplamSure} <span className="text-[10px] text-gray-400">dk</span></span></div><div className="flex justify-between items-center"><span className="text-[10px] text-red-400 font-bold">Duruş:</span><span className="text-sm font-bold text-white">{kpiAylikDurus} <span className="text-[10px] text-gray-400">dk</span></span></div></div>
+          <div className="bg-gray-900 border border-blue-500/30 p-4 rounded-2xl shadow-[0_0_10px_rgba(59,130,246,0.1)] relative overflow-hidden"><p className="text-xs text-blue-300 font-semibold mb-1 relative z-10">Duruş Yüzdesi (Süre)</p><h3 className="text-2xl font-bold text-blue-400 relative z-10">%{durusSureYuzde}</h3><p className="text-[10px] text-gray-400 mt-2 relative z-10">Toplam efora oranı</p></div>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-8 no-print">
-          <Link href="/admin/aktif-isler" className="bg-red-900/60 hover:bg-red-600 border border-red-500/50 text-red-100 p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">
-            <span className="relative flex h-2 w-2 mr-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span></span>
-            Aktif İşler
-          </Link>
+          <Link href="/admin/aktif-isler" className="bg-red-900/60 hover:bg-red-600 border border-red-500/50 text-red-100 p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition"><span className="relative flex h-2 w-2 mr-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span></span>Aktif İşler</Link>
           <Link href="/admin/is-listesi" className="bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">📋 Yapılan İşler</Link>
           <Link href="/admin/eked" className="bg-yellow-600 hover:bg-yellow-500 text-black p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(202,138,4,0.4)] transition">🔒 EKED Takip</Link>
           <Link href="/admin/eked/arsiv" className="bg-gray-700 hover:bg-gray-600 border border-gray-500 text-gray-200 p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">🗄️ EKED Arşivi</Link>
@@ -329,26 +304,25 @@ function DashboardIcerik() {
           )}
         </div>
 
-        {aktifIsler.length > 0 && (
-          <div className="bg-red-900/20 border-2 border-red-500/50 p-6 rounded-2xl mb-10 shadow-2xl">
-            <h2 className="text-xl font-bold text-red-400 mb-6 flex items-center gap-2">
-              <span className="relative flex h-4 w-4">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span>
-              </span>
-              Üretimden Gelen Aktif Bildirimler (Müdahale Bekliyor)
+        {/* YENİ EKLENEN: AKTİF İSG BİLDİRİMLERİ (KAR İHLALLERİ) */}
+        {aktifIsgAlarmlari.length > 0 && (
+          <div className="bg-red-900/40 border-[3px] border-red-500 p-6 rounded-2xl mb-10 shadow-[0_0_30px_rgba(239,68,68,0.5)] no-print relative overflow-hidden">
+            <div className="absolute inset-0 opacity-20 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#ef4444_10px,#ef4444_20px)]"></div>
+            <h2 className="text-2xl font-bold text-red-400 mb-6 flex items-center gap-2 relative z-10">
+              <span className="relative flex h-5 w-5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-5 w-5 bg-red-500"></span></span>
+              ACİL İSG ALARMI: KAR DEVRE DIŞI KALMIŞTIR! (Müdahale Bekliyor)
             </h2>
-            <div className="space-y-4">
-                           {aktifIsler.map(islem => (
-                <div key={islem.id} className={`border p-5 rounded-xl shadow-lg relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition ${islem.ekipmanAdi === "KAR devreye alma" ? "bg-red-900/60 border-red-500 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.5)]" : "bg-gray-900 border-red-800/50 hover:border-red-500/80"}`}>
-                  <div className="absolute top-0 left-0 w-1 h-full bg-red-500"></div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 relative z-10">
+              {aktifIsgAlarmlari.map(islem => (
+                <div key={islem.id} className="bg-gray-900 border border-red-500 p-5 rounded-xl shadow-lg relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div className="absolute top-0 left-0 w-2 h-full bg-red-500 animate-pulse"></div>
                   <div>
                     <p className="text-xs text-gray-400 mb-1">{islem.kayitTarihi?.toDate().toLocaleString('tr-TR')} | Bildiren: {islem.bildirenKisi}</p>
                     <p className="font-bold text-white text-lg">{islem.hatAdi} <span className="text-red-400 font-medium text-sm">({islem.ekipmanAdi})</span></p>
-                    <p className="text-gray-300 text-sm mt-1 line-clamp-2">{islem.aciklama}</p>
+                    <p className="text-gray-300 text-sm mt-1">{islem.aciklama}</p>
                   </div>
-                  <button onClick={() => handleIsiTamamla(islem)} className="w-full md:w-auto whitespace-nowrap bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-lg transition shadow-[0_0_15px_rgba(22,163,74,0.4)]">
-                    ✅ İşi Tamamla
+                  <button onClick={() => handleIsiTamamla(islem)} className="w-full md:w-auto whitespace-nowrap bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-6 rounded-lg transition shadow-lg border border-red-400">
+                    ✅ İşi Tamamla (KAR'ı Devreye Al)
                   </button>
                 </div>
               ))}
@@ -356,20 +330,31 @@ function DashboardIcerik() {
           </div>
         )}
 
+        {/* DİĞER AKTİF İŞ EMİRLERİ */}
+        {aktifIsler.length > 0 && (
+          <div className="bg-red-900/20 border-2 border-red-500/50 p-6 rounded-2xl mb-10 shadow-2xl">
+            <h2 className="text-xl font-bold text-red-400 mb-6 flex items-center gap-2"><span className="relative flex h-4 w-4"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span></span> Üretimden Gelen Aktif Bildirimler</h2>
+            <div className="space-y-4">
+              {aktifIsler.map(islem => (
+                <div key={islem.id} className="bg-gray-900 border border-red-800/50 p-5 rounded-xl shadow-lg relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition hover:border-red-500/80">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-red-500"></div>
+                  <div><p className="text-xs text-gray-400 mb-1">{islem.kayitTarihi?.toDate().toLocaleString('tr-TR')} | Bildiren: {islem.bildirenKisi}</p><p className="font-bold text-white text-lg">{islem.hatAdi} <span className="text-red-400 font-medium text-sm">({islem.ekipmanAdi})</span></p><p className="text-gray-300 text-sm mt-1 line-clamp-2">{islem.aciklama}</p></div>
+                  <button onClick={() => handleIsiTamamla(islem)} className="w-full md:w-auto whitespace-nowrap bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-lg transition shadow-[0_0_15px_rgba(22,163,74,0.4)]">✅ İşi Tamamla</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* EKED GÜVENLİK ALARMI */}
         {aktifEked.length > 0 && (
           <div className="bg-yellow-900/20 border-2 border-yellow-500/50 p-6 rounded-2xl mb-10 shadow-[0_0_20px_rgba(202,138,4,0.15)] relative overflow-hidden">
             <div className="absolute inset-0 opacity-10 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#ca8a04_10px,#ca8a04_20px)]"></div>
-            <h2 className="text-xl font-bold text-yellow-500 mb-4 flex items-center gap-2 relative z-10">
-              <span className="relative flex h-4 w-4"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span><span className="relative inline-flex rounded-full h-4 w-4 bg-yellow-500"></span></span>
-              DİKKAT: Sahada Aktif Kilitli (EKED) Alanlar Var!
-            </h2>
+            <h2 className="text-xl font-bold text-yellow-500 mb-4 flex items-center gap-2 relative z-10"><span className="relative flex h-4 w-4"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span><span className="relative inline-flex rounded-full h-4 w-4 bg-yellow-500"></span></span> DİKKAT: Sahada Aktif Kilitli (EKED) Alanlar Var!</h2>
             <div className="space-y-3 relative z-10">
               {aktifEked.map(eked => (
                 <div key={eked.id} className="bg-gray-900 border border-yellow-700/50 p-4 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                  <div>
-                    <p className="text-xs text-yellow-500/80 mb-1">{eked.tarih} | Kilitli Bırakan: {eked.personel}</p>
-                    <p className="font-bold text-white text-lg">📍 {eked.yer}</p>
-                  </div>
+                  <div><p className="text-xs text-yellow-500/80 mb-1">{eked.tarih} | Kilitli Bırakan: {eked.personel}</p><p className="font-bold text-white text-lg">📍 {eked.yer}</p></div>
                   <span className="bg-yellow-600 text-black font-bold text-xs px-3 py-1 rounded animate-pulse">ENERJİ KESİK</span>
                 </div>
               ))}
@@ -391,9 +376,7 @@ function DashboardIcerik() {
                 <select {...register("vardiya")} className={`w-full bg-gray-800 border ${errors.vardiya ? 'border-red-500' : 'border-gray-600'} rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500`}>
                   <option value="">-- Vardiya Seçiniz --</option><option value="08:00 - 16:00">08:00 - 16:00 (Gündüz)</option><option value="16:00 - 24:00">16:00 - 24:00 (Akşam)</option><option value="24:00 - 08:00">24:00 - 08:00 (Gece)</option>
                 </select>
-                {errors.vardiya && <p className="text-red-500 text-xs mt-1">{errors.vardiya.message}</p>}
               </div>
-
               <div className="relative" ref={dropdownRef}>
                 <label className="block text-sm font-bold text-blue-400 mb-2">İşi Yapan Ekip Üyeleri <span className="text-red-500">*</span></label>
                 <div onClick={() => setDropdownAcik(!dropdownAcik)} className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white cursor-pointer flex justify-between items-center">
@@ -416,29 +399,15 @@ function DashboardIcerik() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">Üretim Hattı</label>
-                <select 
-                  {...register("hatAdi")} 
-                  disabled={isAutoFilled}
-                  onChange={(e) => { setSeciliHat(e.target.value); setValue("hatAdi", e.target.value); setValue("ekipmanAdi", ""); }} 
-                  className={`w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 focus:border-blue-500 ${isAutoFilled ? 'opacity-60 cursor-not-allowed' : ''}`}
-                >
+                <select {...register("hatAdi")} disabled={isAutoFilled} onChange={(e) => { setSeciliHat(e.target.value); setValue("hatAdi", e.target.value); setValue("ekipmanAdi", ""); }} className={`w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 ${isAutoFilled ? 'opacity-60 cursor-not-allowed' : ''}`}>
                   <option value="">-- Hat Seçiniz --</option>{benzersizHatlar.map(hat => <option key={hat} value={hat}>{hat}</option>)}
                 </select>
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">Arızalı Ekipman</label>
-                <select 
-                  {...register("ekipmanAdi")} 
-                  disabled={!seciliHat || isAutoFilled} 
-                  className={`w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 ${(!seciliHat || isAutoFilled) ? 'opacity-60 cursor-not-allowed' : ''}`}
-                >
+                <select {...register("ekipmanAdi")} disabled={!seciliHat || isAutoFilled} className={`w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 ${(!seciliHat || isAutoFilled) ? 'opacity-60 cursor-not-allowed' : ''}`}>
                   <option value="">{seciliHat ? "-- Ekipman Seçiniz --" : "-- Önce Hat Seçiniz --"}</option>
-                  {filtrelenmisEkipmanlar.length > 0 ? (
-                    filtrelenmisEkipmanlar.map(ekp => <option key={ekp.id} value={ekp.ekipmanAdi}>{ekp.ekipmanAdi}</option>)
-                  ) : isAutoFilled ? (
-                    <option value={watch("ekipmanAdi")}>{watch("ekipmanAdi")}</option>
-                  ) : null}
+                  {filtrelenmisEkipmanlar.length > 0 ? (filtrelenmisEkipmanlar.map(ekp => <option key={ekp.id} value={ekp.ekipmanAdi}>{ekp.ekipmanAdi}</option>)) : isAutoFilled ? (<option value={watch("ekipmanAdi")}>{watch("ekipmanAdi")}</option>) : null}
                 </select>
               </div>
             </div>
@@ -446,15 +415,10 @@ function DashboardIcerik() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">Sorun Tipi</label>
-                <select 
-                  {...register("sorunTipi")} 
-                  disabled={isAutoFilled}
-                  className={`w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 ${isAutoFilled ? 'opacity-60 cursor-not-allowed' : ''}`}
-                >
+                <select {...register("sorunTipi")} disabled={isAutoFilled} className={`w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 ${isAutoFilled ? 'opacity-60 cursor-not-allowed' : ''}`}>
                   <option value="">-- Seçiniz --</option><option value="Mekanik">Mekanik</option><option value="Elektrik">Elektrik</option><option value="Otomasyon">Otomasyon</option><option value="Diğer">Diğer</option>
                 </select>
               </div>
-
               <div className="flex flex-col justify-center">
                 <label className="block text-sm font-medium text-gray-400 mb-3">Hat Duruşu Yaşandı mı?</label>
                 <Controller name="isDuruslu" control={control} render={({ field: { onChange, value } }) => (
@@ -468,36 +432,21 @@ function DashboardIcerik() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-fuchsia-900/10 p-4 rounded-xl border border-fuchsia-800/30">
-              <div className="md:col-span-3 mb-[-10px]"><p className="text-fuchsia-400 font-bold text-sm flex items-center gap-2">⚙️ Kullanılan Yedek Parça <span className="text-gray-500 font-normal text-xs">(Kullanılmadıysa boş bırakın)</span></p></div>
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Stok Kodu / Parça Adı</label>
-                <input type="text" {...register("yedekParcaKodu")} placeholder="Örn: RLM-6205" className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 focus:border-fuchsia-500" />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Miktar</label>
-                <input type="number" step="0.01" {...register("yedekParcaMiktar")} placeholder="Örn: 2" className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 focus:border-fuchsia-500" />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Birim</label>
-                <select {...register("yedekParcaBirim")} className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 focus:border-fuchsia-500">
-                  <option value="Adet">Adet</option><option value="Metre">Metre</option><option value="KG">KG</option><option value="Litre">Litre</option>
-                </select>
-              </div>
+              <div className="md:col-span-3 mb-[-10px]"><p className="text-fuchsia-400 font-bold text-sm">⚙️ Kullanılan Yedek Parça</p></div>
+              <div><input type="text" {...register("yedekParcaKodu")} placeholder="Stok Kodu / Adı" className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3" /></div>
+              <div><input type="number" step="0.01" {...register("yedekParcaMiktar")} placeholder="Miktar" className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3" /></div>
+              <div><select {...register("yedekParcaBirim")} className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3"><option value="Adet">Adet</option><option value="Metre">Metre</option><option value="KG">KG</option><option value="Litre">Litre</option></select></div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-800/50 p-4 rounded-xl border border-gray-700">
-              <div><label className="block text-sm font-medium text-gray-400 mb-2">Başlangıç Saati</label><input type="datetime-local" {...register("baslangicSaati")} className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 focus:border-blue-500" />{errors.baslangicSaati && <p className="text-red-500 text-xs mt-1">{errors.baslangicSaati.message}</p>}</div>
-              <div><label className="block text-sm font-medium text-gray-400 mb-2">Bitiş Saati</label><input type="datetime-local" {...register("bitisSaati")} className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 focus:border-blue-500" />{errors.bitisSaati && <p className="text-red-500 text-xs mt-1">{errors.bitisSaati.message}</p>}</div>
-              <div className="md:col-span-2 text-center pt-2"><p className="text-sm text-gray-400">Otomatik Hesaplanan Süre:</p><p className="text-3xl font-bold text-blue-500">{hesaplananSure} <span className="text-lg text-gray-500">Dakika</span></p></div>
+              <div><label className="block text-sm font-medium text-gray-400 mb-2">Başlangıç Saati</label><input type="datetime-local" {...register("baslangicSaati")} className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 focus:border-blue-500" /></div>
+              <div><label className="block text-sm font-medium text-gray-400 mb-2">Bitiş Saati</label><input type="datetime-local" {...register("bitisSaati")} className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 focus:border-blue-500" /></div>
+              <div className="md:col-span-2 text-center pt-2"><p className="text-sm text-gray-400">Süre:</p><p className="text-3xl font-bold text-blue-500">{hesaplananSure} <span className="text-lg text-gray-500">Dk</span></p></div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-400 mb-2">Açıklama / Yapılan İşlem</label>
-              <textarea {...register("aciklama")} rows={4} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 focus:border-blue-500" />
-              {errors.aciklama && <p className="text-red-500 text-xs mt-1">{errors.aciklama.message}</p>}
-            </div>
+            <div><textarea {...register("aciklama")} rows={4} placeholder="Açıklama / Yapılan İşlem" className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3" /></div>
 
-            <button type="submit" disabled={isSubmitting || hesaplananSure <= 0} className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-4 px-4 rounded-xl disabled:opacity-50 transition-all">
+            <button type="submit" disabled={isSubmitting || hesaplananSure <= 0} className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-4 px-4 rounded-xl disabled:opacity-50">
               {isSubmitting ? "Kaydediliyor..." : "Performansıma Kaydet ve İşi Bitir"}
             </button>
           </form>
@@ -508,9 +457,5 @@ function DashboardIcerik() {
 }
 
 export default function Page() {
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-gray-950 text-white flex justify-center items-center">Yükleniyor...</div>}>
-      <DashboardIcerik />
-    </Suspense>
-  );
+  return <Suspense fallback={<div className="min-h-screen bg-gray-950 text-white flex justify-center items-center">Yükleniyor...</div>}><DashboardIcerik /></Suspense>;
 }

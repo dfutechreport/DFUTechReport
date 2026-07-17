@@ -119,7 +119,7 @@ function DashboardIcerik() {
     // 1. İş Emirlerini İkiye Böl (KAR vs Normal İşler)
     const wQ = query(collection(db, "work_orders"), where("durum", "==", "Açık"));
     const wSnap = await getDocs(wQ);
-    const dataW = wSnap.docs.map(d => ({ id: d.id, ...d.data(), gercekZaman: d.data().kayitTarihi ? d.data().kayitTarihi.toDate().getTime() : 0 }));
+        const dataW: any[] = wSnap.docs.map(d => ({ id: d.id, ...d.data(), gercekZaman: d.data().kayitTarihi ? d.data().kayitTarihi.toDate().getTime() : 0 }));
     
     const isgAlarmlari = dataW.filter(d => d.ekipmanAdi === "KAR devreye alma");
     const normalIsler = dataW.filter(d => d.ekipmanAdi !== "KAR devreye alma");

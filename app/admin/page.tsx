@@ -86,7 +86,7 @@ export default function AdminDashboard() {
 
       const wQ = query(collection(db, "work_orders"), where("durum", "==", "Açık"));
       const wSnap = await getDocs(wQ);
-      const wData = wSnap.docs.map(d => ({ id: d.id, ...d.data(), gercekZaman: d.data().kayitTarihi ? d.data().kayitTarihi.toDate().getTime() : 0 }));
+      const wData: any[] = wSnap.docs.map(d => ({ id: d.id, ...d.data(), gercekZaman: d.data().kayitTarihi ? d.data().kayitTarihi.toDate().getTime() : 0 }));
       
       const isgAlarmlari = wData.filter(d => d.ekipmanAdi === "KAR devreye alma");
       const normalIsler = wData.filter(d => d.ekipmanAdi !== "KAR devreye alma");

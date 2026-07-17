@@ -72,7 +72,7 @@ function DashboardIcerik() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const { register, handleSubmit, control, watch, formState: { errors }, reset, setValue } = useForm<FormData>({
+  const { register, handleSubmit, control, watch, formState: { errors }, reset, setValue } = useForm({
     resolver: yupResolver(arizaSemasi),
     defaultValues: { isDuruslu: false, yedekParcaBirim: "Adet" }
   });

@@ -27,7 +27,7 @@ export default function TamamlananIsler() {
       const q = query(collection(db, "work_orders"), where("durum", "==", "Kapalı"));
       const snap = await getDocs(q);
       
-      const rawData = snap.docs.map(document => {
+     const rawData: any[] = snap.docs.map(document => {
         const d = document.data();
         return {
           id: document.id, ...d,

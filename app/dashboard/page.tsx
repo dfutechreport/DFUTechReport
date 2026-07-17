@@ -339,8 +339,8 @@ function DashboardIcerik() {
               Üretimden Gelen Aktif Bildirimler (Müdahale Bekliyor)
             </h2>
             <div className="space-y-4">
-              {aktifIsler.map(islem => (
-                <div key={islem.id} className="bg-gray-900 border border-red-800/50 p-5 rounded-xl shadow-lg relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition hover:border-red-500/80">
+                           {aktifIsler.map(islem => (
+                <div key={islem.id} className={`border p-5 rounded-xl shadow-lg relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition ${islem.ekipmanAdi === "KAR devreye alma" ? "bg-red-900/60 border-red-500 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.5)]" : "bg-gray-900 border-red-800/50 hover:border-red-500/80"}`}>
                   <div className="absolute top-0 left-0 w-1 h-full bg-red-500"></div>
                   <div>
                     <p className="text-xs text-gray-400 mb-1">{islem.kayitTarihi?.toDate().toLocaleString('tr-TR')} | Bildiren: {islem.bildirenKisi}</p>

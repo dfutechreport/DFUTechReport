@@ -102,8 +102,8 @@ export default function AktifIslerListesi() {
                 </tr>
               </thead>
               <tbody>
-                {orders.map(o => (
-                  <tr key={o.id} className="border-b border-gray-800 hover:bg-gray-800/50 transition">
+                                {orders.map(o => (
+                  <tr key={o.id} className={`border-b transition ${o.ekipmanAdi === "KAR devreye alma" ? "bg-red-900/40 border-red-500 animate-pulse" : "border-gray-800 hover:bg-gray-800/50"}`}>
                     <td className="py-4 px-2 text-gray-400 text-xs font-bold">{o.tarihFormatli}</td>
                     <td className="py-4 px-2 font-medium text-orange-300">{o.bildirenKisi}</td>
                     <td className="py-4 px-2"><div className="font-bold text-gray-200">{o.hatAdi}</div><div className="text-xs text-gray-500">{o.ekipmanAdi}</div></td>

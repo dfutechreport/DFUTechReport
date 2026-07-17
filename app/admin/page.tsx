@@ -286,8 +286,8 @@ export default function AdminDashboard() {
             <div className="bg-red-900/20 border-2 border-red-500/50 p-6 rounded-2xl mb-10 shadow-2xl no-print">
               <h2 className="text-xl font-bold text-red-400 mb-6 flex items-center gap-2"><span className="relative flex h-4 w-4"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span></span> Üretimden Gelen Aktif Bildirimler (Müdahale Bekleyen İş Emirleri)</h2>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {aktifIsler.map(islem => (
-                  <div key={islem.id} className="bg-gray-900 border border-red-800/50 p-5 rounded-xl shadow-lg relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition hover:border-red-500/80">
+                              {aktifIsler.map(islem => (
+                <div key={islem.id} className={`border p-5 rounded-xl shadow-lg relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition ${islem.ekipmanAdi === "KAR devreye alma" ? "bg-red-900/60 border-red-500 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.5)]" : "bg-gray-900 border-red-800/50 hover:border-red-500/80"}`}>
                     <div className="absolute top-0 left-0 w-1 h-full bg-red-500"></div>
                     <div><p className="text-xs text-gray-400 mb-1">{islem.kayitTarihi?.toDate().toLocaleString('tr-TR')} | Bildiren: {islem.bildirenKisi}</p><p className="font-bold text-white text-lg">{islem.hatAdi} <span className="text-red-400 font-medium text-sm">({islem.ekipmanAdi})</span></p><p className="text-gray-300 text-sm mt-1 line-clamp-2">{islem.aciklama}</p></div>
                     {userRole !== "uretim" && <button onClick={() => handleIsiTamamla(islem)} className="w-full md:w-auto whitespace-nowrap bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-lg transition shadow-[0_0_15px_rgba(22,163,74,0.4)]">✅ İşi Tamamla</button>}

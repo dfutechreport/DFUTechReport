@@ -154,7 +154,10 @@ export default function AdminDashboard() {
     setDogalgazSayacListesi(Array.from(dogSet).sort());
     setSuSayacListesi(Array.from(suSet).sort());
 
-    const initAylar = () => ({ "01. Ay": 0, "02. Ay": 0, "03. Ay": 0, "04. Ay": 0, "05. Ay": 0, "06. Ay": 0, "07. Ay": 0, "08. Ay": 0, "09. Ay": 0, "10. Ay": 0, "11. Ay": 0, "12. Ay": 0 });
+  const initAylar = (): Record<string, number> => ({
+      "01. Ay": 0, "02. Ay": 0, "03. Ay": 0, "04. Ay": 0, "05. Ay": 0, "06. Ay": 0,
+      "07. Ay": 0, "08. Ay": 0, "09. Ay": 0, "10. Ay": 0, "11. Ay": 0, "12. Ay": 0
+    });
     const tuketimElektrik = initAylar();
     const tuketimDogalgaz = initAylar();
     const tuketimSu = initAylar();

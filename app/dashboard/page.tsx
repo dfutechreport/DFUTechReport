@@ -113,9 +113,7 @@ function DashboardIcerik() {
     }
   }, [searchParams, setValue, assets]);
 
-  // ALARMLAR VE KPI HESAPLAMA (Teknisyen Ekranı İçin)
   const fetchAktifAlarmlarVeKPI = async () => {
-    // 1. Alarmlar
     const wQ = query(collection(db, "work_orders"), where("durum", "==", "Açık"));
     const wSnap = await getDocs(wQ);
     const dataW = wSnap.docs.map(d => ({ id: d.id, ...d.data(), gercekZaman: d.data().kayitTarihi ? d.data().kayitTarihi.toDate().getTime() : 0 }));
@@ -125,7 +123,6 @@ function DashboardIcerik() {
     const eSnap = await getDocs(eQ);
     setAktifEked(eSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
-    // 2. KPI Kartları İçin Tüm İşleri Çek (İsterseniz sadece bulunduğunuz yıla/aya göre filtreleyebilirsiniz, şimdilik genel özet)
     const logsSnap = await getDocs(collection(db, "maintenance_logs"));
     let topDurusDk = 0; let topIs = 0; let topMudahaleDk = 0; let durusIsSayisi = 0;
 
@@ -221,7 +218,7 @@ function DashboardIcerik() {
   const benzersizHatlar = Array.from(new Set(assets.map(a => a.hatAdi)));
   const filtrelenmisEkipmanlar = assets.filter(a => a.hatAdi === seciliHat);
 
-  const formKaydet = async (data: FormData) => {
+  const formKaydet = async (data: any) => {
     if (seciliPersoneller.length === 0) return alert("Lütfen işi yapan en az 1 personel seçin!");
     setIsSubmitting(true); setBasariMesaji("");
     try {
@@ -241,7 +238,7 @@ function DashboardIcerik() {
       window.history.replaceState(null, "", "/dashboard");
       window.scrollTo({ top: 0, behavior: "smooth" });
       
-      fetchAktifAlarmlarVeKPI(); // Kayıttan sonra KPI'ları anında yenile
+      fetchAktifAlarmlarVeKPI(); 
     } catch (error) { alert("Hata oluştu."); } finally { setIsSubmitting(false); }
   };
 
@@ -285,7 +282,6 @@ function DashboardIcerik() {
           </div>
         </div>
 
-        {/* YENİ: KPI KARTLARI (Teknisyen Ekranı İçin) */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <div className="bg-gray-900 border border-gray-800 p-4 rounded-2xl shadow-lg">
             <p className="text-xs text-gray-400 font-semibold mb-1">Toplam Yapılan İş</p>

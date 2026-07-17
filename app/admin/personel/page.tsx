@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, getDocs, doc, getDoc, updateDoc, setDoc, query, orderBy, deleteDoc } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, setDoc, query, orderBy, deleteDoc } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import Link from "next/link";
 
@@ -91,21 +91,16 @@ export default function PersonelYonetimi() {
             <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-lg">
               <h2 className="text-xl font-bold mb-4 text-purple-400">Yeni Personel Ekle</h2>
               <form onSubmit={handleManuelEkle} className="space-y-4">
-                <div>
-                  <label className="block text-sm text-gray-400 mb-1">E-Posta</label>
-                  <input type="email" required value={yeniEmail} onChange={(e) => setYeniEmail(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-lg p-3 focus:border-purple-500" />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-400 mb-1">Resmi İsim - Soyisim</label>
-                  <input type="text" required value={yeniIsim} onChange={(e) => setYeniIsim(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-lg p-3 focus:border-purple-500" />
-                </div>
+                <div><label className="block text-sm text-gray-400 mb-1">E-Posta</label><input type="email" required value={yeniEmail} onChange={(e) => setYeniEmail(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-lg p-3 focus:border-purple-500" /></div>
+                <div><label className="block text-sm text-gray-400 mb-1">Resmi İsim - Soyisim</label><input type="text" required value={yeniIsim} onChange={(e) => setYeniIsim(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-lg p-3 focus:border-purple-500" /></div>
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">Yetki (Rol)</label>
                   <select value={yeniRol} onChange={(e) => setYeniRol(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-lg p-3 focus:border-purple-500">
                     <option value="teknisyen">Teknisyen</option>
                     <option value="operator">Operatör</option>
                     <option value="uretim">Üretim Yetkilisi</option>
-                    {/* YENİ: İK Rolü */}
+                    {/* YENİ: İSG Rolü Eklendi */}
+                    <option value="isg">İSG Yetkilisi</option>
                     <option value="ik">İnsan Kaynakları (İK)</option>
                     <option value="admin">Admin</option>
                   </select>
@@ -124,11 +119,7 @@ export default function PersonelYonetimi() {
                 <table className="w-full text-left text-sm">
                   <thead>
                     <tr className="border-b border-gray-800 text-gray-400">
-                      <th className="pb-3 px-2">İsim & Soyisim</th>
-                      <th className="pb-3 px-2">E-Posta</th>
-                      <th className="pb-3 px-2">Durum</th>
-                      <th className="pb-3 px-2">Yetki</th>
-                      <th className="pb-3 px-2 text-right">Aksiyon</th>
+                      <th className="pb-3 px-2">İsim & Soyisim</th><th className="pb-3 px-2">E-Posta</th><th className="pb-3 px-2">Durum</th><th className="pb-3 px-2">Yetki</th><th className="pb-3 px-2 text-right">Aksiyon</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -145,6 +136,7 @@ export default function PersonelYonetimi() {
                               <option value="teknisyen">Teknisyen</option>
                               <option value="operator">Operatör</option>
                               <option value="uretim">Üretim Yetkilisi</option>
+                              <option value="isg">İSG Yetkilisi</option>
                               <option value="ik">İnsan Kaynakları</option>
                               <option value="admin">Admin</option>
                             </select>
@@ -153,9 +145,10 @@ export default function PersonelYonetimi() {
                         <td className="py-4 px-2 text-right space-x-1 whitespace-nowrap">
                           {!u.isApproved ? (
                             <>
-                              <button onClick={() => handleApprove(u.id, "teknisyen")} className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-2 py-1 rounded">Teknisyen</button>
-                              <button onClick={() => handleApprove(u.id, "operator")} className="bg-gray-600 hover:bg-gray-500 text-white text-xs px-2 py-1 rounded">Operatör</button>
-                              <button onClick={() => handleApprove(u.id, "ik")} className="bg-teal-600 hover:bg-teal-500 text-white text-xs px-2 py-1 rounded">İK Yap</button>
+                              <button onClick={() => handleApprove(u.id, "teknisyen")} className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-2 py-1 rounded mb-1">Teknisyen</button>
+                              <button onClick={() => handleApprove(u.id, "operator")} className="bg-gray-600 hover:bg-gray-500 text-white text-xs px-2 py-1 rounded mb-1">Operatör</button>
+                              {/* Hızlı İSG Onay Butonu */}
+                              <button onClick={() => handleApprove(u.id, "isg")} className="bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-xs px-2 py-1 rounded">İSG Yap</button>
                             </>
                           ) : (
                             <button onClick={() => handleRevoke(u.id, u.email)} className="bg-red-900/50 text-red-400 text-xs px-2 py-1 rounded border border-red-800/50">Erişimi Kes</button>

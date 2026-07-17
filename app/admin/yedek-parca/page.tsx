@@ -17,7 +17,7 @@ export default function YedekParcaArsivi() {
       const q = query(collection(db, "maintenance_logs"), orderBy("kayitTarihi", "desc"));
       const snap = await getDocs(q);
       
-      const data: any[] = snap.docs.map(document => {
+      const data = snap.docs.map(document => {
         const d = document.data();
         return {
           id: document.id, ...d,

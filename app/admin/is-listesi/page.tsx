@@ -111,7 +111,7 @@ export default function IsListesi() {
               </div>
               <div className="grid grid-cols-2 gap-4 bg-gray-800/50 p-4 rounded-xl border border-gray-700">
                 <div><label className="block text-sm text-gray-400 mb-1">Başlangıç Saati</label><input type="datetime-local" value={editBaslangic} onChange={(e) => setEditBaslangic(e.target.value)} className="w-full bg-gray-900 border-gray-700 rounded-lg p-3 text-white text-sm" /></div>
-                <div><label className="block text-sm text-gray-400 mb-1">Bitiş Saati</label><input type="datetime-local" value={editBitis} onChange={(e) => setEditBitis(e.target.value)} className="w-full bg-gray-900 border-gray-700 rounded-lg p-3 text-white text-sm" /></div>
+                <div><label className="block text-sm text-gray-400 mb-1">Bitiş Saati</label><input type="datetime-local" value={editBitis} onChange={(e) => setBitis(e.target.value)} className="w-full bg-gray-900 border-gray-700 rounded-lg p-3 text-white text-sm" /></div>
                 <div className="col-span-2 text-center pt-2 border-t border-gray-700 mt-2"><p className="text-sm text-gray-400">Yeni Süre</p><p className="text-2xl font-bold text-blue-400">{hesaplananSure} <span className="text-sm">dk</span></p></div>
               </div>
               <div>

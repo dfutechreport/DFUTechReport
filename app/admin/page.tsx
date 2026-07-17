@@ -352,7 +352,8 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {userRole !== "uretim" && (
+           {/* DİKKAT: GRAFİKLERİ VE KPI'LARI SADECE ADMİN VE OPERATÖR GÖREBİLİR */}
+          {(userRole === "admin" || userRole === "operator") && (
             <>
               <div className="hidden print:block text-center mb-8 border-b-2 border-black pb-4">
                 <h2 className="text-2xl font-bold text-black">Bakım Yönetim Sistemi Özet Raporu</h2>

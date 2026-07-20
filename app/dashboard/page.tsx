@@ -299,7 +299,19 @@ function DashboardIcerik() {
           <Link href="/dashboard/kontrol-formlari" className="bg-cyan-600 hover:bg-cyan-500 text-white p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(6,182,212,0.4)] transition">✅ Kontrol Formları</Link>
           <Link href="/dashboard/sayac" className="bg-emerald-600 hover:bg-emerald-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">⚡ Sayaç Okuma</Link>
           <Link href="/dashboard/mesai" className="bg-teal-600 hover:bg-teal-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">⏰ Fazla Mesai</Link>
-          {(userRole === "admin" || userRole === "operator") && (
+         
+          {/* YENİ PERİYODİK BAKIM (PM) BUTONLARI (KONTROL FORMLARI YERİNE) */}
+          {(userRole === "admin" || userRole === "operator" || userRole === "isg" || userRole === "teknisyen") && (
+            <>
+              <Link href="/dashboard/periyodik-bakim" className="bg-teal-600 hover:bg-teal-500 text-white p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(20,184,166,0.4)] transition">
+                ✅ Periyodik Bakım (PM) Formu
+              </Link>
+              <Link href="/admin/periyodik-bakim-arsiv" className="bg-gray-800 hover:bg-gray-700 border border-teal-700/50 text-teal-300 p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">
+                🗄️ Periyodik Bakım Arşivi
+              </Link>
+            </>
+          )}
+ {(userRole === "admin" || userRole === "operator") && (
             <Link href="/admin/yedek-parca" className="bg-fuchsia-700 hover:bg-fuchsia-600 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(192,38,211,0.4)] transition">⚙️ Yedek Parça</Link>
           )}
         </div>

@@ -269,6 +269,17 @@ export default function AdminDashboard() {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-8 no-print">
+          {/* YENİ PERİYODİK BAKIM (PM) BUTONLARI (KONTROL FORMLARI YERİNE) */}
+          {(userRole === "admin" || userRole === "operator" || userRole === "isg" || userRole === "teknisyen") && (
+            <>
+              <Link href="/dashboard/periyodik-bakim" className="bg-teal-600 hover:bg-teal-500 text-white p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(20,184,166,0.4)] transition">
+                ✅ Periyodik Bakım (PM) Formu
+              </Link>
+              <Link href="/admin/periyodik-bakim-arsiv" className="bg-gray-800 hover:bg-gray-700 border border-teal-700/50 text-teal-300 p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">
+                🗄️ Periyodik Bakım Arşivi
+              </Link>
+            </>
+          )}
             {(userRole === "admin" || userRole === "uretim") && (<Link href="/admin/is-emri-ac" className="bg-red-600 hover:bg-red-500 text-white p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(220,38,38,0.5)] transition">🚨 Yeni İş Emri</Link>)}
             {userRole !== "isg" && (<Link href="/admin/aktif-isler" className="bg-red-900/60 hover:bg-red-600 border border-red-500/50 text-red-100 p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition"><span className="relative flex h-2 w-2 mr-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span></span>Aktif İş Emirleri</Link>)}
             {userRole !== "isg" && (<Link href="/admin/tamamlanan-isler" className="bg-gray-700 hover:bg-gray-600 border border-gray-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">🗄️ Arşivlenen İşler</Link>)}

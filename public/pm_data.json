@@ -1,0 +1,1184 @@
+{
+  "KEK-DEPOZİTÖR": {
+    "hat": "KEK  HATTI",
+    "ekipman": "DEPOZİTÖR",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "acil  stop butonlarını   kontrolü",
+      "kapak emniyet siviclerinİn kontrolü",
+      "pano içi temizliği ve enstrüman kontrolü",
+      "Kalıp ve piston  bakımı ve temizliği",
+      "Yatakların gıdaya uygun yağ ile yağlanması.",
+      "tüm mekanik ve elektrik aksam kontrolü."
+    ]
+  },
+  "KEK - FIRIN": {
+    "hat": "KEK HATTI",
+    "ekipman": "FIRIN",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "brülör kontrolü",
+      "pnömatik hava regülatörü kontrolü",
+      "buhar giriş vanası  kontrolü",
+      "buhar giriş selenoid  bobinlerin  kontrolü",
+      "fırın içi  konveyör zincirlerinin yağlanması",
+      "Tahrik motoru ve redüktörü kontrolü",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü"
+    ]
+  },
+  "KEK - DEDEKTÖR": {
+    "hat": "KEK HATTI",
+    "ekipman": "METAL DEDEKTÖR",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Metal dedektör bant motor-redüktör kontrolü",
+      "Metal dedektör bant aşınma kontrolü",
+      "Metal dedektör pnömatik sistemlerin kontrolü",
+      "Dedektöre ait tüm yatakların  yağlanması",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü"
+    ]
+  },
+  "KEK - MİKSER": {
+    "hat": "KEK HATTI",
+    "ekipman": "MIKSER",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "Kayış Gerginlik Kontrolu",
+      "Kayışlarda Deformasyon, Yıpranma Kontrolu",
+      "Mikser boynuzu aşınma deformasyon kontrolu",
+      "Hidrolik Sistem kontrolu",
+      "Kazan geri çekme kilitleme kontrolu",
+      "Yatakların Yağlanması",
+      "Asansör Emniyet Switchleri kontrolu",
+      "Asansör Pano Besleme Şalteri, pano içi kontrolu",
+      "Asansör Motor ve Redüktör Kontrolu",
+      "Asansör Mekanik Aksam Kontrolu",
+      "Asansör Sonsuz Dişli ve Rulman Kontrolu",
+      "Asansör Yataklarının Yağlanması"
+    ]
+  },
+  "KRB - ANKO": {
+    "hat": "KURABİYE  HATTI",
+    "ekipman": "ANKO",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "acil  stop butonlarını   kontrolü",
+      "kapak emniyet siviclerinin kontrolü",
+      "pano içi temizliği ve kontrolü",
+      "zincirlerin  gıdaya uygun yağ ile yağlanması.",
+      "ekran butonlarının çalışırlılığı kontrolü",
+      "motor redüktör kontrolü ve temizliği",
+      "çalıştır test et dinle gözlemle ."
+    ]
+  },
+  "KRB - FIRIN": {
+    "hat": "KURABİYE",
+    "ekipman": "FIRIN",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "brülör    kontrolü",
+      "pnömatik hava regülatörü kontrolü",
+      "buhar giriş vanası  kontrolü",
+      "buhar giriş selenoid  bobinlerin  kontrolü",
+      "fırın içi  konveyör zincirlerinin yağlanması",
+      "Tahrik motoru ve redüktörü kontrolü",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü"
+    ]
+  },
+  "KRB - DEDEKTÖR": {
+    "hat": "KURABİYE  HATTI",
+    "ekipman": "METAL DEDEKTÖR",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Metal dedektör bant motor-redüktör kontrolü",
+      "Metal dedektör bant aşınma kontrolü",
+      "Metal dedektör pnömatik sistemlerin kontrolü",
+      "Dedektöre ait tüm yatakların  yağlanması",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü"
+    ]
+  },
+  "KRB - MİKSER": {
+    "hat": "KURABİYE HATTI",
+    "ekipman": "MIKSER",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "Kayış Gerginlik Kontrolu",
+      "Kayışlarda Deformasyon, Yıpranma Kontrolu",
+      "Mikser boynuzu aşınma deformasyon kontrolu",
+      "Hidrolik Sistem kontrolu",
+      "Kazan geri çekme kilitleme kontrolu",
+      "Yatakların Yağlanması",
+      "Asansör Emniyet Switchleri kontrolu",
+      "Asansör Pano Besleme Şalteri, pano içi kontrolu",
+      "Asansör Motor ve Redüktör Kontrolu",
+      "Asansör Mekanik Aksam Kontrolu",
+      "Asansör Sonsuz Dişli ve Rulman Kontrolu",
+      "Asansör Yataklarının Yağlanması"
+    ]
+  },
+  "KRB - RHEON": {
+    "hat": "KURABİYE  HATTI",
+    "ekipman": "RHEON",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "acil  stop butonlarını   kontrolü",
+      "kapak emniyet siviclerinşn kontrolü",
+      "pano içi temizliği ve enstrüman kontrolü",
+      "motor redüktör  bakımı ve temizliği",
+      "tahrik zincirlerinin gıdaya uygun yağ ile yağlanması.",
+      "tüm mekanik ve elektrik aksam kontrolü."
+    ]
+  },
+  "KRB - ŞOKLAMA": {
+    "hat": "KURABİYE  HATTI",
+    "ekipman": "ŞOKLAMA",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "acil  stop butonlarını   kontrolü",
+      "pano içi kontrolü ve temizliği",
+      "kapı rezistans  kontrolü",
+      "odaların kontrol panelleri test edilmesi.",
+      "belirsiz değerler ile set değeri doğrulama .",
+      "kapı kolları kontrolleri. (sağlamlık )",
+      "kapı izolasyon fitilleri  kontrollü.",
+      "evaparatörler  fanlarının kontrolü.",
+      "evaparatör  atık su giderlerinin rezistans kontolü"
+    ]
+  },
+  "ML DİNLENDİRME": {
+    "hat": "MULTİLİNE",
+    "ekipman": "ARA DİNLENDİRME",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "iş emniyetini al",
+      "Acil stopların  ve emniyet siviclerin  kontrolu",
+      "yatak ve zincirleri yagla (gıda uyumulu)",
+      "tahrik ve aktarmalarda arızalı var ise degiştir",
+      "Plastik  parçaların kırılma ve gerekli ise  değişiminin yapılması",
+      "taşıyıcı  zincir  gergisinde deforme boşluk var ise degiş",
+      "kefe ve kefe  taşıyıcı deforme olan var ise degiş",
+      "Motor rediktörlerin kontrolü",
+      "pnomatik elementleri kontrol et arızalı var ise degiş",
+      "yan kapakları ürün taşıyıcı zincirleri hava ile temizle gıda yag ile yagla"
+    ]
+  },
+  "ML KESTART": {
+    "hat": "MULTİLİNE",
+    "ekipman": "BENİER KESTART",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların ve emniyet siviclerin kontrolü",
+      "Kayış, kasnak ve zincir, dişli  sistemlerin kontrolü",
+      "Motor ve rediktörlerin  kontrolü",
+      "Unlama kontrolü",
+      "Sert plastik değişimi gerekir ise değişimi",
+      "Gıdaya uygun yağla  yatak ve rulmanların yağlanması",
+      "Makinayı çalıştır test et dinle gözlemle"
+    ]
+  },
+  "ML BIÇAK ATMA": {
+    "hat": "MULTİLİNE",
+    "ekipman": "BIÇAK ATMA",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "kapı emniyet  switchlerin kontrolu",
+      "konveyöre  bağlı sensörlerin kontrolü",
+      "tüm sensörlerin kontrolü",
+      "pnömatik hava kaçağı konrolü",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü",
+      "lineer  kısımların kontrolü  ve yağlanması",
+      "nozullar ve mafsallar kontrol edilecek.",
+      "çalıştırılıp kesme basıncı kontrol edilecek",
+      "pnömatik hava  regülatör basıncı kontrolü",
+      "tahliye su çıkış vanalarının kontrolü",
+      "su basma pompasının çalışırlığının kontrolü"
+    ]
+  },
+  "ML DEPANNER": {
+    "hat": "MULTİLİNE",
+    "ekipman": "DEPANNER",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "tüm elektrik enstrümanların kontrolü",
+      "Palet bant kontrolü",
+      "süpürme ünitesinin kızaklarının kontrolü",
+      "tekerlekler ve rulmanların kontrolü",
+      "pnömatik  pistonların kontrolü",
+      "redükröre bağlı tahrik zincirlerin yağlanması",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü",
+      "tava tutucuların kontrolü",
+      "Lift kontrolü",
+      "koruyucu kapakların  kontrolü"
+    ]
+  },
+  "ML FERMANTASYON": {
+    "hat": "MULTİLİNE",
+    "ekipman": "FERMANTASYON",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "konveyöre  bağlı sensörlerin kontrolü",
+      "üst aktarma  kontrolü",
+      "pnömatik hava kaçağı konrolü",
+      "zincirlerin  yağlanması ve kontrolü",
+      "Tahrik motoru ve redüktörü kontrolü",
+      "taşıyıcı asker ve stoper kontrolü",
+      "alt taşıma bandı  paletli konveyör  kontrolü",
+      "bağıl nem ve sıcaklık transmitteri  kontrolü",
+      "buhar fanlarının  çalışma kontrolü",
+      "fermantasyon  içi aydınlatma  kontrolü",
+      "buhar vanası ,kondenstop ve manometre  kontrolü",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü"
+    ]
+  },
+  "ML FIRIN": {
+    "hat": "MULTİLİNE",
+    "ekipman": "FIRIN",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "brülör    kontrolü",
+      "pnömatik hava regülatörü kontrolü",
+      "buhar giriş vanası  kontrolü",
+      "buhar giriş selenoid  bobinlerin  kontrolü",
+      "fırın içi  konveyör zincirlerinin yağlanması",
+      "Tahrik motoru ve redüktörü kontrolü",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü"
+    ]
+  },
+  "ML KONİK YUVARLAMA": {
+    "hat": "MULTİLİNE",
+    "ekipman": "KONİK ÇEVİRME",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu  ve temizliği",
+      "Acil stopların ve emniyet siviclerin  kontrolü",
+      "Tahrik zincir  dişli kayış kontrolü gerekli ise değişimi",
+      "Pnömatik sistem kontrolü",
+      "Sert plastiklerin kontrolü gerekli ise değişimi",
+      "Motor ve rediktörlerin kontrolü",
+      "Rulmanların gıdaya uygun yağ ile yağlanması",
+      "Mekanik tüm aksam ve bağlantıların  kontrolü",
+      "Makinayı çalıştır dinle gözlemle test et"
+    ]
+  },
+  "ML DEDEKTÖR": {
+    "hat": "MULTİLİNE",
+    "ekipman": "METAL DEDEKTÖR",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Metal dedektör bant motor-redüktör kontrolü",
+      "Metal dedektör bant aşınma kontrolü",
+      "Metal dedektör pnömatik sistemlerin kontrolü",
+      "Dedektöre ait tüm yatakların  yağlanması",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü"
+    ]
+  },
+  "ML MİKSER ASANSÖRÜ": {
+    "hat": "MULTİLİNE",
+    "ekipman": "MIKSER ve ASANSÖR",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "Kayış Gerginlik Kontrolu",
+      "Kayışlarda Deformasyon, Yıpranma Kontrolu",
+      "Mikser boynuzu aşınma deformasyon kontrolu",
+      "Hidrolik Sistem kontrolu",
+      "Kazan geri çekme kilitleme kontrolu",
+      "Yatakların Yağlanması",
+      "Asansör Emniyet Switchleri kontrolu",
+      "Asansör Pano Besleme Şalteri, pano içi kontrolu",
+      "Asansör Motor ve Redüktör Kontrolu",
+      "Asansör Mekanik Aksam Kontrolu",
+      "Asansör Sonsuz Dişli ve Rulman Kontrolu",
+      "Asansör Yataklarının Yağlanması"
+    ]
+  },
+  "ML PAKETLEME": {
+    "hat": "MULTİLİNE",
+    "ekipman": "PAKETLEME",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "KARTON AÇMA",
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "Pnömatik pistonların  kontrolü",
+      "karton taşıyıcı kayışın  kontrolü",
+      "pnömatik dijital ölçerlerin ayarların kontrolü",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü",
+      "POŞET AÇMA",
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "Teflon bant ve rezistans kontrolü",
+      "poşet tutucuların  kontrolü",
+      "Pnömatik pistonların  kontrolü",
+      "manuel olarak  adım adım çalıştırılması",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü",
+      "KARTON YAPIŞTIRMA",
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "Pnömatik pistonların  kontrolü",
+      "karton taşıyıcı kayışın  kontrolü",
+      "koli bantlama mekanizmasının kontrolü"
+    ]
+  },
+  "ML SOĞUTMA": {
+    "hat": "MULTİLİNE",
+    "ekipman": "SOĞUTMA",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "emniyet siviçlerin kontrolü",
+      "acil stop butonlarının kontrolü",
+      "motor ve redüktör   bakımı ve temizliği",
+      "döner konveyör  bantın kontrolü",
+      "redüktör zincirlerinin  yağlanması ve kontrolü",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü",
+      "koruma kapaklarının kontrolü"
+    ]
+  },
+  "ML ŞEKİLLENDİRME": {
+    "hat": "MULTİLİNE",
+    "ekipman": "ŞEKİLLENDİRME",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "kapak emniyet  switchlerin kontrolu",
+      "Motor ve rediktör kontrol ve temizliği",
+      "ürün baskı kollarının kontrolü (eşit basması )",
+      "gresörlüklerin  gıdaya uygun yağile yağlanması",
+      "rulmanların kontrolü",
+      "bantlarda yırtılma ,sökülme kontrolü",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü",
+      "dokunmatik panelin kontrolü",
+      "zincirlerin gıdaya uygun yağ ile yağlanması",
+      "tüm sistemi çalıştır test et dinle."
+    ]
+  },
+  "ML ŞOKLAMA": {
+    "hat": "MULTİLİNE",
+    "ekipman": "ŞOKLAMA",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "Glikol  vanalarının  kontrolü",
+      "temper  vanalarının kontrolü",
+      "thermokupl  cihazının  kontrolü",
+      "motor  ve redüktör  bakımı ve  temizliği kontrolü",
+      "freezer iç konveyör bantının  kontrolü",
+      "evaparatör fanlarının kontrolü",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü"
+    ]
+  },
+  "ML TAVA DÖNÜŞ": {
+    "hat": "MULTİLİNE",
+    "ekipman": "TAVA DÖNÜŞ KONVEYÖRLER",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların  ve emniyet siviclerin  kontrolu",
+      "Tüm zincirlerin kontrolü ve gıdaya uygun yağla yağlanması",
+      "Dişlilerin aşınma ve paralellik kontrolü",
+      "Palet bantların kırılma ve gerekli ise  değişiminin yapılması",
+      "Tüm rulmanlar gıdaya uygun yağ ile yağlanması",
+      "Yan bariyerlerin kontrolü çalışır hale getirilmesi.",
+      "Zincir  kontrol  ve gergi kontrolü",
+      "Tüm sistemi çalıştır test et"
+    ]
+  },
+  "PA - DEKORLAMA": {
+    "hat": "PASTRY HATTI",
+    "ekipman": "DEKORLAMA",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "acil stop butonu kontrolü",
+      "kapak emniyet sivici kontrolü",
+      "tel bantların kontrolü ( kopma,kırılma,deformasyon)",
+      "avara yatak ve roller ların kontrolü",
+      "dekorlama  ürün basma pompası kontrolü",
+      "dişlilerin kontrolü ( aşınma ,paralellik)",
+      "gresörlüklerin gıdaya  uygun yağ ile yağlanması.",
+      "motor ve redüktörlerin  bakım ve temizliği."
+    ]
+  },
+  "PA FERMANTASYON": {
+    "hat": "PASTRY HATTI",
+    "ekipman": "FERMANTASYON",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "pano besleme şalteri  ve pano içi kontrolü.",
+      "kapı emniyet siviclerinin kontrolü",
+      "tüm elektrik enstrümanların kontrolü",
+      "bant yukarı-aşağı siviclerinin kontorlü",
+      "glikol ve buhar hattının vanalarının kontrolü",
+      "pislik tutucuların kontrolü ve temizlenmesi",
+      "kondenstopların kontolleri",
+      "glikol ve buhar hattının izolasyon kontrolleri",
+      "ünitelerin genel temizliği ve filitre kontrollü",
+      "fermantasyon içi aydınlatma kontrolü",
+      "tel bant kontrolü (kopma,kırıklama,deformasyon)",
+      "kapı izolasyonlarının kontrollü (fitiller)",
+      "kapı kollarının kontrol edilmesi.(içeri-dışarı açılması)",
+      "belirsiz değerlere set edilerek doğrulanması."
+    ]
+  },
+  "PA FIRIN": {
+    "hat": "PASTRY HATTI",
+    "ekipman": "FIRIN",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "brülör    kontrolü",
+      "pnömatik hava regülatörü kontrolü",
+      "buhar giriş vanası  kontrolü",
+      "buhar giriş selenoid  bobinlerin  kontrolü",
+      "fırın içi  konveyör zincirlerinin yağlanması",
+      "Tahrik motoru ve redüktörü kontrolü",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü"
+    ]
+  },
+  "PA KÖNİG": {
+    "hat": "PASTRY HATTI",
+    "ekipman": "KÖNİG PORSİYONLAMA",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların ve emniyet siviclerin kontrolü",
+      "Kayış ve kasnak  sistemlerin kontrolü",
+      "Motor ve rediktörlerin  kontrolü",
+      "Unlama kontrolü",
+      "Konik yuvarlama  silindir teflon aşınma kontrolü",
+      "Sert plastik değişimi gerekir ise değişimi",
+      "Gıdaya uygun yağla  yatak ve rulmanların yağlanması",
+      "Makinayı çalıştır test et dinle gözlemle",
+      "Bakım sonrası temizlik ihtiyacı var mı ?"
+    ]
+  },
+  "PA DEDEKTÖR": {
+    "hat": "PASTRY HATTI",
+    "ekipman": "METAL DEDEKTÖR",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Metal dedektör bant motor-redüktör kontrolü",
+      "Metal dedektör bant aşınma kontrolü",
+      "Metal dedektör pnömatik sistemlerin kontrolü",
+      "Dedektöre ait tüm yatakların  yağlanması",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü"
+    ]
+  },
+  "PA MİKSER ASANSÖR": {
+    "hat": "PASTRY HATTI",
+    "ekipman": "MİKSER ASANSÖR",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "Kayış Gerginlik Kontrolu",
+      "Kayışlarda Deformasyon, Yıpranma Kontrolu",
+      "Mikser boynuzu aşınma deformasyon kontrolu",
+      "Hidrolik Sistem kontrolu",
+      "Kazan geri çekme kilitleme kontrolu",
+      "Yatakların Yağlanması",
+      "Asansör Emniyet Switchleri kontrolu",
+      "Asansör Pano Besleme Şalteri, pano içi kontrolu",
+      "Asansör Motor ve Redüktör Kontrolu",
+      "Asansör Mekanik Aksam Kontrolu",
+      "Asansör Sonsuz Dişli ve Rulman Kontrolu",
+      "Asansör Yataklarının Yağlanması",
+      "CO2  kaçağının kontrolü",
+      "pnömatik basınç regülatörü kontolü"
+    ]
+  },
+  "PA PAKETLEME": {
+    "hat": "PASTRY HATTI",
+    "ekipman": "PAKETLEME",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "KARTON AÇMA",
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "Pnömatik pistonların  kontrolü",
+      "karton taşıyıcı kayışın  kontrolü",
+      "pnömatik dijital ölçerlerin ayarların kontrolü",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü",
+      "POŞET AÇMA",
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "Teflon bant ve rezistans kontrolü",
+      "poşet tutucuların  kontrolü",
+      "Pnömatik pistonların  kontrolü",
+      "manuel olarak  adım adım çalıştırılması",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü",
+      "KARTON YAPIŞTIRMA",
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "Pnömatik pistonların  kontrolü",
+      "karton taşıyıcı kayışın  kontrolü",
+      "koli bantlama mekanizmasının kontrolü"
+    ]
+  },
+  "PA RADEMAKER": {
+    "hat": "PASTRY HATTI",
+    "ekipman": "RADEMAKER ŞEKİLLENDİRME",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "acil stop butonu kontrolü",
+      "kapak emniyet sivici kontrolü",
+      "motor redüktör bakımı ve temizliği",
+      "ürün yürütme  sert plastik aksam kontrolü",
+      "rademaker  dokunmatik ekran kontrolü",
+      "mavi lastik bantlarda aşınma ,yıpranma kontolü",
+      "düzenleme kalıbı kamlarının kontrolü.",
+      "hava kaçağı kontrolü",
+      "kesme nozullarının,hava,su kontrolleri",
+      "rulman kontrolleri gıdaya uygun gres basılması",
+      "avare yatak ve millerin kontrolleri",
+      "unlamaların  kontrolü",
+      "ünitelerdeki enstrümanların kontrolleri (buton,potans)",
+      "motor pervanelerinin temizliği ve kontolleri",
+      "tüm gresörlüklere gıdaya uygun yağ basılması."
+    ]
+  },
+  "PA ŞOKLAMA": {
+    "hat": "PASTRY HATTI",
+    "ekipman": "ŞOKLAMA",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "pano şalter ve pano  içi kontrol",
+      "acil stop butonlarının  kontrolü",
+      "kapı emniyet siviclerinin kontrolü",
+      "motor ve redüktörlerin kontrolü",
+      "giriş tel bantın kontrolü",
+      "glikol ve temper hattının vanalarının  kontrolü",
+      "glikol ve temper hattının izolasyonun   kontrolü"
+    ]
+  },
+  "PA TRİVİ": {
+    "hat": "PASTRY HATTI",
+    "ekipman": "TRİVİ İŞLEME",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "acil  stop butonlarını   kontrolü",
+      "kapak emniyet siviclerinşn kontrolü",
+      "motor ve redüktör bakım ve temizliği",
+      "hava hortum bağlantı ve kaçak kontrolü",
+      "hat üzerindeki  elektrik enstrüman kontrolü",
+      "tüm bantların deformasyon yırtılma kontrolü",
+      "gresörlüklerin gıdaya uygun yağ ile yağlanması",
+      "tüm zincirlerin gıdaya uygun yağ ile yağlanması",
+      "ünitelerin fiş ve prizlerinin kontrolü",
+      "multiroller  ünitesi  baskı , yay  gruplarının kontrolleri",
+      "multiroller dişli gruplarının yağlanması.",
+      "üniteler içindeki sensörlerin kontrolü",
+      "avare  yatakların ve roller kontrolleri."
+    ]
+  },
+  "SE DİNLENDİRME": {
+    "hat": "SERBEST EKMEK",
+    "ekipman": "ARA DİNLENDİRME",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların  ve emniyet siviclerin  kontrolu",
+      "Tüm zincirlerin kontrolü ve gıdaya uygun yağla yağlanması",
+      "Dişlilerin aşınma ve paralellik kontrolü",
+      "Plastik  parçaların kırılma ve gerekli ise  değişiminin yapılması",
+      "Tüm rulmanlar gıdaya uygun yağ ile yağlanması",
+      "Tüm kefe taşıyıcı sepetlerin kontrolü deforme olan var ise değişimi",
+      "Motor rediktörlerin kontrolü",
+      "Tüm pnömatik sistemin kontrolü",
+      "Tüm sistemi çalıştır test et"
+    ]
+  },
+  "SE FERMANTASYON": {
+    "hat": "SERBEST EKMEK",
+    "ekipman": "FERMANTASYON",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "konveyöre  bağlı sensörlerin kontrolü",
+      "üst aktarma  pistonlarının  kontrolü",
+      "pnömatik hava kaçağı konrolü",
+      "zincirlerin  yağlanması ve kontrolü",
+      "Tahrik motoru ve redüktörü kontrolü",
+      "taşıyıcı asker ve stoper kontrolü",
+      "alt taşıma bandı  paletli konveyör  kontrolü",
+      "HTT08  bağıl nem ve sıcaklık transmitteri  kontrolü",
+      "buhar fanlarının  çalışma kontrolü",
+      "fermantasyon  içi aydınlatma  kontrolü",
+      "buhar vanası ,kondenstop ve manometre  kontrolü",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü"
+    ]
+  },
+  "SE FIRIN": {
+    "hat": "SERBEST EKMEK",
+    "ekipman": "SARMAŞIK FIRIN",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "Sarmaşık fırın yan kapakların kontrolü",
+      "konveyör  örgülü bantın kontrolü",
+      "brülör    kontrolü",
+      "pnömatik hava regülatörü kontrolü",
+      "buhar giriş vanası  kontrolü",
+      "buhar giriş selenoid  bobinlerin  kontrolü",
+      "fırın içi  konveyör zincirlerinin yağlanması",
+      "Tahrik motoru ve redüktörü kontrolü",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü"
+    ]
+  },
+  "SE ŞOKLAMA": {
+    "hat": "SERBEST EKMEK",
+    "ekipman": "FREEZER",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "Glikol  vanalarının  kontrolü",
+      "temper  vanalarının kontrolü",
+      "thermokupl  cihazının  kontrolü",
+      "motor  ve redüktör  bakımı ve  temizliği kontrolü",
+      "freezer iç konveyör bantının  kontrolü",
+      "evaparatör fanlarının kontrolü",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü"
+    ]
+  },
+  "SE KESTART": {
+    "hat": "SERBEST EKMEK",
+    "ekipman": "KESTART",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların ve emniyet siviclerin  kontrolü",
+      "Tahrik zincir  dişli kayış kontrolü gerekli ise değişimi",
+      "Pnömatik sistem kontrolü",
+      "Sert plastiklerin kontrolü gerekli ise değişimi",
+      "Motor ve rediktörlerin kontrolü",
+      "Rulmanların gıdaya uygun yağ ile yağlanması",
+      "Otomatik yatak ve hazne  yağlarının  kontrolü",
+      "Mekanik tüm aksam ve bağlantıların  kontrolü",
+      "Makinayı çalıştır dinle gözlemle test et"
+    ]
+  },
+  "SE DEDEKTÖR": {
+    "hat": "SERBEST EKMEK",
+    "ekipman": "METAL DEDEKTÖR",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Metal dedektör bant motor-redüktör kontrolü",
+      "Metal dedektör bant aşınma kontrolü",
+      "Metal dedektör pnömatik sistemlerin kontrolü",
+      "Dedektöre ait tüm yatakların  yağlanması",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü"
+    ]
+  },
+  "SE MİKSER ASANSÖR": {
+    "hat": "SERBEST EKMEK",
+    "ekipman": "MIKSER VE ASANSÖR",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "Kayış Gerginlik Kontrolu",
+      "Kayışlarda Deformasyon, Yıpranma Kontrolu",
+      "Mikser boynuzu aşınma deformasyon kontrolu",
+      "Hidrolik Sistem kontrolu",
+      "Kazan geri çekme kilitleme kontrolu",
+      "Yatakların Yağlanması",
+      "Asansör Emniyet Switchleri kontrolu",
+      "Asansör Pano Besleme Şalteri, pano içi kontrolu",
+      "Asansör Motor ve Redüktör Kontrolu",
+      "Asansör Mekanik Aksam Kontrolu",
+      "Asansör Sonsuz Dişli ve Rulman Kontrolu",
+      "Asansör Yataklarının Yağlanması"
+    ]
+  },
+  "SE PAKETLEME": {
+    "hat": "SERBEST EKMEK",
+    "ekipman": "PAKETLEME",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "KARTON AÇMA",
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "Pnömatik pistonların  kontrolü",
+      "karton taşıyıcı kayışın  kontrolü",
+      "pnömatik dijital ölçerlerin ayarların kontrolü",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü",
+      "POŞET AÇMA",
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "Teflon bant ve rezistans kontrolü",
+      "poşet tutucuların  kontrolü",
+      "Pnömatik pistonların  kontrolü",
+      "manuel olarak  adım adım çalıştırılması",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü",
+      "KARTON YAPIŞTIRMA",
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "Pnömatik pistonların  kontrolü",
+      "karton taşıyıcı kayışın  kontrolü",
+      "koli bantlama mekanizmasının kontrolü"
+    ]
+  },
+  "SE SOĞUTMA": {
+    "hat": "SERBEST EKMEK",
+    "ekipman": "SOĞUTMA",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Emniyet halatı  ve emniyet sivici kontrolü",
+      "acil stop butonlarının kontrolü",
+      "motor ve redüktör   bakımı ve temizliği",
+      "döner konveyör  bantın kontrolü",
+      "redüktör zincirlerinin  yağlanması ve kontrolü",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü"
+    ]
+  },
+  "SE ŞEKİLLENDİRME": {
+    "hat": "SERBEST EKMEK",
+    "ekipman": "ŞEKİLLENDİRME",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "Su püskürtme nozullarının kontrolü",
+      "konveyör bez bantta  aşınma,yıpranma kontrolü",
+      "paletli bantlarda aşınma ,kırılma ,yıpranma kontrolü",
+      "örgülü  yönlendirici tellerin  kontrolü",
+      "Tahrik motoru ve redüktörü kontrolü",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü"
+    ]
+  },
+  "SİMİT DİNLENDİRME": {
+    "hat": "SİMİT",
+    "ekipman": "ARA DİNLENDİRME",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "iş emniyetini al",
+      "Acil stopların  ve emniyet siviclerin  kontrolu",
+      "yatak ve zincirleri yagla (gıda uyumulu)",
+      "tahrik ve aktarmalarda arızalı var ise degiştir",
+      "Plastik  parçaların kırılma ve gerekli ise  değişiminin yapılması",
+      "taşıyıcı  zincir  gergisinde deforme boşluk var ise degiş",
+      "kefe ve kefe  taşıyıcı deforme olan var ise degiş",
+      "Motor rediktörlerin kontrolü",
+      "pnomatik elementleri kontrol et arızalı var ise degiş",
+      "yan kapakları ürün taşıyıcı zincirleri hava ile temizle gıda yag ile yagla"
+    ]
+  },
+  "SİMİT FERMANTASYON": {
+    "hat": "SİMİT",
+    "ekipman": "FERMANTASYON",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "bağıl nem ve sıcaklık transmitteri  kontrolü",
+      "iklimdirme üntesi su ve buhar kaçakları var ise gider",
+      "fermantasyon  içi aydınlatma  kontrolü",
+      "kapıları ve araba yolları deforme ize düzelt .degiş",
+      "tüm su ve buhar filtreleri temizle kirliise degiş"
+    ]
+  },
+  "SİMİT FIRIN": {
+    "hat": "SİMİT",
+    "ekipman": "FIRIN",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "acil stop ve emniyet sviç kontrol et arızalı ise degiş",
+      "su hatlarını kontrol et arızalı element var ise degiş",
+      "brülör    kontrolü",
+      "bacaları baglantılarda açıklık var ise düzelt",
+      "kapıda açıklık ve kitlenme de sorun var ise gider",
+      "sıcaklık ayar kanatlarda eksik ve gevşek civata olmasın",
+      "Tahrik motoru ve redüktörü kontrolü",
+      "zincirini yağla, temizle",
+      "Yatakları yağla"
+    ]
+  },
+  "SİMİT KESTART": {
+    "hat": "SİMİT",
+    "ekipman": "KESTART",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların ve emniyet siviclerin  kontrolü",
+      "Tahrik zincir  dişli kayış kontrolü gerekli ise değişimi",
+      "pnomatik hava kaçakları gider,arızalı element var ise degiş",
+      "Sert plastiklerin kontrolü gerekli ise değişimi",
+      "Motor ve rediktörlerin kontrolü",
+      "Rulmanların gıdaya uygun yağ ile yağlanması",
+      "Otomatik yatak ve hazne  yağlarının  kontrolü",
+      "Mekanik tüm aksam ve bağlantıların  kontrolü",
+      "makinada deforme olan parçaları degiş",
+      "hamur basma pistonları deforme ise degiş",
+      "hamur hazne iç sıyırıcılarda deforme olan var ise degiş",
+      "taşıyıcı bantlarda deforme var ise degiş"
+    ]
+  },
+  "SİMİT DEDEKTÖR": {
+    "hat": "SİMİT",
+    "ekipman": "METAL DEDEKTÖR",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "motorediktör kontrol et fanı temizle",
+      "taşıma bantı kontrol et deforme degiştir",
+      "Metal dedektör pnömatik sistemlerin kontrolü",
+      "baglantı ve tahrikleri kontrol et deforme ise degiş"
+    ]
+  },
+  "SİMİT MİKSER ASANSÖR": {
+    "hat": "SİMİT",
+    "ekipman": "MIKSER VE ASANSÖR",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "Kayış Gerginlik Kontrolu",
+      "Kayışlarda Deformasyon, Yıpranma Kontrolu",
+      "Mikser boynuzu aşınma deformasyon kontrolu",
+      "Hidrolik Sistem kontrolu",
+      "Kazan geri çekme kilitleme kontrolu",
+      "yatak rulman yagla (uyumlu gıda)",
+      "Asansör Emniyet Switchleri kontrolu",
+      "Asansör Pano Besleme Şalteri, pano içi kontrolu",
+      "Asansör Motor ve Redüktör Kontrolu",
+      "taşıyıcı klavuzlama  kanalı  elinle yagla",
+      "vida diş milde ve klavuz rollerlerde deforme ise degiş",
+      "kazan tutucu kollarda egilme varmı var ise düzelt"
+    ]
+  },
+  "SİMİT PAKETLEME": {
+    "hat": "SİMİT",
+    "ekipman": "PAKETLEME",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "KARTON AÇMA",
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "Pnömatik pistonların  kontrolü",
+      "karton taşıyıcı kayışın  kontrolü",
+      "pnömatik dijital ölçerlerin ayarların kontrolü",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü",
+      "POŞET AÇMA",
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "Teflon bant ve rezistans kontrolü",
+      "poşet tutucuların  kontrolü",
+      "Pnömatik pistonların  kontrolü",
+      "manuel olarak  adım adım çalıştırılması",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü",
+      "KARTON YAPIŞTIRMA",
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "Pnömatik pistonların  kontrolü",
+      "karton taşıyıcı kayışın  kontrolü",
+      "koli bantlama mekanizmasının kontrolü"
+    ]
+  },
+  "SİMİT SOĞUTMA": {
+    "hat": "SİMİT",
+    "ekipman": "SOĞUTMA",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Emniyet halatı  ve emniyet sivici kontrolü",
+      "acil stop butonlarının kontrolü",
+      "motor ve redüktör   bakımı ve temizliği",
+      "döner konveyör  bantın kontrolü",
+      "redüktör zincirlerinin  yağlanması ve kontrolü",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü"
+    ]
+  },
+  "SİMİT ŞEKİLLENDİRME": {
+    "hat": "SIMIT",
+    "ekipman": "ŞEKİLLENDİRME",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "iş güvenligini al",
+      "emniyet elementlerini kontrol et arıza var ise degiş",
+      "Motor ve rediktör kontrol ve temizliği",
+      "ezme kalıbında deforme varmı var ise temizle",
+      "tüm yatak ve rulmanları gıda uyumlu yag ile yagla",
+      "tahrik mil ve merdanelerde deforme var ise degiş",
+      "ezme taşıma şerbetleme bantlar deforme ise degiş",
+      "baglantıları kontrol et  gevşeyeni sık eksik ise tamamla",
+      "tahrik aktarma zincirleri yagla hadve boş ise degiştir",
+      "manuel ekipmanları kontrol et deforme ise degiştir."
+    ]
+  },
+  "SPL BIÇAK ATMA": {
+    "hat": "SPL",
+    "ekipman": "BIÇAK ATMA",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "kapı emniyet  switchlerin kontrolu",
+      "konveyöre  bağlı sensörlerin kontrolü",
+      "tüm sensörlerin kontrolü",
+      "pnömatik hava kaçağı konrolü",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü",
+      "lineer  kısımların kontrolü  ve yağlanması",
+      "nozullar ve mafsallar kontrol edilecek.",
+      "çalıştırılıp kesme basıncı kontrol edilecek",
+      "pnömatik hava  regülatör basıncı kontrolü",
+      "tahliye su çıkış vanalarının kontrolü",
+      "su basma pompasının çalışırlığının kontrolü"
+    ]
+  },
+  "SPL DEPANNER": {
+    "hat": "SPL",
+    "ekipman": "DEPANNER",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "tüm elektrik enstrümanların kontrolü",
+      "triger kayışı kontrolü",
+      "süpürme ünitesinin kızaklarının kontrolü",
+      "tekerlekler ve rulmanların kontrolü",
+      "pnömatik  pistonların kontrolü",
+      "redükröre bağlı tahrik zincirlerin yağlanması",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü",
+      "elevatör tava tutucuların kontrolü",
+      "tava itme piston kontrolü",
+      "koruyucu kapakların  kontrolü"
+    ]
+  },
+  "SPL FERMANTASYON": {
+    "hat": "SPL",
+    "ekipman": "FERMANTASYON",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "konveyöre  bağlı sensörlerin kontrolü",
+      "üst aktarma  pistonlarının  kontrolü",
+      "pnömatik hava kaçağı konrolü",
+      "zincirlerin  yağlanması ve kontrolü",
+      "Tahrik motoru ve redüktörü kontrolü",
+      "taşıyıcı asker ve stoper kontrolü",
+      "alt taşıma bandı  paletli konveyör  kontrolü",
+      "bağıl nem ve sıcaklık transmitteri  kontrolü",
+      "buhar fanlarının  çalışma kontrolü",
+      "fermantasyon  içi aydınlatma  kontrolü",
+      "buhar vanası ,kondenstop ve manometre  kontrolü",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü"
+    ]
+  },
+  "SPL FIRIN": {
+    "hat": "SPL",
+    "ekipman": "FIRIN",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "brülör    kontrolü",
+      "pnömatik hava regülatörü kontrolü",
+      "buhar giriş vanası  kontrolü",
+      "buhar giriş selenoid  bobinlerin  kontrolü",
+      "fırın içi  konveyör zincirlerinin yağlanması",
+      "Tahrik motoru ve redüktörü kontrolü",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü"
+    ]
+  },
+  "SPL KÖNİG": {
+    "hat": "SPL",
+    "ekipman": "KÖNİG PORSİYONLAMA",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların ve emniyet siviclerin kontrolü",
+      "Kayış ve kasnak  sistemlerin kontrolü",
+      "Motor ve rediktörlerin  kontrolü",
+      "Unlama kontrolü",
+      "Konik yuvarlama  silindir teflon aşınma kontrolü",
+      "Sert plastik değişimi gerekir ise değişimi",
+      "Gıdaya uygun yağla  yatak ve rulmanların yağlanması",
+      "Makinayı çalıştır test et dinle gözlemle",
+      "Bakım sonrası temizlik ihtiyacı var mı ?"
+    ]
+  },
+  "SPL DEDEKTÖR": {
+    "hat": "SPL",
+    "ekipman": "METAL DEDEKTÖR",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Metal dedektör bant motor-redüktör kontrolü",
+      "Metal dedektör bant aşınma kontrolü",
+      "Metal dedektör pnömatik sistemlerin kontrolü",
+      "Dedektöre ait tüm yatakların  yağlanması",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü"
+    ]
+  },
+  "SPL MİKSER ASANSÖR": {
+    "hat": "SPL",
+    "ekipman": "MIKSER VE ASANSÖR",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "Kayış Gerginlik Kontrolu",
+      "Kayışlarda Deformasyon, Yıpranma Kontrolu",
+      "Mikser boynuzu aşınma deformasyon kontrolu",
+      "Hidrolik Sistem kontrolu",
+      "Kazan geri çekme kilitleme kontrolu",
+      "Yatakların Yağlanması",
+      "Asansör Emniyet Switchleri kontrolu",
+      "Asansör Pano Besleme Şalteri, pano içi kontrolu",
+      "Asansör Motor ve Redüktör Kontrolu",
+      "Asansör Mekanik Aksam Kontrolu",
+      "Asansör Sonsuz Dişli ve Rulman Kontrolu",
+      "Asansör Yataklarının Yağlanması"
+    ]
+  },
+  "SPL PAKETLEME": {
+    "hat": "SPL",
+    "ekipman": "PAKETLEME",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "KARTON AÇMA",
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "Pnömatik pistonların  kontrolü",
+      "karton taşıyıcı kayışın  kontrolü",
+      "pnömatik dijital ölçerlerin ayarların kontrolü",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü",
+      "POŞET AÇMA",
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "Teflon bant ve rezistans kontrolü",
+      "poşet tutucuların  kontrolü",
+      "Pnömatik pistonların  kontrolü",
+      "manuel olarak  adım adım çalıştırılması",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü",
+      "KARTON YAPIŞTIRMA",
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "Pnömatik pistonların  kontrolü",
+      "karton taşıyıcı kayışın  kontrolü",
+      "koli bantlama mekanizmasının kontrolü"
+    ]
+  },
+  "SPL SOĞUTMA": {
+    "hat": "SPL",
+    "ekipman": "SOĞUTMA",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "emniyet siviçlerin kontrolü",
+      "acil stop butonlarının kontrolü",
+      "motor ve redüktör   bakımı ve temizliği",
+      "döner konveyör  bantın kontrolü",
+      "redüktör zincirlerinin  yağlanması ve kontrolü",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü",
+      "koruma kapaklarının kontrolü"
+    ]
+  },
+  "SPL ŞOKLAMA": {
+    "hat": "SPL",
+    "ekipman": "ŞOKLAMA",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "Emniyet  switchlerin kontrolu",
+      "Glikol  vanalarının  kontrolü",
+      "temper  vanalarının kontrolü",
+      "thermokupl  cihazının  kontrolü",
+      "motor  ve redüktör  bakımı ve  temizliği kontrolü",
+      "freezer iç konveyör bantının  kontrolü",
+      "evaparatör fanlarının kontrolü",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü"
+    ]
+  },
+  "SPL VGS ŞEKİLLENDİRME": {
+    "hat": "SPL",
+    "ekipman": "VGS - ŞEKİLLENDİRME",
+    "siklik": "HAFTALIK",
+    "maddeler": [
+      "Pano besleme şalteri ve pano içi kontrolu",
+      "Acil stopların Kontrolu",
+      "kapak emniyet  switchlerin kontrolu",
+      "Motor ve rediktör kontrol ve temizliği",
+      "ürün baskı kollarının kontrolü (eşit basması )",
+      "gresörlüklerin  gıdaya uygun yağile yağlanması",
+      "rulmanların kontrolü",
+      "bantlarda yırtılma ,sökülme kontrolü",
+      "mekaniki aksam ve bağlantı noktalarının kontrolü",
+      "dokunmatik panelin kontrolü",
+      "zincirlerin gıdaya uygun yağ ile yağlanması",
+      "tüm sistemi çalıştır test et dinle."
+    ]
+  }
+}

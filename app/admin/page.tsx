@@ -19,6 +19,9 @@ export default function AdminDashboard() {
   const [aktifIsler, setAktifIsler] = useState<any[]>([]);
   const [aktifEked, setAktifEked] = useState<any[]>([]); 
   const [aktifIsgAlarmlari, setAktifIsgAlarmlari] = useState<any[]>([]);
+  
+  // YENİ: PM (Planlı Bakım) Alarmları State'i
+  const [aktifPmAlarmlari, setAktifPmAlarmlari] = useState<any[]>([]);
 
   const [filterYil, setFilterYil] = useState("");
   const [filterAy, setFilterAy] = useState("");
@@ -88,10 +91,13 @@ export default function AdminDashboard() {
       const wSnap = await getDocs(wQ);
       const wData: any[] = wSnap.docs.map(d => ({ id: d.id, ...d.data(), gercekZaman: d.data().kayitTarihi ? d.data().kayitTarihi.toDate().getTime() : 0 }));
       
+      // YENİ: İŞ EMİRLERİNİ 3'E BÖLÜYORUZ (İSG, PM, Normal)
       const isgAlarmlari = wData.filter(d => d.ekipmanAdi === "KAR devreye alma");
-      const normalIsler = wData.filter(d => d.ekipmanAdi !== "KAR devreye alma");
+      const pmAlarmlari = wData.filter(d => d.sorunTipi === "Planlı Bakım");
+      const normalIsler = wData.filter(d => d.ekipmanAdi !== "KAR devreye alma" && d.sorunTipi !== "Planlı Bakım");
 
       setAktifIsgAlarmlari(isgAlarmlari.sort((a, b) => b.gercekZaman - a.gercekZaman));
+      setAktifPmAlarmlari(pmAlarmlari.sort((a, b) => b.gercekZaman - a.gercekZaman));
       setAktifIsler(normalIsler.sort((a, b) => b.gercekZaman - a.gercekZaman).slice(0, 5));
 
       const eQ = query(collection(db, "eked_logs"), where("durum", "==", "Açık"));
@@ -127,25 +133,26 @@ export default function AdminDashboard() {
     } catch (error) { alert("Hata oluştu."); }
   };
 
+  const handlePMBasla = (islem: any) => {
+    // PM Alarmı Formu İçin Özel Yönlendirme (PM Formuna atar)
+    window.location.href = `/dashboard/periyodik-bakim?makine=${encodeURIComponent(islem.ekipmanAdi)}&pmOrderId=${islem.id}`;
+  };
+
   useEffect(() => {
     if (rawMeterLogs.length === 0) return;
     const sayacGruplari: Record<string, any[]> = {};
     const elekSet = new Set<string>(); const dogSet = new Set<string>(); const suSet = new Set<string>();
-
     rawMeterLogs.forEach(log => {
       const tip = log.tip || "Elektrik";
       if (tip === "Elektrik" && log.sayacAdi) elekSet.add(log.sayacAdi);
       if (tip === "Doğalgaz" && log.sayacAdi) dogSet.add(log.sayacAdi);
       if (tip === "Su" && log.sayacAdi) suSet.add(log.sayacAdi);
-
       if (tip === "Elektrik" && filterElektrikSayac && log.sayacAdi !== filterElektrikSayac) return;
       if (tip === "Doğalgaz" && filterDogalgazSayac && log.sayacAdi !== filterDogalgazSayac) return;
       if (tip === "Su" && filterSuSayac && log.sayacAdi !== filterSuSayac) return;
-
       if (!sayacGruplari[log.sayacAdi]) sayacGruplari[log.sayacAdi] = [];
       sayacGruplari[log.sayacAdi].push(log);
     });
-
     setElektrikSayacListesi(Array.from(elekSet).sort()); setDogalgazSayacListesi(Array.from(dogSet).sort()); setSuSayacListesi(Array.from(suSet).sort());
 
     const initAylar = (): Record<string, number> => ({ "01. Ay": 0, "02. Ay": 0, "03. Ay": 0, "04. Ay": 0, "05. Ay": 0, "06. Ay": 0, "07. Ay": 0, "08. Ay": 0, "09. Ay": 0, "10. Ay": 0, "11. Ay": 0, "12. Ay": 0 });
@@ -162,7 +169,6 @@ export default function AdminDashboard() {
         else if (tip === "Su" && tuketimSu[ayAnahtari] !== undefined) tuketimSu[ayAnahtari] += tuketimFarki;
       }
     });
-
     const formatData = (dataObj: any) => Object.keys(dataObj).map(ay => ({ ay, tuketim: dataObj[ay] })).filter(a => a.tuketim > 0);
     setGrafikElektrik(formatData(tuketimElektrik)); setGrafikDogalgaz(formatData(tuketimDogalgaz)); setGrafikSu(formatData(tuketimSu));
   }, [rawMeterLogs, filterElektrikSayac, filterDogalgazSayac, filterSuSayac]);
@@ -179,7 +185,6 @@ export default function AdminDashboard() {
       let tarihObj = data.baslangicSaati ? new Date(data.baslangicSaati) : (data.kayitTarihi ? data.kayitTarihi.toDate() : null);
       const yil = tarihObj ? tarihObj.getFullYear().toString() : "";
       const ay = tarihObj ? (tarihObj.getMonth() + 1).toString() : ""; 
-
       let grafikPass = true;
       if (filterYil && yil !== filterYil) grafikPass = false;
       if (filterAy && ay !== filterAy) grafikPass = false;
@@ -209,7 +214,6 @@ export default function AdminDashboard() {
       if (filterPerfVardiya && data.vardiya !== filterPerfVardiya) perfPass = false;
       if (filterPerfDurus === "duruslu" && data.isDuruslu !== true) perfPass = false;
       if (filterPerfDurus === "durussuz" && data.isDuruslu !== false) perfPass = false;
-
       if (perfPass) {
         isEkibi.forEach((personelIsmi: string) => {
           if (filterPerfPersonel && personelIsmi !== filterPerfPersonel) return;
@@ -229,6 +233,9 @@ export default function AdminDashboard() {
     setPersonelPerformans(formatliPersonel);
   }, [rawLogs, filterYil, filterAy, filterHat, filterEkipman, filterPerfYil, filterPerfAy, filterPerfVardiya, filterPerfPersonel, filterPerfDurus, filterPerfSiralama]);
 
+  const filtreleriTemizle = () => { setFilterYil(""); setFilterAy(""); setFilterHat(""); setFilterEkipman(""); };
+  const perfFiltreleriTemizle = () => { setFilterPerfYil(""); setFilterPerfAy(""); setFilterPerfVardiya(""); setFilterPerfPersonel(""); setFilterPerfDurus(""); setFilterPerfSiralama("is"); };
+
   if (loading) return <div className="min-h-screen bg-gray-950 flex justify-center items-center text-white">Sistem yükleniyor...</div>;
   if (!isAdmin) return <div className="min-h-screen bg-gray-950 text-red-500 flex justify-center items-center">Yetkisiz Erişim!</div>;
 
@@ -242,7 +249,6 @@ export default function AdminDashboard() {
       );
     } return null;
   };
-
   const durusSureYuzde = kpiToplamSure > 0 ? ((kpiAylikDurus / kpiToplamSure) * 100).toFixed(1) : "0";
 
   return (
@@ -262,27 +268,16 @@ export default function AdminDashboard() {
             </div>
             <div className="flex flex-wrap gap-3 no-print">
               {(userRole === "admin" || userRole === "isg") && (
-                <button onClick={() => window.print()} className="bg-white text-gray-900 font-bold px-4 py-2 rounded-lg shadow-lg hover:bg-gray-200 transition flex items-center gap-2 text-sm md:text-base"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg> PDF Çıktısı Al</button>
+                <button onClick={() => window.print()} className="bg-white text-gray-900 font-bold px-4 py-2 rounded-lg shadow-lg hover:bg-gray-200 transition text-sm flex items-center gap-2"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg> PDF Çıktısı Al</button>
               )}
-              <button onClick={() => { auth.signOut(); window.location.href="/"; }} className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg">Çıkış Yap</button>
+              <button onClick={() => { auth.signOut(); window.location.href="/"; }} className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg text-sm">Çıkış</button>
             </div>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-8 no-print">
-          {/* YENİ PERİYODİK BAKIM (PM) BUTONLARI (KONTROL FORMLARI YERİNE) */}
-          {(userRole === "admin" || userRole === "operator" || userRole === "isg" || userRole === "teknisyen") && (
-            <>
-              <Link href="/dashboard/periyodik-bakim" className="bg-teal-600 hover:bg-teal-500 text-white p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(20,184,166,0.4)] transition">
-                ✅ Periyodik Bakım (PM) Formu
-              </Link>
-              <Link href="/admin/periyodik-bakim-arsiv" className="bg-gray-800 hover:bg-gray-700 border border-teal-700/50 text-teal-300 p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">
-                🗄️ Periyodik Bakım Arşivi
-              </Link>
-            </>
-          )}
             {(userRole === "admin" || userRole === "uretim") && (<Link href="/admin/is-emri-ac" className="bg-red-600 hover:bg-red-500 text-white p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(220,38,38,0.5)] transition">🚨 Yeni İş Emri</Link>)}
             {userRole !== "isg" && (<Link href="/admin/aktif-isler" className="bg-red-900/60 hover:bg-red-600 border border-red-500/50 text-red-100 p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition"><span className="relative flex h-2 w-2 mr-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span></span>Aktif İş Emirleri</Link>)}
-            {userRole !== "isg" && (<Link href="/admin/tamamlanan-isler" className="bg-gray-700 hover:bg-gray-600 border border-gray-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">🗄️ Arşivlenen İşler</Link>)}
+            {userRole !== "isg" && (<Link href="/admin/tamamlanan-isler" className="bg-gray-700 hover:bg-gray-600 border border-gray-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">🗄️ Tamamlanan İş Emirleri</Link>)}
             {(userRole === "admin" || userRole === "isg") && (
               <>
                 <Link href="/admin/eked" className="bg-yellow-600 hover:bg-yellow-500 text-black p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(202,138,4,0.4)] transition">🔒 EKED Takip</Link>
@@ -297,7 +292,7 @@ export default function AdminDashboard() {
                 <Link href="/admin/personel" className="bg-purple-600 hover:bg-purple-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">👤 Personel Onay</Link>
               </>
             )}
-            
+            {(userRole === "admin" || userRole === "operator" || userRole === "teknisyen") && (<Link href="/dashboard/pano-kayit" className="bg-indigo-700 hover:bg-indigo-600 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(67,56,202,0.4)] transition">🔌 Pano Kayıt</Link>)}
             {(userRole === "admin" || userRole === "operator" || userRole === "isg" || userRole === "teknisyen") && (
               <>
                 <Link href="/dashboard/pano-listesi" className="bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">🔌 Pano Listesi</Link>
@@ -307,6 +302,9 @@ export default function AdminDashboard() {
             {userRole !== "uretim" && userRole !== "isg" && (
               <>
                 <Link href="/dashboard/kontrol-formlari" className="bg-cyan-600 hover:bg-cyan-500 text-white p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(6,182,212,0.4)] transition">✅ Kontrol Formları</Link>
+                {/* YENİ: PM ARŞİVİ LİNKİ */}
+                <Link href="/admin/periyodik-bakim-arsiv" className="bg-teal-800 hover:bg-teal-700 text-teal-100 p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">🗄️ PM Arşivi</Link>
+                
                 <Link href="/admin/yedek-parca" className="bg-fuchsia-700 hover:bg-fuchsia-600 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(192,38,211,0.4)] transition">⚙️ Yedek Parça</Link>
                 <Link href="/admin/is-listesi" className="bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">📋 Yapılan İşler</Link>
                 <Link href="/dashboard/sayac" className="bg-emerald-600 hover:bg-emerald-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">⚡ Sayaç Okuma</Link>
@@ -316,6 +314,34 @@ export default function AdminDashboard() {
             )}
           </div>
 
+          {/* YENİ: PLANLI BAKIM (PM) ZAMANLAYICI ALARMI */}
+          {(userRole === "admin" || userRole === "operator" || userRole === "teknisyen") && aktifPmAlarmlari.length > 0 && (
+            <div className="bg-cyan-900/30 border-2 border-cyan-500/50 p-6 rounded-2xl mb-10 shadow-[0_0_20px_rgba(6,182,212,0.3)] no-print relative overflow-hidden">
+              <h2 className="text-xl font-bold text-cyan-400 mb-6 flex items-center gap-2 relative z-10">
+                <span className="relative flex h-4 w-4"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span><span className="relative inline-flex rounded-full h-4 w-4 bg-cyan-500"></span></span>
+                Yaklaşan Planlı Bakımlar (Periyodik Bakım Günü Geldi)
+              </h2>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 relative z-10">
+                {aktifPmAlarmlari.map(islem => (
+                  <div key={islem.id} className="bg-gray-900 border border-cyan-800/50 p-5 rounded-xl shadow-lg relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition hover:border-cyan-500/80">
+                    <div className="absolute top-0 left-0 w-2 h-full bg-cyan-500"></div>
+                    <div>
+                      <p className="text-xs text-gray-400 mb-1">Sistem Otomasyonu | Planlı İş Emri</p>
+                      <p className="font-bold text-white text-lg">{islem.hatAdi} <span className="text-cyan-400 font-medium text-sm">({islem.ekipmanAdi})</span></p>
+                      <p className="text-gray-300 text-sm mt-1">{islem.aciklama}</p>
+                    </div>
+                    {userRole !== "operator" && (
+                      <button onClick={() => handlePMBasla(islem)} className="w-full md:w-auto whitespace-nowrap bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-lg transition shadow-lg">
+                        ✅ PM Formuna Git
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* AKTİF İSG ALARMLARI (KAR) */}
           {(userRole === "admin" || userRole === "operator" || userRole === "teknisyen" || userRole === "isg") && aktifIsgAlarmlari.length > 0 && (
             <div className="bg-red-900/40 border-[3px] border-red-500 p-6 rounded-2xl mb-10 shadow-[0_0_30px_rgba(239,68,68,0.5)] no-print relative overflow-hidden">
               <div className="absolute inset-0 opacity-20 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#ef4444_10px,#ef4444_20px)]"></div>
@@ -332,6 +358,7 @@ export default function AdminDashboard() {
             </div>
           )}
 
+          {/* DİĞER AKTİF İŞ EMİRLERİ */}
           {userRole !== "isg" && aktifIsler.length > 0 && (
             <div className="bg-red-900/20 border-2 border-red-500/50 p-6 rounded-2xl mb-10 shadow-2xl no-print">
               <h2 className="text-xl font-bold text-red-400 mb-6 flex items-center gap-2"><span className="relative flex h-4 w-4"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span></span> Üretimden Gelen Aktif Bildirimler (Müdahale Bekleyen İş Emirleri)</h2>
@@ -347,6 +374,7 @@ export default function AdminDashboard() {
             </div>
           )}
 
+          {/* EKED GÜVENLİK ALARMI */}
           {(userRole === "admin" || userRole === "operator" || userRole === "isg" || userRole === "teknisyen") && aktifEked.length > 0 && (
             <div className="bg-yellow-900/20 border-2 border-yellow-500/50 p-6 rounded-2xl mb-10 shadow-[0_0_20px_rgba(202,138,4,0.15)] relative overflow-hidden no-print">
               <div className="absolute inset-0 opacity-10 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#ca8a04_10px,#ca8a04_20px)]"></div>
@@ -362,8 +390,15 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {(userRole === "admin" || userRole === "operator") && (
+          {/* GRAFİKLER BÖLÜMÜ (SADECE ADMIN/OPERATOR) */}
+          {userRole !== "uretim" && userRole !== "isg" && (
             <>
+              <div className="hidden print:block text-center mb-8 border-b-2 border-black pb-4">
+                <h2 className="text-2xl font-bold text-black">Bakım Yönetim Sistemi Özet Raporu</h2>
+                <p className="text-gray-600">Rapor Kapsamı: {filterYil || "Tüm Yıllar"} - {filterAy ? `${filterAy}. Ay` : "Tüm Aylar"} | Hat: {filterHat || "Tümü"}</p>
+                <p className="text-sm text-gray-500 mt-1">Oluşturulma Tarihi: {new Date().toLocaleString('tr-TR')}</p>
+              </div>
+
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 <div className="bg-gray-900 border border-gray-800 p-4 md:p-5 rounded-2xl shadow-lg"><p className="text-xs md:text-sm text-gray-400 font-semibold mb-1">Toplam Yapılan İş</p><h3 className="text-2xl md:text-3xl font-bold text-green-400">{kpiToplamIs} <span className="text-sm text-gray-500 font-normal">Adet</span></h3><p className="text-xs text-gray-500 mt-2 font-medium">Toplam Efor: <span className="text-white">{kpiToplamSure} dk</span></p></div>
                 <div className="bg-gray-900 border border-gray-800 p-4 md:p-5 rounded-2xl shadow-lg"><p className="text-xs md:text-sm text-gray-400 font-semibold mb-1">Duruşlu İş Sayısı</p><h3 className="text-2xl md:text-3xl font-bold text-red-400">{kpiDurusluIsSayisi} <span className="text-sm text-gray-500 font-normal">Adet</span></h3><p className="text-xs text-gray-500 mt-2 font-medium">Kritik Duruş: <span className="text-white">{kpiAylikDurus} dk</span></p></div>
@@ -383,12 +418,12 @@ export default function AdminDashboard() {
                 <div className="flex-1 min-w-[120px]"><label className="block text-xs text-gray-400 mb-1">Ay</label><select value={filterAy} onChange={(e) => setFilterAy(e.target.value)} className="w-full bg-gray-800 rounded-lg p-2 text-sm"><option value="">Tümü</option><option value="1">Ocak</option><option value="2">Şubat</option><option value="3">Mart</option><option value="4">Nisan</option><option value="5">Mayıs</option><option value="6">Haziran</option><option value="7">Temmuz</option><option value="8">Ağustos</option><option value="9">Eylül</option><option value="10">Ekim</option><option value="11">Kasım</option><option value="12">Aralık</option></select></div>
                 <div className="flex-1 min-w-[120px]"><label className="block text-xs text-gray-400 mb-1">Üretim Hattı</label><select value={filterHat} onChange={(e) => { setFilterHat(e.target.value); setFilterEkipman(""); }} className="w-full bg-gray-800 rounded-lg p-2 text-sm"><option value="">Tümü</option>{hatListesi.map(h => <option key={h} value={h}>{h}</option>)}</select></div>
                 <div className="flex-1 min-w-[120px]"><label className="block text-xs text-gray-400 mb-1">Ekipman</label><select value={filterEkipman} onChange={(e) => setFilterEkipman(e.target.value)} disabled={!filterHat} className="w-full bg-gray-800 rounded-lg p-2 text-sm disabled:opacity-50"><option value="">{filterHat ? "Tüm Ekipmanlar" : "Önce Hat Seçin"}</option>{ekipmanListesi.map(e => <option key={e} value={e}>{e}</option>)}</select></div>
-                <button onClick={() => {setFilterYil(""); setFilterAy(""); setFilterHat(""); setFilterEkipman("");}} className="bg-red-900/40 text-red-400 px-4 py-2 rounded-lg text-sm h-9">Bakımı Sıfırla</button>
+                <button onClick={() => {setFilterYil(""); setFilterAy(""); setFilterHat(""); setFilterEkipman("");}} className="bg-red-900/40 text-red-400 px-4 py-2 rounded-lg text-sm h-9">Sıfırla</button>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
-                <div className="bg-gray-900 border border-gray-800 p-4 md:p-6 rounded-2xl"><h2 className="text-lg font-bold mb-6 text-green-400 print:text-black">Yapılan İşler</h2>{grafikTumIslerVerisi.length > 0 ? (<div className="h-72 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikTumIslerVerisi} margin={{ top: 25, right: 5, left: -25, bottom: 5 }}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="isim" tick={{fontSize: 10, fill: '#9CA3AF'}} interval={0} angle={-15} textAnchor="end" /><YAxis tick={{fontSize: 10, fill: '#9CA3AF'}} /><Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} trigger="hover" /><Legend wrapperStyle={{ fontSize: '11px', paddingTop: '15px' }} /><Bar name="İş Adedi" dataKey="adet" fill="#10B981" maxBarSize={40}><LabelList dataKey="adet" position="top" fill="#10B981" fontSize={11} fontWeight="bold" /></Bar><Bar name="Süre (Dk)" dataKey="dakika" fill="#3B82F6" maxBarSize={40}><LabelList dataKey="dakika" position="top" fill="#3B82F6" fontSize={11} fontWeight="bold" /></Bar></BarChart></ResponsiveContainer></div>) : <div className="h-48 flex justify-center items-center text-gray-500 border border-dashed border-gray-800 rounded-xl">Filtreye uygun veri yok</div>}</div>
-                <div className="bg-gray-900 border border-gray-800 p-4 md:p-6 rounded-2xl"><h2 className="text-lg font-bold mb-6 text-red-400 print:text-black">Sadece Duruşlu Arızalar</h2>{grafikDurusVerisi.length > 0 ? (<div className="h-72 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikDurusVerisi} margin={{ top: 25, right: 5, left: -25, bottom: 5 }}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="isim" tick={{fontSize: 10, fill: '#9CA3AF'}} interval={0} angle={-15} textAnchor="end" /><YAxis tick={{fontSize: 10, fill: '#9CA3AF'}} /><Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} trigger="hover" /><Legend wrapperStyle={{ fontSize: '11px', paddingTop: '15px' }} /><Bar name="Duruş Adedi" dataKey="adet" fill="#F59E0B" maxBarSize={40}><LabelList dataKey="adet" position="top" fill="#F59E0B" fontSize={11} fontWeight="bold" /></Bar><Bar name="Süre (Dk)" dataKey="dakika" fill="#EF4444" maxBarSize={40}><LabelList dataKey="dakika" position="top" fill="#EF4444" fontSize={11} fontWeight="bold" /></Bar></BarChart></ResponsiveContainer></div>) : <div className="h-48 flex justify-center items-center text-gray-500 border border-dashed border-gray-800 rounded-xl">Filtreye uygun duruş yok</div>}</div>
+                <div className="bg-gray-900 border border-gray-800 p-4 md:p-6 rounded-2xl"><h2 className="text-lg font-bold mb-6 text-green-400 print:text-black">Yapılan İşler</h2>{grafikTumIslerVerisi.length > 0 ? (<div className="h-72 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikTumIslerVerisi} margin={{ top: 25, right: 5, left: -25, bottom: 5 }}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="isim" tick={{fontSize: 10, fill: '#9CA3AF'}} interval={0} angle={-15} textAnchor="end" /><YAxis tick={{fontSize: 10, fill: '#9CA3AF'}} /><Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} trigger="hover" /><Legend wrapperStyle={{ fontSize: '11px', paddingTop: '15px' }} /><Bar name="İş Adedi" dataKey="adet" fill="#10B981" maxBarSize={40}><LabelList dataKey="adet" position="top" fill="#10B981" fontSize={11} fontWeight="bold" /></Bar><Bar name="Süre (Dk)" dataKey="dakika" fill="#3B82F6" maxBarSize={40}><LabelList dataKey="dakika" position="top" fill="#3B82F6" fontSize={11} fontWeight="bold" /></Bar></BarChart></ResponsiveContainer></div>) : <div className="h-48 flex justify-center items-center text-gray-500 border border-dashed border-gray-800 rounded-xl">Veri yok</div>}</div>
+                <div className="bg-gray-900 border border-gray-800 p-4 md:p-6 rounded-2xl"><h2 className="text-lg font-bold mb-6 text-red-400 print:text-black">Sadece Duruşlu Arızalar</h2>{grafikDurusVerisi.length > 0 ? (<div className="h-72 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikDurusVerisi} margin={{ top: 25, right: 5, left: -25, bottom: 5 }}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="isim" tick={{fontSize: 10, fill: '#9CA3AF'}} interval={0} angle={-15} textAnchor="end" /><YAxis tick={{fontSize: 10, fill: '#9CA3AF'}} /><Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} trigger="hover" /><Legend wrapperStyle={{ fontSize: '11px', paddingTop: '15px' }} /><Bar name="Duruş Adedi" dataKey="adet" fill="#F59E0B" maxBarSize={40}><LabelList dataKey="adet" position="top" fill="#F59E0B" fontSize={11} fontWeight="bold" /></Bar><Bar name="Süre (Dk)" dataKey="dakika" fill="#EF4444" maxBarSize={40}><LabelList dataKey="dakika" position="top" fill="#EF4444" fontSize={11} fontWeight="bold" /></Bar></BarChart></ResponsiveContainer></div>) : <div className="h-48 flex justify-center items-center text-gray-500 border border-dashed border-gray-800 rounded-xl">Veri yok</div>}</div>
               </div>
 
               <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl print-break">
@@ -407,14 +442,14 @@ export default function AdminDashboard() {
                   <table className="w-full text-left border-collapse text-sm md:text-base">
                     <thead>
                       <tr className="border-b border-gray-800 text-gray-400 print:text-black">
-                        <th className="pb-3 px-2 md:px-4">Teknisyen Adı</th><th className="pb-3 px-2 md:px-4">Toplam İş</th><th className="pb-3 px-2 md:px-4">Toplam Efor</th><th className="pb-3 px-4">MTTR</th>
+                        <th className="pb-3 px-2 md:px-4">Teknisyen Adı</th><th className="pb-3 px-2 md:px-4">Toplam İş</th><th className="pb-3 px-2 md:px-4">Toplam Efor</th><th className="pb-3 px-2">MTTR</th>
                       </tr>
                     </thead>
                     <tbody>
                       {personelPerformans.map((p, index) => {
                         const ortalama = p.isSayisi > 0 ? (p.eforDk / p.isSayisi).toFixed(1) : "0";
                         return (
-                          <tr key={index} className="border-b border-gray-800 print:border-gray-300 perf-row">
+                          <tr key={index} className="border-b border-gray-800 print:border-gray-300 perf-row hover:bg-gray-800/50 transition">
                             <td className="py-4 px-2 md:px-4 font-medium text-blue-300 print:text-black">{index === 0 ? "🥇 " : index === 1 ? "🥈 " : index === 2 ? "🥉 " : ""}{p.isim}</td>
                             <td className="py-4 px-2 md:px-4 text-green-400 print:text-black">{p.isSayisi} Adet</td>
                             <td className="py-4 px-2 md:px-4 text-gray-300 print:text-black">{p.eforDk} Dakika</td>

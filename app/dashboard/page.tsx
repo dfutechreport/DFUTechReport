@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, Suspense } from "react";
-import { collection, getDocs, addDoc, doc, getDoc, updateDoc, arrayUnion, query, where } from "firebase/firestore";
+import { collection, getDocs, addDoc, doc, getDoc, updateDoc, arrayUnion, query, where, orderBy } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../../lib/firebase";
 import { useForm, Controller } from "react-hook-form";
@@ -53,7 +53,8 @@ function DashboardIcerik() {
   // ALARM STATE'LERİ
   const [aktifIsler, setAktifIsler] = useState<any[]>([]);
   const [aktifEked, setAktifEked] = useState<any[]>([]); 
-  const [aktifIsgAlarmlari, setAktifIsgAlarmlari] = useState<any[]>([]); // YENİ: KAR İSG Alarmları
+  const [aktifIsgAlarmlari, setAktifIsgAlarmlari] = useState<any[]>([]); 
+  const [aktifPmAlarmlari, setAktifPmAlarmlari] = useState<any[]>([]); // YENİ: PM Mavi Alarmı
 
   const [isAutoFilled, setIsAutoFilled] = useState(false);
 
@@ -116,41 +117,34 @@ function DashboardIcerik() {
   }, [searchParams, setValue, assets]);
 
   const fetchAktifAlarmlarVeKPI = async () => {
-    // 1. İş Emirlerini İkiye Böl (KAR vs Normal İşler)
     const wQ = query(collection(db, "work_orders"), where("durum", "==", "Açık"));
     const wSnap = await getDocs(wQ);
-        const dataW: any[] = wSnap.docs.map(d => ({ id: d.id, ...d.data(), gercekZaman: d.data().kayitTarihi ? d.data().kayitTarihi.toDate().getTime() : 0 }));
+    const dataW: any[] = wSnap.docs.map(d => ({ id: d.id, ...d.data(), gercekZaman: d.data().kayitTarihi ? d.data().kayitTarihi.toDate().getTime() : 0 }));
     
+    // İşleri üçe böl (İSG KAR, PM Planlı Bakım, Normal İş)
     const isgAlarmlari = dataW.filter(d => d.ekipmanAdi === "KAR devreye alma");
-    const normalIsler = dataW.filter(d => d.ekipmanAdi !== "KAR devreye alma");
+    const pmAlarmlari = dataW.filter(d => d.sorunTipi === "Planlı Bakım");
+    const normalIsler = dataW.filter(d => d.ekipmanAdi !== "KAR devreye alma" && d.sorunTipi !== "Planlı Bakım");
 
     setAktifIsgAlarmlari(isgAlarmlari.sort((a, b) => b.gercekZaman - a.gercekZaman));
+    setAktifPmAlarmlari(pmAlarmlari.sort((a, b) => b.gercekZaman - a.gercekZaman));
     setAktifIsler(normalIsler.sort((a, b) => b.gercekZaman - a.gercekZaman).slice(0, 5));
 
-    // 2. EKED Alarmları
     const eQ = query(collection(db, "eked_logs"), where("durum", "==", "Açık"));
     const eSnap = await getDocs(eQ);
     setAktifEked(eSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
-    // 3. KPI Hesaplamaları
     const logsSnap = await getDocs(collection(db, "maintenance_logs"));
     let topDurusDk = 0; let topIs = 0; let topMudahaleDk = 0; let durusIsSayisi = 0;
 
     logsSnap.forEach((document) => {
       const data = document.data();
       const sure = Number(data.toplamSureDakika) || 0;
-      topIs++;
-      topMudahaleDk += sure;
-      if (data.isDuruslu) {
-        topDurusDk += sure;
-        durusIsSayisi++;
-      }
+      topIs++; topMudahaleDk += sure;
+      if (data.isDuruslu) { topDurusDk += sure; durusIsSayisi++; }
     });
 
-    setKpiToplamIs(topIs);
-    setKpiToplamSure(topMudahaleDk);
-    setKpiAylikDurus(topDurusDk);
-    setKpiDurusluIsSayisi(durusIsSayisi);
+    setKpiToplamIs(topIs); setKpiToplamSure(topMudahaleDk); setKpiAylikDurus(topDurusDk); setKpiDurusluIsSayisi(durusIsSayisi);
   };
 
   useEffect(() => {
@@ -207,11 +201,8 @@ function DashboardIcerik() {
 
   const handleIsiTamamla = async (islem: any) => {
     if (!window.confirm("Bu işi bitirdiğinizi onaylıyor musunuz? Onayladıktan sonra süresini girmek için form otomatik olarak açılacaktır.")) return;
-
     try {
-      await updateDoc(doc(db, "work_orders", islem.id), {
-        durum: "Kapalı", tamamlayanKisi: userName, tamamlanmaTarihi: new Date()
-      });
+      await updateDoc(doc(db, "work_orders", islem.id), { durum: "Kapalı", tamamlayanKisi: userName, tamamlanmaTarihi: new Date() });
       fetchAktifAlarmlarVeKPI();
       setSeciliHat(islem.hatAdi);
       setValue("hatAdi", islem.hatAdi);
@@ -223,6 +214,10 @@ function DashboardIcerik() {
       formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       setBasariMesaji("Üretim bildirimi başarıyla kapatıldı! Lütfen harcadığınız süreyi girerek performansınızı kaydedin.");
     } catch (error) { alert("Hata oluştu."); }
+  };
+
+  const handlePMBasla = (islem: any) => {
+    window.location.href = `/dashboard/periyodik-bakim?makine=${encodeURIComponent(islem.ekipmanAdi)}&pmOrderId=${islem.id}`;
   };
 
   const benzersizHatlar = Array.from(new Set(assets.map(a => a.hatAdi)));
@@ -249,6 +244,7 @@ function DashboardIcerik() {
   return (
     <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8 relative">
       
+      {/* DUYURULAR */}
       {showDuyuruModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80 backdrop-blur-sm p-4">
           <div className="bg-gray-900 border-2 border-yellow-500 rounded-2xl shadow-2xl p-8 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
@@ -276,14 +272,13 @@ function DashboardIcerik() {
           </div>
           <div className="flex gap-3">
             {(userRole === "admin" || userRole === "operator" || userRole === "uretim") && (
-              <a href="/admin" className="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg transition text-sm flex items-center font-semibold text-blue-400">
-                {userRole === "admin" ? "Yönetim Paneline Dön" : "İzleme Paneline Dön"}
-              </a>
+              <Link href="/admin" className="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg transition text-sm flex items-center font-semibold text-blue-400">Yönetim Paneline Dön</Link>
             )}
             <button onClick={() => { auth.signOut(); window.location.href="/"; }} className="bg-red-900/50 hover:bg-red-600 text-red-400 px-4 py-2 rounded-lg border border-red-800/50">Çıkış</button>
           </div>
         </div>
 
+        {/* 4'LÜ KPI KARTLARI */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <div className="bg-gray-900 border border-gray-800 p-4 rounded-2xl shadow-lg"><p className="text-xs text-gray-400 font-semibold mb-1">Toplam Yapılan İş</p><h3 className="text-2xl font-bold text-green-400">{kpiToplamIs} <span className="text-xs text-gray-500 font-normal">Adet</span></h3><p className="text-[10px] text-gray-500 mt-2 font-medium">Toplam Efor: <span className="text-white">{kpiToplamSure} dk</span></p></div>
           <div className="bg-gray-900 border border-gray-800 p-4 rounded-2xl shadow-lg"><p className="text-xs text-gray-400 font-semibold mb-1">Duruşlu İş Sayısı</p><h3 className="text-2xl font-bold text-red-400">{kpiDurusluIsSayisi} <span className="text-xs text-gray-500 font-normal">Adet</span></h3><p className="text-[10px] text-gray-500 mt-2 font-medium">Kritik Duruş: <span className="text-white">{kpiAylikDurus} dk</span></p></div>
@@ -291,64 +286,57 @@ function DashboardIcerik() {
           <div className="bg-gray-900 border border-blue-500/30 p-4 rounded-2xl shadow-[0_0_10px_rgba(59,130,246,0.1)] relative overflow-hidden"><p className="text-xs text-blue-300 font-semibold mb-1 relative z-10">Duruş Yüzdesi (Süre)</p><h3 className="text-2xl font-bold text-blue-400 relative z-10">%{durusSureYuzde}</h3><p className="text-[10px] text-gray-400 mt-2 relative z-10">Toplam efora oranı</p></div>
         </div>
 
+        {/* HIZLI ERİŞİM MENÜSÜ */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-8 no-print">
           <Link href="/admin/aktif-isler" className="bg-red-900/60 hover:bg-red-600 border border-red-500/50 text-red-100 p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition"><span className="relative flex h-2 w-2 mr-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span></span>Aktif İşler</Link>
           <Link href="/admin/is-listesi" className="bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">📋 Yapılan İşler</Link>
           <Link href="/admin/eked" className="bg-yellow-600 hover:bg-yellow-500 text-black p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(202,138,4,0.4)] transition">🔒 EKED Takip</Link>
           <Link href="/admin/eked/arsiv" className="bg-gray-700 hover:bg-gray-600 border border-gray-500 text-gray-200 p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">🗄️ EKED Arşivi</Link>
+          <Link href="/dashboard/pano-kayit" className="bg-indigo-700 hover:bg-indigo-600 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(67,56,202,0.4)] transition">🔌 Pano Kayıt</Link>
+          <Link href="/dashboard/pano-listesi" className="bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">🔌 Pano Listesi</Link>
           <Link href="/dashboard/kontrol-formlari" className="bg-cyan-600 hover:bg-cyan-500 text-white p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(6,182,212,0.4)] transition">✅ Kontrol Formları</Link>
           <Link href="/dashboard/sayac" className="bg-emerald-600 hover:bg-emerald-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">⚡ Sayaç Okuma</Link>
           <Link href="/dashboard/mesai" className="bg-teal-600 hover:bg-teal-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">⏰ Fazla Mesai</Link>
-         
-          {/* YENİ PERİYODİK BAKIM (PM) BUTONLARI (KONTROL FORMLARI YERİNE) */}
-          {(userRole === "admin" || userRole === "operator" || userRole === "isg" || userRole === "teknisyen") && (
-            <>
-              <Link href="/dashboard/periyodik-bakim" className="bg-teal-600 hover:bg-teal-500 text-white p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(20,184,166,0.4)] transition">
-                ✅ Periyodik Bakım (PM) Formu
-              </Link>
-              <Link href="/admin/periyodik-bakim-arsiv" className="bg-gray-800 hover:bg-gray-700 border border-teal-700/50 text-teal-300 p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">
-                🗄️ Periyodik Bakım Arşivi
-              </Link>
-            </>
-          )}
- {(userRole === "admin" || userRole === "operator") && (
-            <Link href="/admin/yedek-parca" className="bg-fuchsia-700 hover:bg-fuchsia-600 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(192,38,211,0.4)] transition">⚙️ Yedek Parça</Link>
-          )}
         </div>
 
-        {/* YENİ EKLENEN: AKTİF İSG BİLDİRİMLERİ (KAR İHLALLERİ) */}
+        {/* ALARMLAR (ISG, PM, NORMAL) */}
         {aktifIsgAlarmlari.length > 0 && (
           <div className="bg-red-900/40 border-[3px] border-red-500 p-6 rounded-2xl mb-10 shadow-[0_0_30px_rgba(239,68,68,0.5)] no-print relative overflow-hidden">
             <div className="absolute inset-0 opacity-20 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#ef4444_10px,#ef4444_20px)]"></div>
-            <h2 className="text-2xl font-bold text-red-400 mb-6 flex items-center gap-2 relative z-10">
-              <span className="relative flex h-5 w-5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-5 w-5 bg-red-500"></span></span>
-              ACİL İSG ALARMI: KAR DEVRE DIŞI KALMIŞTIR! (Müdahale Bekliyor)
-            </h2>
+            <h2 className="text-2xl font-bold text-red-400 mb-6 flex items-center gap-2 relative z-10"><span className="relative flex h-5 w-5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-5 w-5 bg-red-500"></span></span> ACİL İSG ALARMI: KAR DEVRE DIŞI KALMIŞTIR! (Müdahale Bekliyor)</h2>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 relative z-10">
               {aktifIsgAlarmlari.map(islem => (
                 <div key={islem.id} className="bg-gray-900 border border-red-500 p-5 rounded-xl shadow-lg relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div className="absolute top-0 left-0 w-2 h-full bg-red-500 animate-pulse"></div>
-                  <div>
-                    <p className="text-xs text-gray-400 mb-1">{islem.kayitTarihi?.toDate().toLocaleString('tr-TR')} | Bildiren: {islem.bildirenKisi}</p>
-                    <p className="font-bold text-white text-lg">{islem.hatAdi} <span className="text-red-400 font-medium text-sm">({islem.ekipmanAdi})</span></p>
-                    <p className="text-gray-300 text-sm mt-1">{islem.aciklama}</p>
-                  </div>
-                  <button onClick={() => handleIsiTamamla(islem)} className="w-full md:w-auto whitespace-nowrap bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-6 rounded-lg transition shadow-lg border border-red-400">
-                    ✅ İşi Tamamla (KAR'ı Devreye Al)
-                  </button>
+                  <div><p className="text-xs text-gray-400 mb-1">{islem.kayitTarihi?.toDate().toLocaleString('tr-TR')} | Bildiren: {islem.bildirenKisi}</p><p className="font-bold text-white text-lg">{islem.hatAdi} <span className="text-red-400 font-medium text-sm">({islem.ekipmanAdi})</span></p><p className="text-gray-300 text-sm mt-1">{islem.aciklama}</p></div>
+                  <button onClick={() => handleIsiTamamla(islem)} className="w-full md:w-auto whitespace-nowrap bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-6 rounded-lg transition shadow-lg border border-red-400">✅ İşi Tamamla (KAR'ı Devreye Al)</button>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* DİĞER AKTİF İŞ EMİRLERİ */}
+        {aktifPmAlarmlari.length > 0 && (
+          <div className="bg-cyan-900/30 border-2 border-cyan-500/50 p-6 rounded-2xl mb-10 shadow-[0_0_20px_rgba(6,182,212,0.3)] no-print relative overflow-hidden">
+            <h2 className="text-xl font-bold text-cyan-400 mb-6 flex items-center gap-2 relative z-10"><span className="relative flex h-4 w-4"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span><span className="relative inline-flex rounded-full h-4 w-4 bg-cyan-500"></span></span> Yaklaşan Planlı Bakımlar (Periyodik Bakım Günü Geldi)</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 relative z-10">
+              {aktifPmAlarmlari.map(islem => (
+                <div key={islem.id} className="bg-gray-900 border border-cyan-800/50 p-5 rounded-xl shadow-lg relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition hover:border-cyan-500/80">
+                  <div className="absolute top-0 left-0 w-2 h-full bg-cyan-500"></div>
+                  <div><p className="text-xs text-gray-400 mb-1">Sistem Otomasyonu | Planlı İş Emri</p><p className="font-bold text-white text-lg">{islem.hatAdi} <span className="text-cyan-400 font-medium text-sm">({islem.ekipmanAdi})</span></p><p className="text-gray-300 text-sm mt-1">{islem.aciklama}</p></div>
+                  <button onClick={() => handlePMBasla(islem)} className="w-full md:w-auto whitespace-nowrap bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-lg transition shadow-lg">✅ PM Formuna Git</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {aktifIsler.length > 0 && (
           <div className="bg-red-900/20 border-2 border-red-500/50 p-6 rounded-2xl mb-10 shadow-2xl">
-            <h2 className="text-xl font-bold text-red-400 mb-6 flex items-center gap-2"><span className="relative flex h-4 w-4"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span></span> Üretimden Gelen Aktif Bildirimler</h2>
+            <h2 className="text-xl font-bold text-red-400 mb-6 flex items-center gap-2"><span className="relative flex h-4 w-4"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span></span> Üretimden Gelen Aktif Bildirimler (Müdahale Bekliyor)</h2>
             <div className="space-y-4">
               {aktifIsler.map(islem => (
-                <div key={islem.id} className="bg-gray-900 border border-red-800/50 p-5 rounded-xl shadow-lg relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition hover:border-red-500/80">
+                <div key={islem.id} className={`bg-gray-900 border border-red-800/50 p-5 rounded-xl shadow-lg relative overflow-hidden flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition hover:border-red-500/80`}>
                   <div className="absolute top-0 left-0 w-1 h-full bg-red-500"></div>
                   <div><p className="text-xs text-gray-400 mb-1">{islem.kayitTarihi?.toDate().toLocaleString('tr-TR')} | Bildiren: {islem.bildirenKisi}</p><p className="font-bold text-white text-lg">{islem.hatAdi} <span className="text-red-400 font-medium text-sm">({islem.ekipmanAdi})</span></p><p className="text-gray-300 text-sm mt-1 line-clamp-2">{islem.aciklama}</p></div>
                   <button onClick={() => handleIsiTamamla(islem)} className="w-full md:w-auto whitespace-nowrap bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-lg transition shadow-[0_0_15px_rgba(22,163,74,0.4)]">✅ İşi Tamamla</button>
@@ -358,7 +346,6 @@ function DashboardIcerik() {
           </div>
         )}
 
-        {/* EKED GÜVENLİK ALARMI */}
         {aktifEked.length > 0 && (
           <div className="bg-yellow-900/20 border-2 border-yellow-500/50 p-6 rounded-2xl mb-10 shadow-[0_0_20px_rgba(202,138,4,0.15)] relative overflow-hidden">
             <div className="absolute inset-0 opacity-10 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#ca8a04_10px,#ca8a04_20px)]"></div>
@@ -374,6 +361,7 @@ function DashboardIcerik() {
           </div>
         )}
 
+        {/* ARIZA FORMU */}
         <div ref={formRef} className={`bg-gray-900 border p-6 md:p-8 rounded-2xl shadow-2xl transition-all ${isAutoFilled ? 'border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.3)]' : 'border-gray-800'}`}>
           <h2 className={`text-xl font-bold mb-6 flex items-center gap-2 ${isAutoFilled ? 'text-green-400' : 'text-orange-400'}`}>
             {isAutoFilled ? "✅ Otomatik Dolduruldu (İş Emri Kapatıldı)" : "Yeni Vardiya / Bakım Raporu"}
@@ -389,6 +377,7 @@ function DashboardIcerik() {
                   <option value="">-- Vardiya Seçiniz --</option><option value="08:00 - 16:00">08:00 - 16:00 (Gündüz)</option><option value="16:00 - 24:00">16:00 - 24:00 (Akşam)</option><option value="24:00 - 08:00">24:00 - 08:00 (Gece)</option>
                 </select>
               </div>
+
               <div className="relative" ref={dropdownRef}>
                 <label className="block text-sm font-bold text-blue-400 mb-2">İşi Yapan Ekip Üyeleri <span className="text-red-500">*</span></label>
                 <div onClick={() => setDropdownAcik(!dropdownAcik)} className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white cursor-pointer flex justify-between items-center">
@@ -411,7 +400,7 @@ function DashboardIcerik() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">Üretim Hattı</label>
-                <select {...register("hatAdi")} disabled={isAutoFilled} onChange={(e) => { setSeciliHat(e.target.value); setValue("hatAdi", e.target.value); setValue("ekipmanAdi", ""); }} className={`w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 ${isAutoFilled ? 'opacity-60 cursor-not-allowed' : ''}`}>
+                <select {...register("hatAdi")} disabled={isAutoFilled} onChange={(e) => { setSeciliHat(e.target.value); setValue("hatAdi", e.target.value); setValue("ekipmanAdi", ""); }} className={`w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 focus:border-blue-500 ${isAutoFilled ? 'opacity-60 cursor-not-allowed' : ''}`}>
                   <option value="">-- Hat Seçiniz --</option>{benzersizHatlar.map(hat => <option key={hat} value={hat}>{hat}</option>)}
                 </select>
               </div>
@@ -444,7 +433,7 @@ function DashboardIcerik() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-fuchsia-900/10 p-4 rounded-xl border border-fuchsia-800/30">
-              <div className="md:col-span-3 mb-[-10px]"><p className="text-fuchsia-400 font-bold text-sm">⚙️ Kullanılan Yedek Parça</p></div>
+              <div className="md:col-span-3 mb-[-10px]"><p className="text-fuchsia-400 font-bold text-sm flex items-center gap-2">⚙️ Kullanılan Yedek Parça <span className="text-gray-500 font-normal text-xs">(Kullanılmadıysa boş bırakın)</span></p></div>
               <div><input type="text" {...register("yedekParcaKodu")} placeholder="Stok Kodu / Adı" className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3" /></div>
               <div><input type="number" step="0.01" {...register("yedekParcaMiktar")} placeholder="Miktar" className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3" /></div>
               <div><select {...register("yedekParcaBirim")} className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3"><option value="Adet">Adet</option><option value="Metre">Metre</option><option value="KG">KG</option><option value="Litre">Litre</option></select></div>
@@ -453,12 +442,15 @@ function DashboardIcerik() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-800/50 p-4 rounded-xl border border-gray-700">
               <div><label className="block text-sm font-medium text-gray-400 mb-2">Başlangıç Saati</label><input type="datetime-local" {...register("baslangicSaati")} className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 focus:border-blue-500" /></div>
               <div><label className="block text-sm font-medium text-gray-400 mb-2">Bitiş Saati</label><input type="datetime-local" {...register("bitisSaati")} className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 focus:border-blue-500" /></div>
-              <div className="md:col-span-2 text-center pt-2"><p className="text-sm text-gray-400">Süre:</p><p className="text-3xl font-bold text-blue-500">{hesaplananSure} <span className="text-lg text-gray-500">Dk</span></p></div>
+              <div className="md:col-span-2 text-center pt-2"><p className="text-sm text-gray-400">Otomatik Hesaplanan Süre:</p><p className="text-3xl font-bold text-blue-500">{hesaplananSure} <span className="text-lg text-gray-500">Dakika</span></p></div>
             </div>
 
-            <div><textarea {...register("aciklama")} rows={4} placeholder="Açıklama / Yapılan İşlem" className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3" /></div>
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-2">Açıklama / Yapılan İşlem</label>
+              <textarea {...register("aciklama")} rows={4} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 focus:border-blue-500" />
+            </div>
 
-            <button type="submit" disabled={isSubmitting || hesaplananSure <= 0} className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-4 px-4 rounded-xl disabled:opacity-50">
+            <button type="submit" disabled={isSubmitting || hesaplananSure <= 0} className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-4 px-4 rounded-xl disabled:opacity-50 transition-all">
               {isSubmitting ? "Kaydediliyor..." : "Performansıma Kaydet ve İşi Bitir"}
             </button>
           </form>

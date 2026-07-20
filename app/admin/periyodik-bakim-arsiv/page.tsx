@@ -11,6 +11,14 @@ export default function PeriyodikBakimArsivi() {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState("");
 
+  // YENİ: FİLTRELER
+  const [filterYil, setFilterYil] = useState("");
+  const [filterAy, setFilterAy] = useState("");
+  const [filterHat, setFilterHat] = useState("");
+
+  const [yilListesi, setYilListesi] = useState<string[]>([]);
+  const [hatListesi, setHatListesi] = useState<string[]>([]);
+
   const fetchArsiv = async () => {
     try {
       const q = query(collection(db, "pm_logs"), orderBy("kayitTarihi", "desc"));
@@ -20,9 +28,21 @@ export default function PeriyodikBakimArsivi() {
         return {
           id: document.id, ...d,
           tarihFormatli: d.kayitTarihi ? d.kayitTarihi.toDate().toLocaleString('tr-TR') : "-",
-          gercekZaman: d.kayitTarihi ? d.kayitTarihi.toDate().getTime() : 0
+          gercekZaman: d.kayitTarihi ? d.kayitTarihi.toDate().getTime() : 0,
+          yil: d.kayitTarihi ? d.kayitTarihi.toDate().getFullYear().toString() : "",
+          ay: d.kayitTarihi ? (d.kayitTarihi.toDate().getMonth() + 1).toString() : ""
         };
       });
+
+      const yillar = new Set<string>();
+      const hatlar = new Set<string>();
+      data.forEach(d => {
+        if (d.yil) yillar.add(d.yil);
+        if (d.hatAdi) hatlar.add(d.hatAdi);
+      });
+      setYilListesi(Array.from(yillar).sort((a, b) => Number(b) - Number(a)));
+      setHatListesi(Array.from(hatlar).sort());
+
       setLogs(data.sort((a, b) => b.gercekZaman - a.gercekZaman));
     } catch (error) { console.error(error); } finally { setLoading(false); }
   };
@@ -51,20 +71,18 @@ export default function PeriyodikBakimArsivi() {
     try { await deleteDoc(doc(db, "pm_logs", id)); fetchArsiv(); } catch (error) { alert("Hata."); }
   };
 
+  const filteredLogs = logs.filter(log => {
+    if (filterYil && log.yil !== filterYil) return false;
+    if (filterAy && log.ay !== filterAy) return false;
+    if (filterHat && log.hatAdi !== filterHat) return false;
+    return true;
+  });
+
   if (loading) return <div className="min-h-screen bg-gray-950 flex justify-center items-center text-white">Yükleniyor...</div>;
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{__html: `
-        @media print {
-          body { background: white !important; color: black !important; }
-          .no-print { display: none !important; }
-          .bg-gray-950, .bg-gray-900 { background: white !important; }
-          .text-white, .text-gray-400 { color: black !important; }
-          .border-gray-800, .border-gray-700 { border-color: #ddd !important; }
-          .shadow-lg { box-shadow: none !important; }
-        }
-      `}} />
+      <style dangerouslySetInnerHTML={{__html: `@media print { body { background: white !important; color: black !important; } .no-print { display: none !important; } .bg-gray-950, .bg-gray-900 { background: white !important; } .text-white, .text-gray-400 { color: black !important; } .border-gray-800, .border-gray-700 { border-color: #ddd !important; } .shadow-lg { box-shadow: none !important; } }`}} />
 
       <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8">
         <div className="max-w-7xl mx-auto">
@@ -75,20 +93,42 @@ export default function PeriyodikBakimArsivi() {
               <p className="text-gray-400 mt-1 print:text-black">Sahadan doldurulan tüm periyodik bakım (Checklist) formlarının dökümü.</p>
             </div>
             <div className="flex gap-3 no-print">
-              <button onClick={() => window.print()} className="bg-white text-gray-900 font-bold px-4 py-2 rounded-lg shadow-lg hover:bg-gray-200 transition flex items-center gap-2 text-sm">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg> PDF Çıktısı Al
-              </button>
+              <button onClick={() => window.print()} className="bg-white text-gray-900 font-bold px-4 py-2 rounded-lg shadow-lg hover:bg-gray-200 transition flex items-center gap-2 text-sm">PDF Çıktısı Al</button>
               <Link href={userRole === "admin" || userRole === "operator" ? "/admin" : "/dashboard"} className="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm transition">← Panele Dön</Link>
             </div>
           </div>
 
+          {/* YENİ: PM ARŞİVİ FİLTRE ÇUBUĞU */}
+          <div className="bg-gray-900 border border-teal-800/50 p-4 rounded-xl shadow-lg mb-8 flex flex-wrap gap-4 items-end no-print">
+            <div className="flex-1 min-w-[120px]">
+              <label className="block text-xs text-teal-400 font-bold mb-1">Yıl</label>
+              <select value={filterYil} onChange={e => setFilterYil(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-lg p-2 text-sm focus:border-teal-500">
+                <option value="">Tümü</option>{yilListesi.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            <div className="flex-1 min-w-[120px]">
+              <label className="block text-xs text-teal-400 font-bold mb-1">Ay</label>
+              <select value={filterAy} onChange={e => setFilterAy(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-lg p-2 text-sm focus:border-teal-500">
+                <option value="">Tümü</option><option value="1">Ocak</option><option value="2">Şubat</option><option value="3">Mart</option><option value="4">Nisan</option><option value="5">Mayıs</option><option value="6">Haziran</option><option value="7">Temmuz</option><option value="8">Ağustos</option><option value="9">Eylül</option><option value="10">Ekim</option><option value="11">Kasım</option><option value="12">Aralık</option>
+              </select>
+            </div>
+            <div className="flex-1 min-w-[150px]">
+              <label className="block text-xs text-teal-400 font-bold mb-1">Üretim Hattı</label>
+              <select value={filterHat} onChange={e => setFilterHat(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-lg p-2 text-sm focus:border-teal-500">
+                <option value="">Tümü</option>{hatListesi.map(h => <option key={h} value={h}>{h}</option>)}
+              </select>
+            </div>
+            <button onClick={() => {setFilterYil(""); setFilterAy(""); setFilterHat("");}} className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm h-9">Sıfırla</button>
+          </div>
+
           <div className="hidden print:block text-center mb-8 border-b-2 border-black pb-4">
             <h2 className="text-2xl font-bold text-black">Periyodik Bakım (PM) Gerçekleşme Raporu</h2>
+            <p className="text-gray-600">Filtre: Yıl {filterYil || "Tümü"} | Ay {filterAy || "Tümü"} | Hat {filterHat || "Tümü"}</p>
             <p className="text-sm text-gray-500 mt-1">Oluşturulma Tarihi: {new Date().toLocaleString('tr-TR')}</p>
           </div>
 
           <div className="bg-gray-900 border border-teal-800/50 p-6 rounded-2xl shadow-[0_0_20px_rgba(20,184,166,0.15)] overflow-x-auto print:border-none print:shadow-none print:p-0">
-            {logs.length === 0 ? <div className="text-center py-10 text-gray-500">Kayıtlı periyodik bakım formu bulunmuyor.</div> : (
+            {filteredLogs.length === 0 ? <div className="text-center py-10 text-gray-500">Kayıtlı periyodik bakım formu bulunmuyor.</div> : (
               <table className="w-full text-left text-sm whitespace-nowrap md:whitespace-normal">
                 <thead>
                   <tr className="border-b border-gray-800 text-gray-400 print:text-black">
@@ -102,7 +142,7 @@ export default function PeriyodikBakimArsivi() {
                   </tr>
                 </thead>
                 <tbody>
-                  {logs.map(log => (
+                  {filteredLogs.map(log => (
                     <tr key={log.id} className="border-b border-gray-800 print:border-gray-300 hover:bg-gray-800/50 transition">
                       <td className="py-4 px-2 text-gray-400 text-xs print:text-black font-bold">{log.tarihFormatli} <br/><span className="text-gray-500">{log.vardiya}</span></td>
                       <td className="py-4 px-2 font-medium text-blue-300 print:text-black">{log.personel}</td>
@@ -132,7 +172,6 @@ export default function PeriyodikBakimArsivi() {
               </table>
             )}
           </div>
-
         </div>
       </div>
     </>

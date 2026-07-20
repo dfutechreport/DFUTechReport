@@ -31,7 +31,7 @@ export default function PMSetup() {
           ekipmanAdi: makineVerisi.ekipman,
           siklik: makineVerisi.siklik,
           maddeler: makineVerisi.maddeler,
-          aktif: True // Gelecekte bir makinenin bakımını durdurmak isterseniz false yapabilirsiniz
+          aktif: true // Gelecekte bir makinenin bakımını durdurmak isterseniz false yapabilirsiniz
         });
         
         setLog(`Kayıt ediliyor: ${i+1} / ${keys.length} (${makineKodu})`);

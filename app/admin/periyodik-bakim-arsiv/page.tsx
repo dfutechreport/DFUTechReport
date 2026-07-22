@@ -36,10 +36,10 @@ export default function PeriyodikBakimArsivi() {
 
       const yillar = new Set<string>();
       const hatlar = new Set<string>();
-      data.forEach(d => {
-        if (d.yil) yillar.add(d.yil);
-        if (d.hatAdi) hatlar.add(d.hatAdi);
-      });
+      data.forEach((d: any) => {
+  if (d.yil) yillar.add(d.yil);
+  if (d.hatAdi) hatlar.add(d.hatAdi);
+});
       setYilListesi(Array.from(yillar).sort((a, b) => Number(b) - Number(a)));
       setHatListesi(Array.from(hatlar).sort());
 

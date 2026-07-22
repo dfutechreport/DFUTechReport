@@ -170,3 +170,10 @@ export default function PeriyodikBakimFormu() {
     </div>
   );
 }
+export default function Page() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-950 text-white flex justify-center items-center">Yükleniyor...</div>}>
+      <PeriyodikBakimIcerik />
+    </Suspense>
+  );
+}

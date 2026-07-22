@@ -287,24 +287,45 @@ export default function AdminDashboard() {
     // Bu state'i yukarıda useState ile tanımlamanız gerekir (bkz. alt bilgi)
     setGlobalMTBF(hesaplananMTBF); 
     // ========================================================
-    // --- MTBF ALGORİTMASI BAŞLANGICI ---
+     // --- MTBF ALGORİTMASI BAŞLANGICI ---
     const ekipmanArizalari: Record<string, number[]> = {};
-    rawLogs.forEach(data => {
-      if (!data.isDuruslu) return; // Sadece duruşlu arızaları baz alıyoruz
-      let t = data.baslangicSaati ? new Date(data.baslangicSaati).getTime() : (data.kayitTarihi ? data.kayitTarihi.toDate().getTime() : 0);
-      if (t && data.ekipmanAdi) {
-        if (!ekipmanArizalari[data.ekipmanAdi]) ekipmanArizalari[data.ekipmanAdi] = [];
-        ekipmanArizalari[data.ekipmanAdi].push(t);
+    
+    rawLogs.forEach((data: any) => {
+      if (data.isDuruslu === true) {
+        let t = 0;
+        if (data.baslangicSaati) {
+          t = new Date(data.baslangicSaati).getTime();
+        } else if (data.kayitTarihi) {
+          t = data.kayitTarihi.toDate().getTime();
+        }
+        
+        if (t > 0 && data.ekipmanAdi) {
+          const ekipmanStr = String(data.ekipmanAdi);
+          if (!ekipmanArizalari[ekipmanStr]) {
+            ekipmanArizalari[ekipmanStr] = [];
+          }
+          ekipmanArizalari[ekipmanStr].push(t);
+        }
       }
     });
 
-    let totalMtbfMs = 0; let mtbfCount = 0;
-    Object.values(ekipmanArizalari).forEach(zamanlar => {
-      if (zamanlar.length > 1) {
-        zamanlar.sort((a, b) => a - b); 
+    let totalMtbfMs = 0; 
+    let mtbfCount = 0;
+    
+    const cihazAdlari = Object.keys(ekipmanArizalari);
+    
+    cihazAdlari.forEach((cihazAdi) => {
+      const zamanlar = ekipmanArizalari[cihazAdi];
+      if (zamanlar && zamanlar.length > 1) {
+        // TypeScript hatasını önlemek için sayısal sıralama garantilendi
+        zamanlar.sort((a: number, b: number) => Number(a) - Number(b)); 
+        
         for (let i = 1; i < zamanlar.length; i++) {
-          totalMtbfMs += (zamanlar[i] - zamanlar[i - 1]);
-          mtbfCount++;
+          const fark = Number(zamanlar[i]) - Number(zamanlar[i - 1]);
+          if (fark > 0) {
+            totalMtbfMs += fark;
+            mtbfCount++;
+          }
         }
       }
     });

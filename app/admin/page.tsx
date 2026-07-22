@@ -51,7 +51,7 @@ export default function AdminDashboard() {
   const [kpiToplamSure, setKpiToplamSure] = useState(0);
   const [kpiAylikDurus, setKpiAylikDurus] = useState(0);
   const [kpiDurusluIsSayisi, setKpiDurusluIsSayisi] = useState(0);
-  
+  const [globalMTBF, setGlobalMTBF] = useState("0");
   const [grafikDurusVerisi, setGrafikDurusVerisi] = useState<any[]>([]);
   const [grafikTumIslerVerisi, setGrafikTumIslerVerisi] = useState<any[]>([]);
   const [personelPerformans, setPersonelPerformans] = useState<any[]>([]);
@@ -209,7 +209,7 @@ export default function AdminDashboard() {
     setGrafikElektrik(formatData(tuketimElektrik)); setGrafikDogalgaz(formatData(tuketimDogalgaz)); setGrafikSu(formatData(tuketimSu));
   }, [rawMeterLogs, filterElektrikSayac, filterDogalgazSayac, filterSuSayac]);
 
-  useEffect(() => {
+    useEffect(() => {
     if (rawLogs.length === 0) return;
     let topDurusDk = 0; let topIsAdedi = 0; let topMudahaleDk = 0; let durusluIsAdedi = 0;
     const tumIslerData: Record<string, { adet: number, dakika: number }> = {};
@@ -257,8 +257,61 @@ export default function AdminDashboard() {
           personelAnaliz[personelIsmi].isSayisi += 1; personelAnaliz[personelIsmi].eforDk += sure;
         });
       }
+    }); // <--- rawLogs.forEach DÖNGÜSÜNÜN BİTTİĞİ YER BURASIDIR
+
+    // ========================================================
+    // YENİ EKLENEN: MTBF HESAPLAMA ALGORİTMASI BURAYA GELECEK
+    // ========================================================
+    const ekipmanArizalari: Record<string, number[]> = {};
+    rawLogs.forEach(data => {
+      if (!data.isDuruslu) return; 
+      let t = data.baslangicSaati ? new Date(data.baslangicSaati).getTime() : (data.kayitTarihi ? data.kayitTarihi.toDate().getTime() : 0);
+      if (t && data.ekipmanAdi) {
+        if (!ekipmanArizalari[data.ekipmanAdi]) ekipmanArizalari[data.ekipmanAdi] = [];
+        ekipmanArizalari[data.ekipmanAdi].push(t);
+      }
     });
 
+    let totalMtbfMs = 0; let mtbfCount = 0;
+    Object.values(ekipmanArizalari).forEach(zamanlar => {
+      if (zamanlar.length > 1) {
+        zamanlar.sort((a, b) => a - b); 
+        for (let i = 1; i < zamanlar.length; i++) {
+          totalMtbfMs += (zamanlar[i] - zamanlar[i - 1]);
+          mtbfCount++;
+        }
+      }
+    });
+
+    const hesaplananMTBF = mtbfCount > 0 ? (totalMtbfMs / mtbfCount / (1000 * 60 * 60)).toFixed(1) : "Veri Yetersiz";
+    // Bu state'i yukarıda useState ile tanımlamanız gerekir (bkz. alt bilgi)
+    setGlobalMTBF(hesaplananMTBF); 
+    // ========================================================
+    // --- MTBF ALGORİTMASI BAŞLANGICI ---
+    const ekipmanArizalari: Record<string, number[]> = {};
+    rawLogs.forEach(data => {
+      if (!data.isDuruslu) return; // Sadece duruşlu arızaları baz alıyoruz
+      let t = data.baslangicSaati ? new Date(data.baslangicSaati).getTime() : (data.kayitTarihi ? data.kayitTarihi.toDate().getTime() : 0);
+      if (t && data.ekipmanAdi) {
+        if (!ekipmanArizalari[data.ekipmanAdi]) ekipmanArizalari[data.ekipmanAdi] = [];
+        ekipmanArizalari[data.ekipmanAdi].push(t);
+      }
+    });
+
+    let totalMtbfMs = 0; let mtbfCount = 0;
+    Object.values(ekipmanArizalari).forEach(zamanlar => {
+      if (zamanlar.length > 1) {
+        zamanlar.sort((a, b) => a - b); 
+        for (let i = 1; i < zamanlar.length; i++) {
+          totalMtbfMs += (zamanlar[i] - zamanlar[i - 1]);
+          mtbfCount++;
+        }
+      }
+    });
+
+    const hesaplananMTBF = mtbfCount > 0 ? (totalMtbfMs / mtbfCount / (1000 * 60 * 60)).toFixed(1) : "Veri Yetersiz";
+    setGlobalMTBF(hesaplananMTBF); 
+    // --- MTBF ALGORİTMASI BİTİŞİ ---
     setEkipmanListesi(Array.from(aktifEkipmanlar).sort()); setPersonelHavuzu(Array.from(tumPersoneller).sort());
     setKpiAylikDurus(topDurusDk); setKpiToplamIs(topIsAdedi); setKpiToplamSure(topMudahaleDk); setKpiDurusluIsSayisi(durusluIsAdedi);
     setGrafikTumIslerVerisi(Object.keys(tumIslerData).map(k => ({ isim: k, ...tumIslerData[k] })).sort((a, b) => b.adet - a.adet));
@@ -439,7 +492,7 @@ export default function AdminDashboard() {
                 <p className="text-sm text-gray-500 mt-1">Oluşturulma Tarihi: {new Date().toLocaleString('tr-TR')}</p>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
                 <div className="bg-gray-900 border border-gray-800 p-4 md:p-5 rounded-2xl shadow-lg"><p className="text-xs md:text-sm text-gray-400 font-semibold mb-1">Toplam Yapılan İş</p><h3 className="text-2xl md:text-3xl font-bold text-green-400">{kpiToplamIs} <span className="text-sm text-gray-500 font-normal">Adet</span></h3><p className="text-xs text-gray-500 mt-2 font-medium">Toplam Efor: <span className="text-white">{kpiToplamSure} dk</span></p></div>
                 <div className="bg-gray-900 border border-gray-800 p-4 md:p-5 rounded-2xl shadow-lg"><p className="text-xs md:text-sm text-gray-400 font-semibold mb-1">Duruşlu İş Sayısı</p><h3 className="text-2xl md:text-3xl font-bold text-red-400">{kpiDurusluIsSayisi} <span className="text-sm text-gray-500 font-normal">Adet</span></h3><p className="text-xs text-gray-500 mt-2 font-medium">Kritik Duruş: <span className="text-white">{kpiAylikDurus} dk</span></p></div>
                 <div className="bg-gray-900 border border-orange-500/30 p-4 md:p-5 rounded-2xl shadow-[0_0_15px_rgba(249,115,22,0.1)] relative overflow-hidden flex flex-col justify-center"><div className="flex justify-between items-center border-b border-gray-700/50 pb-2 mb-2"><span className="text-xs md:text-sm text-green-400 font-bold">Toplam Çalışma:</span><span className="text-lg md:text-xl font-bold text-white">{kpiToplamSure} <span className="text-xs text-gray-400">dk</span></span></div><div className="flex justify-between items-center"><span className="text-xs md:text-sm text-red-400 font-bold">Toplam Duruş:</span><span className="text-lg md:text-xl font-bold text-white">{kpiAylikDurus} <span className="text-xs text-gray-400">dk</span></span></div></div>
@@ -449,6 +502,12 @@ export default function AdminDashboard() {
                   <h3 className="text-2xl md:text-3xl font-bold text-purple-400 relative z-10">{globalMTTR} <span className="text-sm text-gray-500 font-normal">dk / İş</span></h3>
                   <p className="text-xs text-gray-400 mt-2 relative z-10">Ort. Müdahale Süresi</p>
                 </div>
+{/* YENİ MTBF KARTI */}
+<div className="bg-gray-900 border border-emerald-500/30 p-4 md:p-5 rounded-2xl shadow-[0_0_15px_rgba(16,185,129,0.1)] relative overflow-hidden col-span-2 md:col-span-1 lg:col-span-1">
+  <p className="text-xs md:text-sm text-emerald-300 font-semibold mb-1 relative z-10">Tesis Geneli MTBF</p>
+  <h3 className="text-2xl md:text-3xl font-bold text-emerald-400 relative z-10">{globalMTBF} <span className="text-sm text-gray-500 font-normal">{globalMTBF === "Veri Yetersiz" ? "" : "Saat"}</span></h3>
+  <p className="text-xs text-gray-400 mt-2 relative z-10">İki Arıza Arası Ort. Süre</p>
+</div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">

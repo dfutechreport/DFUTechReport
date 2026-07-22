@@ -209,7 +209,7 @@ export default function AdminDashboard() {
     setGrafikElektrik(formatData(tuketimElektrik)); setGrafikDogalgaz(formatData(tuketimDogalgaz)); setGrafikSu(formatData(tuketimSu));
   }, [rawMeterLogs, filterElektrikSayac, filterDogalgazSayac, filterSuSayac]);
 
-    useEffect(() => {
+      useEffect(() => {
     if (rawLogs.length === 0) return;
     let topDurusDk = 0; let topIsAdedi = 0; let topMudahaleDk = 0; let durusluIsAdedi = 0;
     const tumIslerData: Record<string, { adet: number, dakika: number }> = {};
@@ -257,39 +257,10 @@ export default function AdminDashboard() {
           personelAnaliz[personelIsmi].isSayisi += 1; personelAnaliz[personelIsmi].eforDk += sure;
         });
       }
-    }); // <--- rawLogs.forEach DÖNGÜSÜNÜN BİTTİĞİ YER BURASIDIR
-
-    // ========================================================
-    // YENİ EKLENEN: MTBF HESAPLAMA ALGORİTMASI BURAYA GELECEK
-    // ========================================================
-    const ekipmanArizalari: Record<string, number[]> = {};
-    rawLogs.forEach(data => {
-      if (!data.isDuruslu) return; 
-      let t = data.baslangicSaati ? new Date(data.baslangicSaati).getTime() : (data.kayitTarihi ? data.kayitTarihi.toDate().getTime() : 0);
-      if (t && data.ekipmanAdi) {
-        if (!ekipmanArizalari[data.ekipmanAdi]) ekipmanArizalari[data.ekipmanAdi] = [];
-        ekipmanArizalari[data.ekipmanAdi].push(t);
-      }
     });
 
-    let totalMtbfMs = 0; let mtbfCount = 0;
-    Object.values(ekipmanArizalari).forEach(zamanlar => {
-      if (zamanlar.length > 1) {
-        zamanlar.sort((a, b) => a - b); 
-        for (let i = 1; i < zamanlar.length; i++) {
-          totalMtbfMs += (zamanlar[i] - zamanlar[i - 1]);
-          mtbfCount++;
-        }
-      }
-    });
-
-    const hesaplananMTBF = mtbfCount > 0 ? (totalMtbfMs / mtbfCount / (1000 * 60 * 60)).toFixed(1) : "Veri Yetersiz";
-    // Bu state'i yukarıda useState ile tanımlamanız gerekir (bkz. alt bilgi)
-    setGlobalMTBF(hesaplananMTBF); 
-    // ========================================================
-     // --- MTBF ALGORİTMASI BAŞLANGICI ---
+    // --- MTBF ALGORİTMASI ---
     const ekipmanArizalari: Record<string, number[]> = {};
-    
     rawLogs.forEach((data: any) => {
       if (data.isDuruslu === true) {
         let t = 0;
@@ -298,7 +269,6 @@ export default function AdminDashboard() {
         } else if (data.kayitTarihi) {
           t = data.kayitTarihi.toDate().getTime();
         }
-        
         if (t > 0 && data.ekipmanAdi) {
           const ekipmanStr = String(data.ekipmanAdi);
           if (!ekipmanArizalari[ekipmanStr]) {
@@ -311,15 +281,12 @@ export default function AdminDashboard() {
 
     let totalMtbfMs = 0; 
     let mtbfCount = 0;
-    
     const cihazAdlari = Object.keys(ekipmanArizalari);
     
     cihazAdlari.forEach((cihazAdi) => {
       const zamanlar = ekipmanArizalari[cihazAdi];
       if (zamanlar && zamanlar.length > 1) {
-        // TypeScript hatasını önlemek için sayısal sıralama garantilendi
         zamanlar.sort((a: number, b: number) => Number(a) - Number(b)); 
-        
         for (let i = 1; i < zamanlar.length; i++) {
           const fark = Number(zamanlar[i]) - Number(zamanlar[i - 1]);
           if (fark > 0) {
@@ -332,15 +299,22 @@ export default function AdminDashboard() {
 
     const hesaplananMTBF = mtbfCount > 0 ? (totalMtbfMs / mtbfCount / (1000 * 60 * 60)).toFixed(1) : "Veri Yetersiz";
     setGlobalMTBF(hesaplananMTBF); 
-    // --- MTBF ALGORİTMASI BİTİŞİ ---
-    setEkipmanListesi(Array.from(aktifEkipmanlar).sort()); setPersonelHavuzu(Array.from(tumPersoneller).sort());
-    setKpiAylikDurus(topDurusDk); setKpiToplamIs(topIsAdedi); setKpiToplamSure(topMudahaleDk); setKpiDurusluIsSayisi(durusluIsAdedi);
+    // --- MTBF ALGORİTMASI BİTİŞ ---
+
+    setEkipmanListesi(Array.from(aktifEkipmanlar).sort()); 
+    setPersonelHavuzu(Array.from(tumPersoneller).sort());
+    setKpiAylikDurus(topDurusDk); 
+    setKpiToplamIs(topIsAdedi); 
+    setKpiToplamSure(topMudahaleDk); 
+    setKpiDurusluIsSayisi(durusluIsAdedi);
     setGrafikTumIslerVerisi(Object.keys(tumIslerData).map(k => ({ isim: k, ...tumIslerData[k] })).sort((a, b) => b.adet - a.adet));
     setGrafikDurusVerisi(Object.keys(durusluIslerData).map(k => ({ isim: k, ...durusluIslerData[k] })).sort((a, b) => b.dakika - a.dakika));
+    
     const formatliPersonel = Object.keys(personelAnaliz).map(k => ({ isim: k, ...personelAnaliz[k] }));
     if (filterPerfSiralama === "efor") formatliPersonel.sort((a, b) => b.eforDk - a.eforDk);
     else formatliPersonel.sort((a, b) => b.isSayisi - a.isSayisi); 
     setPersonelPerformans(formatliPersonel);
+    
   }, [rawLogs, filterYil, filterAy, filterHat, filterEkipman, filterPerfYil, filterPerfAy, filterPerfVardiya, filterPerfPersonel, filterPerfDurus, filterPerfSiralama]);
 
   if (loading) return <div className="min-h-screen bg-gray-950 flex justify-center items-center text-white">Sistem yükleniyor...</div>;

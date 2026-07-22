@@ -46,7 +46,12 @@ export default function AdminDashboard() {
   const [filterPerfDurus, setFilterPerfDurus] = useState(""); 
   const [filterPerfSiralama, setFilterPerfSiralama] = useState("is"); 
   const [personelHavuzu, setPersonelHavuzu] = useState<string[]>([]); 
-
+  // YENİ: En Sık Arızalanan Ekipmanlar (Bad Actors) State'leri
+  const [filterEqYil, setFilterEqYil] = useState("");
+  const [filterEqAy, setFilterEqAy] = useState("");
+  const [filterEqHat, setFilterEqHat] = useState("");
+  const [filterEqLimit, setFilterEqLimit] = useState("5"); 
+  const [ekipmanPerformans, setEkipmanPerformans] = useState<any[]>([]);
   const [kpiToplamIs, setKpiToplamIs] = useState(0);
   const [kpiToplamSure, setKpiToplamSure] = useState(0);
   const [kpiAylikDurus, setKpiAylikDurus] = useState(0);
@@ -331,7 +336,37 @@ export default function AdminDashboard() {
     } return null;
   };
   const durusSureYuzde = kpiToplamSure > 0 ? ((kpiAylikDurus / kpiToplamSure) * 100).toFixed(1) : "0";
-  const globalMTTR = kpiToplamIs > 0 ? (kpiToplamSure / kpiToplamIs).toFixed(1) : "0";
+  // YENİ: Ekipman Performans Analizi (Sadece Duruşlu Arızalar)
+  useEffect(() => {
+    if (rawLogs.length === 0) return;
+    const eqData: Record<string, { hat: string, count: number, sure: number }> = {};
+
+    rawLogs.forEach(data => {
+      if (!data.isDuruslu || !data.ekipmanAdi) return; // Sadece duruşluları al
+      let tarihObj = data.baslangicSaati ? new Date(data.baslangicSaati) : (data.kayitTarihi ? data.kayitTarihi.toDate() : null);
+      const yil = tarihObj ? tarihObj.getFullYear().toString() : "";
+      const ay = tarihObj ? (tarihObj.getMonth() + 1).toString() : ""; 
+
+      if (filterEqYil && yil !== filterEqYil) return;
+      if (filterEqAy && ay !== filterEqAy) return;
+      if (filterEqHat && data.hatAdi !== filterEqHat) return;
+
+      const ekipman = data.ekipmanAdi;
+      if (!eqData[ekipman]) eqData[ekipman] = { hat: data.hatAdi || "-", count: 0, sure: 0 };
+      eqData[ekipman].count += 1;
+      eqData[ekipman].sure += (Number(data.toplamSureDakika) || 0);
+    });
+
+    let arr = Object.keys(eqData).map(k => ({ ekipman: k, ...eqData[k] }));
+    // Önce Duruş Sayısına, eşitse Duruş Süresine göre ÇOKTAN AZA sırala
+    arr.sort((a, b) => b.count - a.count || b.sure - a.sure); 
+
+    if (filterEqLimit !== "all") {
+      arr = arr.slice(0, Number(filterEqLimit)); // İlk 5 veya İlk 10
+    }
+    setEkipmanPerformans(arr);
+  }, [rawLogs, filterEqYil, filterEqAy, filterEqHat, filterEqLimit]);  
+const globalMTTR = kpiToplamIs > 0 ? (kpiToplamSure / kpiToplamIs).toFixed(1) : "0";
 
   return (
     <>
@@ -525,7 +560,49 @@ export default function AdminDashboard() {
                 <div className="bg-gray-900 border border-gray-800 p-4 md:p-6 rounded-2xl"><h2 className="text-lg font-bold mb-6 text-red-400 print:text-black">Sadece Duruşlu Arızalar</h2>{grafikDurusVerisi.length > 0 ? (<div className="h-72 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikDurusVerisi} 
 margin={{ top: 25, right: 5, left: -25, bottom: 5 }}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="isim" tick={{fontSize: 10, fill: '#9CA3AF'}} interval={0} angle={-15} textAnchor="end" /><YAxis tick={{fontSize: 10, fill: '#9CA3AF'}} /><Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} trigger="hover" /><Legend wrapperStyle={{ fontSize: '11px', paddingTop: '15px' }} /><Bar name="Duruş Adedi" dataKey="adet" fill="#F59E0B" maxBarSize={40}><LabelList dataKey="adet" position="top" fill="#F59E0B" fontSize={11} fontWeight="bold" /></Bar><Bar name="Süre (Dk)" dataKey="dakika" fill="#EF4444" maxBarSize={40}><LabelList dataKey="dakika" position="top" fill="#EF4444" fontSize={11} fontWeight="bold" /></Bar></BarChart></ResponsiveContainer></div>) : <div className="h-48 flex justify-center items-center text-gray-500 border border-dashed border-gray-800 rounded-xl">Veri yok</div>}</div>
               </div>
+              {/* YENİ: EN SIK DURUŞ YAPAN EKİPMANLAR (BAD ACTORS) */}
+              <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl mb-8 print-break">
+                <h2 className="text-xl font-bold mb-6 text-red-400 print:text-black flex items-center gap-2">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                  En Sık Duruş Yapan Ekipmanlar
+                </h2>
+                
+                {/* Ekipman Filtreleri */}
+                <div className="bg-gray-800 border-gray-700 p-4 rounded-xl mb-6 flex flex-wrap gap-4 items-end no-print">
+                  <div className="flex-1 min-w-[120px]"><label className="block text-xs text-gray-400 mb-1">Yıl</label><select value={filterEqYil} onChange={(e) => setFilterEqYil(e.target.value)} className="w-full bg-gray-900 rounded-lg p-2 text-sm"><option value="">Tümü</option>{yilListesi.map(y => <option key={y} value={y}>{y}</option>)}</select></div>
+                  <div className="flex-1 min-w-[120px]"><label className="block text-xs text-gray-400 mb-1">Ay</label><select value={filterEqAy} onChange={(e) => setFilterEqAy(e.target.value)} className="w-full bg-gray-900 rounded-lg p-2 text-sm"><option value="">Tümü</option><option value="1">Ocak</option><option value="2">Şubat</option><option value="3">Mart</option><option value="4">Nisan</option><option value="5">Mayıs</option><option value="6">Haziran</option><option value="7">Temmuz</option><option value="8">Ağustos</option><option value="9">Eylül</option><option value="10">Ekim</option><option value="11">Kasım</option><option value="12">Aralık</option></select></div>
+                  <div className="flex-1 min-w-[120px]"><label className="block text-xs text-gray-400 mb-1">Üretim Hattı</label><select value={filterEqHat} onChange={(e) => setFilterEqHat(e.target.value)} className="w-full bg-gray-900 rounded-lg p-2 text-sm"><option value="">Tümü</option>{hatListesi.map(h => <option key={h} value={h}>{h}</option>)}</select></div>
+                  <div className="flex-1 min-w-[120px]"><label className="block text-xs text-red-400 mb-1 font-bold">Listeleme</label><select value={filterEqLimit} onChange={(e) => setFilterEqLimit(e.target.value)} className="w-full bg-red-900/30 text-red-400 rounded-lg p-2 text-sm font-bold border border-red-800/50"><option value="5">İlk 5 (Top 5)</option><option value="10">İlk 10 (Top 10)</option><option value="all">Tümünü Göster</option></select></div>
+                  <button onClick={() => { setFilterEqYil(""); setFilterEqAy(""); setFilterEqHat(""); setFilterEqLimit("5"); }} className="bg-gray-700 px-4 py-2 rounded-lg text-sm h-9">Sıfırla</button>
+                </div>
 
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-sm md:text-base">
+                    <thead>
+                      <tr className="border-b border-gray-800 text-gray-400 print:text-black">
+                        <th className="pb-3 px-2 md:px-4">#</th>
+                        <th className="pb-3 px-2 md:px-4">Ekipman Adı</th>
+                        <th className="pb-3 px-2 md:px-4">Bulunduğu Hat</th>
+                        <th className="pb-3 px-2 md:px-4">Duruş Sayısı</th>
+                        <th className="pb-3 px-2">Top. Duruş Süresi</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ekipmanPerformans.length > 0 ? ekipmanPerformans.map((eq, index) => (
+                        <tr key={index} className="border-b border-gray-800 print:border-gray-300 hover:bg-gray-800/50 transition">
+                          <td className="py-4 px-2 md:px-4 font-bold text-gray-500 print:text-black">{index + 1}</td>
+                          <td className="py-4 px-2 md:px-4 font-bold text-red-400 print:text-black">{eq.ekipman}</td>
+                          <td className="py-4 px-2 md:px-4 text-gray-300 print:text-black">{eq.hat}</td>
+                          <td className="py-4 px-2 md:px-4 font-bold text-white print:text-black">{eq.count} <span className="text-xs text-gray-500 font-normal">Kez</span></td>
+                          <td className="py-4 px-2 md:px-4 text-orange-400 print:text-black">{eq.sure} dk</td>
+                        </tr>
+                      )) : (
+                        <tr><td colSpan={5} className="py-8 text-center text-gray-500">Seçili filtrelere uygun duruşlu arıza kaydı bulunamadı.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
               <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl print-break">
                 <h2 className="text-xl font-bold mb-6 text-blue-400 print:text-black">Personel Performans Matrisi</h2>
                 <div className="bg-gray-800 border-gray-700 p-4 rounded-xl mb-6 flex flex-wrap gap-4 items-end no-print">

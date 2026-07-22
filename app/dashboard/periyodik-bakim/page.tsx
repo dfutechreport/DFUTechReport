@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { collection, getDocs, doc, getDoc, addDoc, updateDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../../../lib/firebase";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-export default function PeriyodikBakimFormu() {
+// 1. DÜZELTME: Buradaki "export default" kaldırıldı, sadece function kaldı.
+function PeriyodikBakimFormu() {
   const [userName, setUserName] = useState("");
   const [userRole, setUserRole] = useState("");
   const [loading, setLoading] = useState(true);
@@ -22,7 +23,6 @@ export default function PeriyodikBakimFormu() {
   const [vardiya, setVardiya] = useState("");
   const [aciklama, setAciklama] = useState("");
 
-  // YENİ: PM İŞ EMRİ ID Sİ (Alarmdan gelirse formu doldurup iş emrini kapatacak)
   const searchParams = useSearchParams();
   const pmWorkOrderId = searchParams.get("pmOrderId");
   const pmMakineKodu = searchParams.get("makine");
@@ -49,7 +49,6 @@ export default function PeriyodikBakimFormu() {
     const list = data.filter((d: any) => d.aktif).sort((a, b) => a.id.localeCompare(b.id));
     setMakineListesi(list);
 
-    // EĞER URL'DEN MAVİ ALARM İLE GELDİYSE OTOMATİK SEÇ
     if (pmMakineKodu) {
       setSeciliMakineId(pmMakineKodu);
       const secilen = list.find(m => m.id === pmMakineKodu);
@@ -80,7 +79,6 @@ export default function PeriyodikBakimFormu() {
     try {
       const hataliMaddeler = seciliMakine.maddeler.filter((madde: string, index: number) => yanitlar[index] === "Hatalı");
 
-      // PM Arşivine Kaydet
       await addDoc(collection(db, "pm_logs"), {
         makineKodu: seciliMakine.id, hatAdi: seciliMakine.hatAdi, ekipmanAdi: seciliMakine.ekipmanAdi,
         bakimPeriyodu: seciliMakine.siklik, tarih, vardiya, personel: userName, yanitlar: yanitlar, 
@@ -89,7 +87,6 @@ export default function PeriyodikBakimFormu() {
         kayitTarihi: new Date()
       });
 
-      // EĞER ALARMDAN GELDİYSE İŞ EMRİNİ DE KAPAT
       if (pmWorkOrderId) {
         await updateDoc(doc(db, "work_orders", pmWorkOrderId), {
           durum: "Kapalı", tamamlayanKisi: userName, tamamlanmaTarihi: new Date()
@@ -117,7 +114,7 @@ export default function PeriyodikBakimFormu() {
 
         {pmWorkOrderId && (
           <div className="bg-teal-900/30 border border-teal-500/50 text-teal-400 p-4 rounded-xl mb-6 font-bold flex items-center gap-2">
-            ✅ Alarmdan Gönlendirildi: Makine otomatik seçildi. Formu kaydettiğinizde Planlı Bakım İş Emri sistemden silinecektir.
+            ✅ Alarmdan Yönlendirildi: Makine otomatik seçildi. Formu kaydettiğinizde Planlı Bakım İş Emri sistemden silinecektir.
           </div>
         )}
 
@@ -170,10 +167,12 @@ export default function PeriyodikBakimFormu() {
     </div>
   );
 }
+
+// 2. DÜZELTME: Suspense sarmalaması içeren ana export bileşeni buraya eklendi.
 export default function Page() {
   return (
     <Suspense fallback={<div className="min-h-screen bg-gray-950 text-white flex justify-center items-center">Yükleniyor...</div>}>
-      <PeriyodikBakimIcerik />
+      <PeriyodikBakimFormu />
     </Suspense>
   );
 }

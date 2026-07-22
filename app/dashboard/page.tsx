@@ -46,7 +46,7 @@ function DashboardIcerik() {
   const [hesaplananSure, setHesaplananSure] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [basariMesaji, setBasariMesaji] = useState("");
-
+  const [aktifStokMiktari, setAktifStokMiktari] = useState<number | string | null>(null);
   const [okunmayanDuyurular, setOkunmayanDuyurular] = useState<any[]>([]);
   const [showDuyuruModal, setShowDuyuruModal] = useState(false);
 
@@ -82,7 +82,37 @@ function DashboardIcerik() {
 
   const watchBaslangic = watch("baslangicSaati");
   const watchBitis = watch("bitisSaati");
+  // 1. Klavyeden girilen Stok Kodunu canlı olarak izliyoruz
+  const watchYedekParcaKodu = watch("yedekParcaKodu");
 
+  // 2. Stok Kodu değiştiğinde veritabanından anlık stok çekme işlemi
+  useEffect(() => {
+    const fetchAktifStok = async () => {
+      if (!watchYedekParcaKodu || watchYedekParcaKodu.trim() === "") {
+        setAktifStokMiktari(null);
+        return;
+      }
+      try {
+        const partRef = doc(db, "spare_parts", watchYedekParcaKodu.trim());
+        const partSnap = await getDoc(partRef);
+        
+        if (partSnap.exists()) {
+          setAktifStokMiktari(partSnap.data().mevcutMiktar);
+        } else {
+          setAktifStokMiktari("Bulunamadı");
+        }
+      } catch (error) {
+        console.error("Stok çekme hatası:", error);
+      }
+    };
+
+    // Kullanıcı yazmayı bitirene kadar (Yarım saniye) bekleyip sunucuyu yormamak için Debounce uyguluyoruz
+    const timeoutId = setTimeout(() => {
+      fetchAktifStok();
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [watchYedekParcaKodu]);
   useEffect(() => {
     if (watchBaslangic && watchBitis) {
       const baslangic = new Date(watchBaslangic).getTime();
@@ -496,11 +526,44 @@ function DashboardIcerik() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-fuchsia-900/10 p-4 rounded-xl border border-fuchsia-800/30">
-              <div className="md:col-span-3 mb-[-10px]"><p className="text-fuchsia-400 font-bold text-sm flex items-center gap-2">⚙️ Kullanılan Yedek Parça <span className="text-gray-500 font-normal text-xs">(Kullanılmadıysa boş bırakın)</span></p></div>
-              <div><input type="text" {...register("yedekParcaKodu")} placeholder="Stok Kodu / Adı" className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3" /></div>
-              <div><input type="number" step="0.01" {...register("yedekParcaMiktar")} placeholder="Miktar" className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3" /></div>
-              <div><select {...register("yedekParcaBirim")} className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3"><option value="Adet">Adet</option><option value="Metre">Metre</option><option value="KG">KG</option><option value="Litre">Litre</option></select></div>
+                       {/* YEDEK PARÇA BÖLÜMÜ */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 bg-fuchsia-900/10 p-4 rounded-xl border border-fuchsia-800/30">
+              <div className="md:col-span-4 mb-[-10px]">
+                <p className="text-fuchsia-400 font-bold text-sm flex items-center gap-2">
+                  ⚙️ Kullanılan Yedek Parça <span className="text-gray-500 font-normal text-xs">(Kullanılmadıysa boş bırakın)</span>
+                </p>
+              </div>
+              
+              <div>
+                <input type="text" {...register("yedekParcaKodu")} placeholder="Tam Stok Kodunu Girin" className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:border-fuchsia-500" />
+              </div>
+              
+              {/* YENİ EKLENEN: AKTİF STOK KUTUCUGU (SADECE OKUNUR) */}
+              <div>
+                <input 
+                  type="text" 
+                  value={aktifStokMiktari !== null ? (aktifStokMiktari === "Bulunamadı" ? "Kayıtsız Parça!" : `Depoda: ${aktifStokMiktari} Stok Var`) : "Mevcut Stok..."} 
+                  readOnly 
+                  className={`w-full border rounded-lg p-3 cursor-not-allowed font-bold text-sm ${
+                    aktifStokMiktari === "Bulunamadı" ? "bg-red-900/20 text-red-400 border-red-800/50" : 
+                    (typeof aktifStokMiktari === "number" && aktifStokMiktari > 0) ? "bg-green-900/20 text-green-400 border-green-800/50" : 
+                    "bg-gray-800 text-gray-500 border-gray-700"
+                  }`} 
+                />
+              </div>
+
+              <div>
+                <input type="number" step="0.01" {...register("yedekParcaMiktar")} placeholder="Düşülecek Miktar" className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:border-fuchsia-500" />
+              </div>
+              
+              <div>
+                <select {...register("yedekParcaBirim")} className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:border-fuchsia-500">
+                  <option value="Adet">Adet</option>
+                  <option value="Metre">Metre</option>
+                  <option value="KG">KG</option>
+                  <option value="Litre">Litre</option>
+                </select>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-800/50 p-4 rounded-xl border border-gray-700">

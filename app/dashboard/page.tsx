@@ -292,6 +292,9 @@ function DashboardIcerik() {
           <Link href="/admin/is-listesi" className="bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">📋 Yapılan İşler</Link>
           <Link href="/admin/eked" className="bg-yellow-600 hover:bg-yellow-500 text-black p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(202,138,4,0.4)] transition">🔒 EKED Takip</Link>
           <Link href="/admin/eked/arsiv" className="bg-gray-700 hover:bg-gray-600 border border-gray-500 text-gray-200 p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">🗄️ EKED Arşivi</Link>
+<Link href="/dashboard/periyodik-bakim" className="bg-teal-600 hover:bg-teal-500 text-white p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(13,148,136,0.4)] transition">
+  📋 Manuel PM (Checklist)
+</Link>
           <Link href="/dashboard/pano-kayit" className="bg-indigo-700 hover:bg-indigo-600 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(67,56,202,0.4)] transition">🔌 Pano Kayıt</Link>
           <Link href="/dashboard/pano-listesi" className="bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">🔌 Pano Listesi</Link>
           <Link href="/dashboard/kontrol-formlari" className="bg-cyan-600 hover:bg-cyan-500 text-white p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(6,182,212,0.4)] transition">✅ Kontrol Formları</Link>

@@ -223,20 +223,81 @@ function DashboardIcerik() {
   const benzersizHatlar = Array.from(new Set(assets.map(a => a.hatAdi)));
   const filtrelenmisEkipmanlar = assets.filter(a => a.hatAdi === seciliHat);
 
-  const formKaydet = async (data: any) => {
+    const formKaydet = async (data: any) => {
     if (seciliPersoneller.length === 0) return alert("Lütfen işi yapan en az 1 personel seçin!");
-    setIsSubmitting(true); setBasariMesaji("");
+    setIsSubmitting(true); 
+    setBasariMesaji("");
+
     try {
+      // --- 1. AŞAMA: YEDEK PARÇA STOK DÜŞÜMÜ VE E-POSTA ALARMI ---
+      if (data.yedekParcaKodu && Number(data.yedekParcaMiktar) > 0) {
+        // Formda girilen stok kodunu veritabanında arıyoruz
+        const stokKodu = String(data.yedekParcaKodu).trim();
+        const partRef = doc(db, "spare_parts", stokKodu);
+        const partSnap = await getDoc(partRef);
+
+        if (partSnap.exists()) {
+          const partData = partSnap.data();
+          const dusulecekMiktar = Number(data.yedekParcaMiktar);
+          const yeniMiktar = partData.mevcutMiktar - dusulecekMiktar;
+
+          // Stoğu veritabanında güncelliyoruz (Düşüyoruz)
+          await updateDoc(partRef, { mevcutMiktar: yeniMiktar });
+
+          // Miktar 2 veya altına düştüyse Mail API'mizi tetikliyoruz
+          if (yeniMiktar <= 2) {
+            fetch('/api/send-mail', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                parcaAdi: partData.parcaAdi,
+                stokKodu: stokKodu,
+                kalanStok: yeniMiktar,
+                birim: partData.birim,
+                teknisyen: userName,
+                hat: data.hatAdi || seciliHat || "-",
+                ekipman: data.ekipmanAdi || "-"
+              })
+            }).catch(err => console.error("Mail API hatası:", err));
+          }
+        } else {
+          // Eğer teknisyen Excel'de olmayan yanlış bir kod girdiyse, sistemi çökertmeyiz
+          // Sadece geliştirici konsoluna uyarı düşer, arıza normal kaydedilmeye devam eder.
+          console.warn("Girilen yedek parça kodu (", stokKodu, ") ana depoda bulunamadı.");
+        }
+      }
+      // --- STOK VE MAİL İŞLEMİ BİTİŞİ ---
+
+      // --- 2. AŞAMA: NORMAL ARIZA FORMU KAYDI ---
       await addDoc(collection(db, "maintenance_logs"), {
-        ...data, isiYapanlar: seciliPersoneller, toplamSureDakika: hesaplananSure, bildirenKisi: userName, kayitTarihi: new Date(), durum: "Kapalı",
-        yedekParcaKodu: data.yedekParcaKodu || "", yedekParcaMiktar: data.yedekParcaMiktar || 0, yedekParcaBirim: data.yedekParcaBirim || "Adet"
+        ...data, 
+        isiYapanlar: seciliPersoneller, 
+        toplamSureDakika: hesaplananSure, 
+        bildirenKisi: userName, 
+        kayitTarihi: new Date(), 
+        durum: "Kapalı",
+        yedekParcaKodu: data.yedekParcaKodu || "", 
+        yedekParcaMiktar: Number(data.yedekParcaMiktar) || 0, 
+        yedekParcaBirim: data.yedekParcaBirim || "Adet"
       });
+
+      // İşlem başarılı mesajı ve formu sıfırlama
       setBasariMesaji("Kayıt başarıyla işlendi. Süre: " + hesaplananSure + " Dk");
-      reset(); setSeciliHat(""); setHesaplananSure(0); setSeciliPersoneller([userName]); setIsAutoFilled(false);
+      reset(); 
+      setSeciliHat(""); 
+      setHesaplananSure(0); 
+      setSeciliPersoneller([userName]); 
+      setIsAutoFilled(false);
       window.history.replaceState(null, "", "/dashboard");
       window.scrollTo({ top: 0, behavior: "smooth" });
       fetchAktifAlarmlarVeKPI(); 
-    } catch (error) { alert("Hata oluştu."); } finally { setIsSubmitting(false); }
+
+    } catch (error) { 
+      console.error(error);
+      alert("Hata oluştu, lütfen tekrar deneyin."); 
+    } finally { 
+      setIsSubmitting(false); 
+    }
   };
 
   const durusSureYuzde = kpiToplamSure > 0 ? ((kpiAylikDurus / kpiToplamSure) * 100).toFixed(1) : "0";

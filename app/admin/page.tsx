@@ -321,22 +321,7 @@ export default function AdminDashboard() {
     setPersonelPerformans(formatliPersonel);
     
   }, [rawLogs, filterYil, filterAy, filterHat, filterEkipman, filterPerfYil, filterPerfAy, filterPerfVardiya, filterPerfPersonel, filterPerfDurus, filterPerfSiralama]);
-
-  if (loading) return <div className="min-h-screen bg-gray-950 flex justify-center items-center text-white">Sistem yükleniyor...</div>;
-  if (!isAdmin) return <div className="min-h-screen bg-gray-950 text-red-500 flex justify-center items-center">Yetkisiz Erişim!</div>;
-
-  const OzelTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-gray-800 border border-gray-700 p-3 rounded-lg shadow-2xl z-50">
-          <p className="font-bold text-white mb-2">{label}</p>
-          {payload.map((p: any, i: number) => (<p key={i} style={{color: p.color}} className="text-sm">{p.name}: <b>{p.value}</b></p>))}
-        </div>
-      );
-    } return null;
-  };
-  const durusSureYuzde = kpiToplamSure > 0 ? ((kpiAylikDurus / kpiToplamSure) * 100).toFixed(1) : "0";
-  // YENİ: Ekipman Performans Analizi (Sadece Duruşlu Arızalar)
+// YENİ: Ekipman Performans Analizi (Sadece Duruşlu Arızalar)
   useEffect(() => {
     if (rawLogs.length === 0) return;
     const eqData: Record<string, { hat: string, count: number, sure: number }> = {};
@@ -365,7 +350,22 @@ export default function AdminDashboard() {
       arr = arr.slice(0, Number(filterEqLimit)); // İlk 5 veya İlk 10
     }
     setEkipmanPerformans(arr);
-  }, [rawLogs, filterEqYil, filterEqAy, filterEqHat, filterEqLimit]);  
+  }, [rawLogs, filterEqYil, filterEqAy, filterEqHat, filterEqLimit]);
+  if (loading) return <div className="min-h-screen bg-gray-950 flex justify-center items-center text-white">Sistem yükleniyor...</div>;
+  if (!isAdmin) return <div className="min-h-screen bg-gray-950 text-red-500 flex justify-center items-center">Yetkisiz Erişim!</div>;
+
+  const OzelTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-gray-800 border border-gray-700 p-3 rounded-lg shadow-2xl z-50">
+          <p className="font-bold text-white mb-2">{label}</p>
+          {payload.map((p: any, i: number) => (<p key={i} style={{color: p.color}} className="text-sm">{p.name}: <b>{p.value}</b></p>))}
+        </div>
+      );
+    } return null;
+  };
+  const durusSureYuzde = kpiToplamSure > 0 ? ((kpiAylikDurus / kpiToplamSure) * 100).toFixed(1) : "0";
+   
 const globalMTTR = kpiToplamIs > 0 ? (kpiToplamSure / kpiToplamIs).toFixed(1) : "0";
 
   return (

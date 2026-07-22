@@ -8,10 +8,12 @@ export async function POST(req: Request) {
     const { parcaAdi, stokKodu, kalanStok, birim, teknisyen, hat, ekipman } = body;
 
     // 2. Gmail SMTP Sunucu Bağlantı Ayarları
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
+     const transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true, // SSL/TLS kullanmaya zorluyoruz
       auth: {
-        // LÜTFEN AŞAĞIDAKİ İKİ SATIRI KENDİ BİLGİLERİNİZLE DEĞİŞTİRİN
+        
         user: 'dfuteknik@gmail.com', // Gönderici Gmail adresi
         pass: 'vfqfqwblcgzkztdr' // Gmail'den aldığınız 16 haneli uygulama şifresi (boşluksuz yazın)
       }

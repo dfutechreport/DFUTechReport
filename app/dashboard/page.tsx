@@ -46,7 +46,7 @@ function DashboardIcerik() {
   const [hesaplananSure, setHesaplananSure] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [basariMesaji, setBasariMesaji] = useState("");
-  const [aktifStokMiktari, setAktifStokMiktari] = useState<number | string | null>(null);
+
   const [okunmayanDuyurular, setOkunmayanDuyurular] = useState<any[]>([]);
   const [showDuyuruModal, setShowDuyuruModal] = useState(false);
 
@@ -54,7 +54,10 @@ function DashboardIcerik() {
   const [aktifIsler, setAktifIsler] = useState<any[]>([]);
   const [aktifEked, setAktifEked] = useState<any[]>([]); 
   const [aktifIsgAlarmlari, setAktifIsgAlarmlari] = useState<any[]>([]); 
-  const [aktifPmAlarmlari, setAktifPmAlarmlari] = useState<any[]>([]); // YENİ: PM Mavi Alarmı
+  const [aktifPmAlarmlari, setAktifPmAlarmlari] = useState<any[]>([]);
+
+  // YENİ EKLENEN: Canlı Stok Takip State'i
+  const [aktifStokMiktari, setAktifStokMiktari] = useState<number | string | null>(null);
 
   const [isAutoFilled, setIsAutoFilled] = useState(false);
 
@@ -82,10 +85,18 @@ function DashboardIcerik() {
 
   const watchBaslangic = watch("baslangicSaati");
   const watchBitis = watch("bitisSaati");
-  // 1. Klavyeden girilen Stok Kodunu canlı olarak izliyoruz
+  // YENİ EKLENEN: Stok kodunu anlık izleme
   const watchYedekParcaKodu = watch("yedekParcaKodu");
 
-  // 2. Stok Kodu değiştiğinde veritabanından anlık stok çekme işlemi
+  useEffect(() => {
+    if (watchBaslangic && watchBitis) {
+      const baslangic = new Date(watchBaslangic).getTime();
+      const bitis = new Date(watchBitis).getTime();
+      setHesaplananSure(Math.max(0, Math.floor((bitis - baslangic) / 60000)));
+    } else setHesaplananSure(0);
+  }, [watchBaslangic, watchBitis]);
+
+  // YENİ EKLENEN: Canlı Stok Kontrol Algoritması
   useEffect(() => {
     const fetchAktifStok = async () => {
       if (!watchYedekParcaKodu || watchYedekParcaKodu.trim() === "") {
@@ -106,20 +117,12 @@ function DashboardIcerik() {
       }
     };
 
-    // Kullanıcı yazmayı bitirene kadar (Yarım saniye) bekleyip sunucuyu yormamak için Debounce uyguluyoruz
     const timeoutId = setTimeout(() => {
       fetchAktifStok();
     }, 500);
 
     return () => clearTimeout(timeoutId);
   }, [watchYedekParcaKodu]);
-  useEffect(() => {
-    if (watchBaslangic && watchBitis) {
-      const baslangic = new Date(watchBaslangic).getTime();
-      const bitis = new Date(watchBitis).getTime();
-      setHesaplananSure(Math.max(0, Math.floor((bitis - baslangic) / 60000)));
-    } else setHesaplananSure(0);
-  }, [watchBaslangic, watchBitis]);
 
   useEffect(() => {
     if (assets.length === 0) return; 
@@ -151,7 +154,6 @@ function DashboardIcerik() {
     const wSnap = await getDocs(wQ);
     const dataW: any[] = wSnap.docs.map(d => ({ id: d.id, ...d.data(), gercekZaman: d.data().kayitTarihi ? d.data().kayitTarihi.toDate().getTime() : 0 }));
     
-    // İşleri üçe böl (İSG KAR, PM Planlı Bakım, Normal İş)
     const isgAlarmlari = dataW.filter(d => d.ekipmanAdi === "KAR devreye alma");
     const pmAlarmlari = dataW.filter(d => d.sorunTipi === "Planlı Bakım");
     const normalIsler = dataW.filter(d => d.ekipmanAdi !== "KAR devreye alma" && d.sorunTipi !== "Planlı Bakım");
@@ -253,15 +255,14 @@ function DashboardIcerik() {
   const benzersizHatlar = Array.from(new Set(assets.map(a => a.hatAdi)));
   const filtrelenmisEkipmanlar = assets.filter(a => a.hatAdi === seciliHat);
 
-    const formKaydet = async (data: any) => {
+  // GÜNCELLENEN: Form Kaydet ve Await Fetch Mail Mantığı
+  const formKaydet = async (data: any) => {
     if (seciliPersoneller.length === 0) return alert("Lütfen işi yapan en az 1 personel seçin!");
     setIsSubmitting(true); 
     setBasariMesaji("");
 
     try {
-      // --- 1. AŞAMA: YEDEK PARÇA STOK DÜŞÜMÜ VE E-POSTA ALARMI ---
       if (data.yedekParcaKodu && Number(data.yedekParcaMiktar) > 0) {
-        // Formda girilen stok kodunu veritabanında arıyoruz
         const stokKodu = String(data.yedekParcaKodu).trim();
         const partRef = doc(db, "spare_parts", stokKodu);
         const partSnap = await getDoc(partRef);
@@ -271,34 +272,38 @@ function DashboardIcerik() {
           const dusulecekMiktar = Number(data.yedekParcaMiktar);
           const yeniMiktar = partData.mevcutMiktar - dusulecekMiktar;
 
-          // Stoğu veritabanında güncelliyoruz (Düşüyoruz)
           await updateDoc(partRef, { mevcutMiktar: yeniMiktar });
 
-          // Miktar 2 veya altına düştüyse Mail API'mizi tetikliyoruz
           if (yeniMiktar <= 2) {
-            fetch('/api/send-mail', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                parcaAdi: partData.parcaAdi,
-                stokKodu: stokKodu,
-                kalanStok: yeniMiktar,
-                birim: partData.birim,
-                teknisyen: userName,
-                hat: data.hatAdi || seciliHat || "-",
-                ekipman: data.ekipmanAdi || "-"
-              })
-            }).catch(err => console.error("Mail API hatası:", err));
+            try {
+              const mailResponse = await fetch('/api/send-mail', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  parcaAdi: partData.parcaAdi,
+                  stokKodu: stokKodu,
+                  kalanStok: yeniMiktar,
+                  birim: partData.birim,
+                  teknisyen: userName,
+                  hat: data.hatAdi || seciliHat || "-",
+                  ekipman: data.ekipmanAdi || "-"
+                })
+              });
+              
+              if (!mailResponse.ok) {
+                console.warn("Mail sunucusu reddetti, durum kodu:", mailResponse.status);
+              } else {
+                console.log("Stok alarm maili başarıyla tetiklendi!");
+              }
+            } catch (err) {
+              console.error("Mail API'ye ulaşılamadı (Network Hatası):", err);
+            }
           }
         } else {
-          // Eğer teknisyen Excel'de olmayan yanlış bir kod girdiyse, sistemi çökertmeyiz
-          // Sadece geliştirici konsoluna uyarı düşer, arıza normal kaydedilmeye devam eder.
           console.warn("Girilen yedek parça kodu (", stokKodu, ") ana depoda bulunamadı.");
         }
       }
-      // --- STOK VE MAİL İŞLEMİ BİTİŞİ ---
 
-      // --- 2. AŞAMA: NORMAL ARIZA FORMU KAYDI ---
       await addDoc(collection(db, "maintenance_logs"), {
         ...data, 
         isiYapanlar: seciliPersoneller, 
@@ -311,8 +316,7 @@ function DashboardIcerik() {
         yedekParcaBirim: data.yedekParcaBirim || "Adet"
       });
 
-      // İşlem başarılı mesajı ve formu sıfırlama
-      setBasariMesaji("Kayıt başarıyla işlendi. Süre: " + hesaplananSure + " Dk");
+      setBasariMesaji(`Kayıt başarıyla işlendi. Süre: ${hesaplananSure} Dk ${data.yedekParcaKodu ? '(Stok Düştü)' : ''}`);
       reset(); 
       setSeciliHat(""); 
       setHesaplananSure(0); 
@@ -335,7 +339,6 @@ function DashboardIcerik() {
   return (
     <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8 relative">
       
-      {/* DUYURULAR */}
       {showDuyuruModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80 backdrop-blur-sm p-4">
           <div className="bg-gray-900 border-2 border-yellow-500 rounded-2xl shadow-2xl p-8 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
@@ -369,7 +372,6 @@ function DashboardIcerik() {
           </div>
         </div>
 
-        {/* 4'LÜ KPI KARTLARI */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <div className="bg-gray-900 border border-gray-800 p-4 rounded-2xl shadow-lg"><p className="text-xs text-gray-400 font-semibold mb-1">Toplam Yapılan İş</p><h3 className="text-2xl font-bold text-green-400">{kpiToplamIs} <span className="text-xs text-gray-500 font-normal">Adet</span></h3><p className="text-[10px] text-gray-500 mt-2 font-medium">Toplam Efor: <span className="text-white">{kpiToplamSure} dk</span></p></div>
           <div className="bg-gray-900 border border-gray-800 p-4 rounded-2xl shadow-lg"><p className="text-xs text-gray-400 font-semibold mb-1">Duruşlu İş Sayısı</p><h3 className="text-2xl font-bold text-red-400">{kpiDurusluIsSayisi} <span className="text-xs text-gray-500 font-normal">Adet</span></h3><p className="text-[10px] text-gray-500 mt-2 font-medium">Kritik Duruş: <span className="text-white">{kpiAylikDurus} dk</span></p></div>
@@ -377,23 +379,15 @@ function DashboardIcerik() {
           <div className="bg-gray-900 border border-blue-500/30 p-4 rounded-2xl shadow-[0_0_10px_rgba(59,130,246,0.1)] relative overflow-hidden"><p className="text-xs text-blue-300 font-semibold mb-1 relative z-10">Duruş Yüzdesi (Süre)</p><h3 className="text-2xl font-bold text-blue-400 relative z-10">%{durusSureYuzde}</h3><p className="text-[10px] text-gray-400 mt-2 relative z-10">Toplam efora oranı</p></div>
         </div>
 
-        {/* HIZLI ERİŞİM MENÜSÜ */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-8 no-print">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-8 no-print">
           <Link href="/admin/aktif-isler" className="bg-red-900/60 hover:bg-red-600 border border-red-500/50 text-red-100 p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition"><span className="relative flex h-2 w-2 mr-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span></span>Aktif İşler</Link>
           <Link href="/admin/is-listesi" className="bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">📋 Yapılan İşler</Link>
+          <Link href="/dashboard/periyodik-bakim" className="bg-teal-600 hover:bg-teal-500 text-white p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(13,148,136,0.4)] transition">📋 Manuel PM (Checklist)</Link>
           <Link href="/admin/eked" className="bg-yellow-600 hover:bg-yellow-500 text-black p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(202,138,4,0.4)] transition">🔒 EKED Takip</Link>
-          <Link href="/admin/eked/arsiv" className="bg-gray-700 hover:bg-gray-600 border border-gray-500 text-gray-200 p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">🗄️ EKED Arşivi</Link>
-<Link href="/dashboard/periyodik-bakim" className="bg-teal-600 hover:bg-teal-500 text-white p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(13,148,136,0.4)] transition">
-  📋 Manuel PM (Checklist)
-</Link>
           <Link href="/dashboard/pano-kayit" className="bg-indigo-700 hover:bg-indigo-600 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(67,56,202,0.4)] transition">🔌 Pano Kayıt</Link>
-          <Link href="/dashboard/pano-listesi" className="bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">🔌 Pano Listesi</Link>
           <Link href="/dashboard/kontrol-formlari" className="bg-cyan-600 hover:bg-cyan-500 text-white p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(6,182,212,0.4)] transition">✅ Kontrol Formları</Link>
-          <Link href="/dashboard/sayac" className="bg-emerald-600 hover:bg-emerald-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">⚡ Sayaç Okuma</Link>
-          <Link href="/dashboard/mesai" className="bg-teal-600 hover:bg-teal-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">⏰ Fazla Mesai</Link>
         </div>
 
-        {/* ALARMLAR (ISG, PM, NORMAL) */}
         {aktifIsgAlarmlari.length > 0 && (
           <div className="bg-red-900/40 border-[3px] border-red-500 p-6 rounded-2xl mb-10 shadow-[0_0_30px_rgba(239,68,68,0.5)] no-print relative overflow-hidden">
             <div className="absolute inset-0 opacity-20 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#ef4444_10px,#ef4444_20px)]"></div>
@@ -455,7 +449,6 @@ function DashboardIcerik() {
           </div>
         )}
 
-        {/* ARIZA FORMU */}
         <div ref={formRef} className={`bg-gray-900 border p-6 md:p-8 rounded-2xl shadow-2xl transition-all ${isAutoFilled ? 'border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.3)]' : 'border-gray-800'}`}>
           <h2 className={`text-xl font-bold mb-6 flex items-center gap-2 ${isAutoFilled ? 'text-green-400' : 'text-orange-400'}`}>
             {isAutoFilled ? "✅ Otomatik Dolduruldu (İş Emri Kapatıldı)" : "Yeni Vardiya / Bakım Raporu"}
@@ -526,7 +519,6 @@ function DashboardIcerik() {
               </div>
             </div>
 
-                       {/* YEDEK PARÇA BÖLÜMÜ */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 bg-fuchsia-900/10 p-4 rounded-xl border border-fuchsia-800/30">
               <div className="md:col-span-4 mb-[-10px]">
                 <p className="text-fuchsia-400 font-bold text-sm flex items-center gap-2">
@@ -538,7 +530,6 @@ function DashboardIcerik() {
                 <input type="text" {...register("yedekParcaKodu")} placeholder="Tam Stok Kodunu Girin" className="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:border-fuchsia-500" />
               </div>
               
-              {/* YENİ EKLENEN: AKTİF STOK KUTUCUGU (SADECE OKUNUR) */}
               <div>
                 <input 
                   type="text" 
@@ -588,5 +579,9 @@ function DashboardIcerik() {
 }
 
 export default function Page() {
-  return <Suspense fallback={<div className="min-h-screen bg-gray-950 text-white flex justify-center items-center">Yükleniyor...</div>}><DashboardIcerik /></Suspense>;
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-950 text-white flex justify-center items-center">Yükleniyor...</div>}>
+      <DashboardIcerik />
+    </Suspense>
+  );
 }

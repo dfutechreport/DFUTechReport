@@ -10,11 +10,11 @@ export default function YedekParcaYoneticisi() {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!window.confirm("Bu işlem Excel'deki tüm stokları (yaklaşık 13 bin kayıt) veritabanına yazacak/güncelleyecektir. Emin misiniz?")) return;
+    if (!window.confirm("Bu işlem Excel'deki tüm stokları veritabanına yazacak/güncelleyecektir. Emin misiniz?")) return;
 
     setLoading(true);
     setProgress(0);
@@ -25,38 +25,48 @@ export default function YedekParcaYoneticisi() {
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
       const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-      // Verileri birebir Excel başlıklarınıza göre haritalıyoruz
       const islenecekData = jsonData.map((row: any) => ({
         stokKodu: String(row["Malzeme"]).trim(),
         parcaAdi: row["Malzeme kısa metni"] || "Bilinmeyen Parça",
         mevcutMiktar: Number(row["Tahditsiz klnb."]) || 0,
         birim: row["Temel ölçü birimi"] || "Adet",
-        kritikSeviye: 2 // Tüm parçalar için varsayılan alarm limiti: 2 ve altı
+        kritikSeviye: 2 
       })).filter((d: any) => d.stokKodu !== "undefined" && d.stokKodu !== "");
 
       const toplam = islenecekData.length;
       let islenen = 0;
-      const CHUNK_SIZE = 400; // Firebase kapasitesi
+      // DİKKAT: Paketi 400'den 250'ye düşürdük, Firebase yorulmasın
+      const CHUNK_SIZE = 250; 
 
       for (let i = 0; i < toplam; i += CHUNK_SIZE) {
         const chunk = islenecekData.slice(i, i + CHUNK_SIZE);
         const batch = writeBatch(db);
         
         chunk.forEach(item => {
-          // Stok kodunu doküman ID'si yapıyoruz (Aynı excel'i tekrar yüklediğinizde eskiyi günceller, çiftleme yapmaz)
           const docRef = doc(collection(db, "spare_parts"), item.stokKodu);
           batch.set(docRef, item, { merge: true });
         });
 
+        // Paketi Firebase'e yolla
         await batch.commit();
+        
         islenen += chunk.length;
         setProgress(Math.floor((islenen / toplam) * 100));
+
+        // YENİ VE EN KRİTİK EKLENTİ: Firebase'e "Nefes Alma" molası veriyoruz.
+        // Her 250 veriyi yazdıktan sonra sistem yarım saniye (500ms) duraklar.
+        // Bu sayede Google Sunucuları "Quota Exceeded (Limit Aşıldı)" hatası fırlatmaz!
+        await new Promise((resolve) => setTimeout(resolve, 500)); 
       }
 
       alert(`✅ BAŞARILI! Toplam ${toplam} adet yedek parça stoğu sisteme aktarıldı/güncellendi.`);
+      
+      // İşlem bittikten sonra File Input'u sıfırlıyoruz ki aynı dosyayı bir daha seçebilelim
+      e.target.value = ''; 
+
     } catch (error) {
       console.error(error);
-      alert("Yükleme sırasında hata oluştu!");
+      alert("Yükleme sırasında hata oluştu veya bağlantı koptu!");
     }
     setLoading(false);
   };

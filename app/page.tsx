@@ -1,170 +1,141 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { signInWithPopup, onAuthStateChanged, updateProfile } from "firebase/auth";
-import { collection, doc, getDoc, setDoc, getDocs, query, where, deleteDoc } from "firebase/firestore";
-import { auth, googleProvider, db } from "../lib/firebase";
+import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "../lib/firebase"; // Firebase dosya yolunuzu gerekirse kontrol edin
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
-  const [loading, setLoading] = useState(false);
-  const [userStatus, setUserStatus] = useState("guest"); 
-  const [message, setMessage] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   
-  const [showSplash, setShowSplash] = useState(false);
+  const router = useRouter();
 
-  const [showNamePrompt, setShowNamePrompt] = useState(false);
-  const [tempUser, setTempUser] = useState<any>(null);
-  const [gercekIsim, setGercekIsim] = useState("");
-
-  const [tempRoleInfo, setTempRoleInfo] = useState<any>(null);
-
+  // Sistem açıldığında kullanıcının daha önceden giriş yapıp yapmadığını ve ROLÜNÜ kontrol eder
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
           const userRef = doc(db, "users", user.uid);
           const userSnap = await getDoc(userRef);
-
+          
           if (userSnap.exists()) {
             const userData = userSnap.data();
-            if (!userData.isApproved) {
-              setUserStatus("pending");
-              setMessage("Hesabınız henüz onaylanmadı. Lütfen Admin ile iletişime geçin.");
+            
+            if (userData.isApproved) {
+              const role = userData.role;
+              
+              // ==========================================
+              // ROL BAZLI OTOMATİK YÖNLENDİRME (ROUTING)
+              // ==========================================
+              if (role === "admin" || role === "isg") {
+                router.push("/admin");
+              } else if (role === "depo") {
+                // YENİ EKLENEN: Depo kullanıcısı kendi paneline gider
+                router.push("/depo"); 
+              } else {
+                // uretim, operator, teknisyen rollerinin hepsi Dashboard'a gider
+                router.push("/dashboard"); 
+              }
             } else {
-              setUserStatus(userData.role);
+              setError("Hesabınız henüz onaylanmamış. Lütfen yöneticinizle görüşün.");
+              auth.signOut();
+              setLoading(false);
             }
           } else {
-            const email = user.email?.toLowerCase().trim();
-            const manuelRef = doc(db, "users", email || "bilinmeyen");
-            const manuelSnap = await getDoc(manuelRef);
-
-            if (manuelSnap.exists()) {
-              const manuelData = manuelSnap.data();
-              setTempRoleInfo(manuelData); 
-              setTempUser(user);
-              setGercekIsim(manuelData.name || user.displayName || ""); 
-              setShowNamePrompt(true);
-            } else {
-              setTempUser(user);
-              setGercekIsim(user.displayName || ""); 
-              setShowNamePrompt(true);
-            }
+            setLoading(false);
           }
-        } catch (error) { console.error("Veri çekme hatası:", error); }
+        } catch (err) {
+          console.error("Kullanıcı verisi çekilemedi:", err);
+          setLoading(false);
+        }
+      } else {
+        setLoading(false);
       }
     });
+
     return () => unsubscribe();
-  }, []);
+  }, [router]);
 
-  const handleGoogleLogin = async () => {
-    setLoading(true);
-    try { await signInWithPopup(auth, googleProvider); } catch (error) { setLoading(false); }
-  };
-
-  const handleIsimKaydet = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (gercekIsim.trim().length < 3) return alert("Lütfen geçerli bir İsim-Soyisim giriniz.");
-
-    setLoading(true);
+    setIsLoggingIn(true);
+    setError("");
     try {
-      await updateProfile(tempUser, { displayName: gercekIsim });
-      const userRef = doc(db, "users", tempUser.uid);
-
-      if (tempRoleInfo) {
-        await setDoc(userRef, {
-          email: tempUser.email, name: gercekIsim, role: tempRoleInfo.role, isApproved: true, createdAt: new Date(), manuelOnaylandi: true
-        });
-        const email = tempUser.email?.toLowerCase().trim();
-        await deleteDoc(doc(db, "users", email));
-        setShowNamePrompt(false);
-        setUserStatus(tempRoleInfo.role); 
-      } else {
-        await setDoc(userRef, {
-          email: tempUser.email, name: gercekIsim, role: "pending", isApproved: false, createdAt: new Date()
-        });
-        setShowNamePrompt(false); setUserStatus("pending");
-        setMessage(`Kayıt alındı, ${gercekIsim}. Yönetici onayı bekleniyor.`);
-      }
-    } catch (error) { alert("İsim kaydedilirken bir hata oluştu."); } finally { setLoading(false); }
+      // Firebase ile giriş işlemi
+      await signInWithEmailAndPassword(auth, email, password);
+      // Giriş başarılı olursa üstteki useEffect otomatik tetiklenir ve yönlendirmeyi yapar.
+    } catch (err: any) {
+      setError("Giriş başarısız. E-posta veya şifre hatalı.");
+      setIsLoggingIn(false);
+    }
   };
 
-  const handleEnterSystem = (url: string) => {
-    setShowSplash(true); 
-    setTimeout(() => { window.location.href = url; }, 2200);
-  };
-
-  if (showSplash) {
-    return (
-      <div className="fixed inset-0 bg-gray-950 z-50 flex flex-col items-center justify-center overflow-hidden">
-        <div className="relative w-40 h-40 flex items-center justify-center">
-          <div className="absolute inset-0 border-4 border-gray-800 rounded-full"></div>
-          <div className="absolute inset-0 border-4 border-blue-500 rounded-full border-t-transparent animate-spin"></div>
-          <div className="absolute inset-0 border-4 border-orange-500 rounded-full border-b-transparent animate-[spin_2s_linear_infinite_reverse]"></div>
-          <div className="animate-pulse flex items-center justify-center bg-white rounded-full w-28 h-28 z-10 shadow-[0_0_40px_rgba(59,130,246,0.6)] overflow-hidden p-2">
-            <img src="/dfulogo.png" alt="DFU Logo" className="w-full h-full object-contain" />
-          </div>
-        </div>
-        <div className="mt-8 text-center animate-[bounce_2s_infinite]">
-          <h2 className="text-2xl font-bold text-white tracking-widest uppercase">DFU Sistemleri</h2>
-          <p className="text-blue-400 font-medium mt-2 tracking-[0.2em] text-sm">GÜVENLİ BAĞLANTI KURULUYOR...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <div className="min-h-screen bg-gray-950 flex justify-center items-center text-teal-500 font-bold tracking-widest">SİSTEM BAŞLATILIYOR...</div>;
 
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col justify-center items-center p-4">
-      <div className="max-w-md w-full bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl p-8 text-center relative overflow-hidden">
+      <div className="max-w-md w-full bg-gray-900 border border-gray-800 rounded-3xl shadow-2xl p-8">
         
-        <div className="mx-auto flex justify-center mb-6">
-          <img src="/dfulogo.png" alt="DFU Logo" className="h-20 w-auto object-contain bg-white rounded-xl p-2 shadow-lg shadow-white/10" />
+        {/* LOGO VE BAŞLIK ALANI */}
+        <div className="flex flex-col items-center mb-8">
+          <img src="/dfulogo.png" alt="DFU Logo" className="h-16 w-auto mb-6 bg-white p-2 rounded-xl" />
+          <h1 className="text-2xl font-bold text-white text-center">CMMS Yönetim Sistemi</h1>
+          <p className="text-gray-500 text-sm mt-2 text-center">Endüstri 4.0 Bakım & Arıza Takip Platformu</p>
         </div>
 
-        <h1 className="text-3xl font-bold text-white mb-2">Bakım Yönetimi</h1>
-        <p className="text-gray-400 mb-8 text-sm font-medium tracking-wide text-blue-300">DFU Donuk Fırıncılık Ürünleri A.Ş.</p>
-
-        {showNamePrompt ? (
-          <form onSubmit={handleIsimKaydet} className="space-y-4 animate-fade-in bg-gray-800 p-6 rounded-xl border border-gray-700">
-            <h2 className="text-xl font-bold text-yellow-400">Son Bir Adım!</h2>
-            <p className="text-gray-300 text-sm">
-              {tempRoleInfo ? "Hesabınız yönetici tarafından peşinen onaylandı! Sadece resmi adınızı teyit edin." : "Kurumsal kayıtlar için lütfen adınızı ve soyadınızı giriniz."}
-            </p>
-            <input type="text" value={gercekIsim} onChange={(e) => setGercekIsim(e.target.value)} placeholder="Örn: Ahmet Yılmaz" className="w-full bg-gray-900 border border-gray-600 rounded-lg p-3 text-white focus:border-blue-500 text-center text-lg font-bold" required />
-            <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition disabled:opacity-50">
-              {loading ? "Sisteme Giriliyor..." : (tempRoleInfo ? "Doğrula ve İçeri Gir" : "Kaydımı Tamamla")}
-            </button>
-          </form>
-        ) : userStatus === "admin" || userStatus === "operator" || userStatus === "isg" ? (
-          // YENİ: İSG Yetkilisi de İzleme Paneline Yönlendirilir
-          <div className="space-y-4">
-            <div className="p-4 rounded-lg bg-green-900/30 text-green-400 border border-green-800/50">
-              Giriş Başarılı (Yetki: {userStatus === "isg" ? "İSG YETKİLİSİ" : userStatus.toUpperCase()})
-            </div>
-            <button onClick={() => handleEnterSystem("/admin")} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-4 rounded-xl shadow-lg">Yönetim Paneline Git ➔</button>
+        {/* HATA MESAJI GÖSTERİMİ */}
+        {error && (
+          <div className="bg-red-900/30 border border-red-800/50 text-red-400 p-4 rounded-xl mb-6 text-sm font-medium text-center">
+            {error}
           </div>
-        ) : userStatus === "uretim" ? (
-          <div className="space-y-4">
-            <div className="p-4 rounded-lg bg-red-900/30 text-red-400 border border-red-800/50">Giriş Başarılı (Yetki: ÜRETİM YETKİLİSİ)</div>
-            <button onClick={() => handleEnterSystem("/admin/aktif-isler")} className="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-4 px-4 rounded-xl shadow-lg">Aktif İşler Paneline Git ➔</button>
-          </div>
-        ) : userStatus === "ik" ? (
-          <div className="space-y-4">
-            <div className="p-4 rounded-lg bg-teal-900/30 text-teal-400 border border-teal-800/50">Giriş Başarılı (Yetki: İNSAN KAYNAKLARI)</div>
-            <button onClick={() => handleEnterSystem("/admin/mesai")} className="w-full bg-teal-600 hover:bg-teal-500 text-white font-bold py-4 px-4 rounded-xl shadow-lg">Puantaj Raporlarına Git ➔</button>
-          </div>
-        ) : userStatus === "teknisyen" || userStatus === "user" ? (
-          <div className="space-y-4">
-            <div className="p-4 rounded-lg bg-blue-900/30 text-blue-400 border border-blue-800/50">Giriş Başarılı (Yetki: TEKNİSYEN)</div>
-            <button onClick={() => handleEnterSystem("/dashboard")} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-4 rounded-xl shadow-lg">Vardiya Raporu Girişine Git ➔</button>
-          </div>
-        ) : userStatus === "pending" ? (
-          <div className="p-4 rounded-lg bg-orange-900/30 text-orange-400 border border-orange-800/50">{message}</div>
-        ) : (
-          <button onClick={handleGoogleLogin} disabled={loading} className="w-full bg-white hover:bg-gray-100 text-gray-900 font-semibold py-3 px-4 rounded-xl transition flex items-center justify-center gap-3 disabled:opacity-50">
-            {loading ? "Bağlanıyor..." : "Google ile Giriş Yap"}
-          </button>
         )}
+
+        {/* GİRİŞ FORMU */}
+        <form onSubmit={handleLogin} className="space-y-6">
+          <div>
+            <label className="block text-sm font-bold text-gray-400 mb-2">E-Posta Adresi</label>
+            <input 
+              type="email" 
+              value={email} 
+              onChange={(e) => setEmail(e.target.value)} 
+              required 
+              className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-teal-500 transition-colors"
+              placeholder="ornek@sirket.com"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-400 mb-2">Şifre</label>
+            <input 
+              type="password" 
+              value={password} 
+              onChange={(e) => setPassword(e.target.value)} 
+              required 
+              className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-teal-500 transition-colors"
+              placeholder="••••••••"
+            />
+          </div>
+
+          <button 
+            type="submit" 
+            disabled={isLoggingIn} 
+            className="w-full bg-teal-600 hover:bg-teal-500 text-white font-bold py-4 rounded-xl shadow-[0_0_15px_rgba(13,148,136,0.3)] transition-all disabled:opacity-50"
+          >
+            {isLoggingIn ? "Giriş Yapılıyor..." : "Sisteme Giriş Yap"}
+          </button>
+        </form>
+
       </div>
+      
+      <p className="text-gray-600 text-xs mt-8 text-center">
+        &copy; {new Date().getFullYear()} DFU Donuk Fırıncılık Ürünleri A.Ş. Tüm Hakları Saklıdır.<br/>
+        Sistem Sürümü: V3.0
+      </p>
     </div>
   );
 }

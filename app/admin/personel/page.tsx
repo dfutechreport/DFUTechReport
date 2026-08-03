@@ -31,14 +31,18 @@ export default function PersonelYonetimi() {
     return () => unsubscribe();
   }, []);
 
-  const fetchKullanicilar = async () => {
+    const fetchKullanicilar = async () => {
     setLoading(true);
     try {
       const snap = await getDocs(collection(db, "users"));
-      const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // TypeScript'in hata vermemesi için her satırın 'any' tipinde olduğunu belirttik
+      const data: any[] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       
       // Önce onay bekleyenleri (isApproved: false), sonra onaylıları (isApproved: true) sırala
-      data.sort((a, b) => (a.isApproved === b.isApproved) ? 0 : a.isApproved ? 1 : -1);
+      data.sort((a: any, b: any) => {
+        if (a.isApproved === b.isApproved) return 0;
+        return a.isApproved ? 1 : -1;
+      });
       
       setKullanicilar(data);
     } catch (error) {

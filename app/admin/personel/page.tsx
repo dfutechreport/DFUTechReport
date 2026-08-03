@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs, doc, updateDoc, deleteDoc } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth, db } from "../../../lib/firebase"; // Dosya yolunuza dikkat edin
+import { auth, db } from "../../../lib/firebase"; 
 import Link from "next/link";
 
 export default function PersonelYonetimi() {
@@ -16,8 +16,7 @@ export default function PersonelYonetimi() {
       if (user) {
         // Oturum açan kullanıcının yetkisini kontrol et
         const currentUserRef = doc(db, "users", user.uid);
-        import { getDoc } from "firebase/firestore";
-        const currentUserSnap = await getDoc(currentUserRef);
+        const currentUserSnap = await getDoc(currentUserRef); // <-- Düzeltildi: Hatalı import satırı kaldırıldı
         
         if (currentUserSnap.exists() && currentUserSnap.data().role === "admin") {
           setIsAdmin(true);
@@ -148,7 +147,6 @@ export default function PersonelYonetimi() {
                       <option value="operator">Teknik Operatör</option>
                       <option value="uretim">Üretim Bildiricisi</option>
                       <option value="isg">İSG (Güvenlik)</option>
-                      {/* YENİ EKLENEN: Depo Rolü Seçeneği */}
                       <option value="depo">Depo ve Stok Sorumlusu</option>
                     </select>
                   </td>

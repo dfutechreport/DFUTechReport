@@ -1,166 +1,188 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { collection, getDocs, doc, getDoc, updateDoc, setDoc, query, orderBy, deleteDoc } from "firebase/firestore";
-import { db } from "../../../lib/firebase";
+import { useEffect, useState } from "react";
+import { collection, getDocs, doc, updateDoc, deleteDoc } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth, db } from "../../../lib/firebase"; // Dosya yolunuza dikkat edin
 import Link from "next/link";
 
-type User = {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  isApproved: boolean;
-};
-
 export default function PersonelYonetimi() {
-  const [users, setUsers] = useState<User[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [kullanicilar, setKullanicilar] = useState<any[]>([]);
 
-  const [yeniEmail, setYeniEmail] = useState("");
-  const [yeniIsim, setYeniIsim] = useState("");
-  const [yeniRol, setYeniRol] = useState("teknisyen");
-  const [ekliyor, setEkliyor] = useState(false);
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // Oturum açan kullanıcının yetkisini kontrol et
+        const currentUserRef = doc(db, "users", user.uid);
+        import { getDoc } from "firebase/firestore";
+        const currentUserSnap = await getDoc(currentUserRef);
+        
+        if (currentUserSnap.exists() && currentUserSnap.data().role === "admin") {
+          setIsAdmin(true);
+          fetchKullanicilar();
+        } else {
+          window.location.href = "/dashboard";
+        }
+      } else {
+        window.location.href = "/";
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
-  const fetchUsers = async () => {
+  const fetchKullanicilar = async () => {
+    setLoading(true);
     try {
-      const q = query(collection(db, "users"), orderBy("isApproved")); 
-      const snap = await getDocs(q);
-      setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() } as User)));
-    } catch (error) { console.error(error); } finally { setLoading(false); }
+      const snap = await getDocs(collection(db, "users"));
+      const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      
+      // Önce onay bekleyenleri (isApproved: false), sonra onaylıları (isApproved: true) sırala
+      data.sort((a, b) => (a.isApproved === b.isApproved) ? 0 : a.isApproved ? 1 : -1);
+      
+      setKullanicilar(data);
+    } catch (error) {
+      console.error("Kullanıcılar çekilirken hata:", error);
+    }
+    setLoading(false);
   };
 
-  useEffect(() => { fetchUsers(); }, []);
-
-  const handleApprove = async (userId: string, newRole: string) => {
-    if (!window.confirm(`Bu kullanıcıyı "${newRole.toUpperCase()}" yetkisiyle onaylamak istediğinize emin misiniz?`)) return;
+  const handleOnayla = async (userId: string, currentRole: string) => {
+    if (!currentRole) return alert("Lütfen onaylamadan önce bir rol seçiniz.");
     try {
-      await updateDoc(doc(db, "users", userId), { isApproved: true, role: newRole });
-      alert("Kullanıcı onaylandı!"); fetchUsers(); 
-    } catch (error) { alert("İşlem başarısız."); }
+      await updateDoc(doc(db, "users", userId), { 
+        isApproved: true,
+        role: currentRole 
+      });
+      alert("Personel başarıyla onaylandı.");
+      fetchKullanicilar();
+    } catch (error) {
+      console.error(error);
+      alert("Onaylama sırasında hata oluştu.");
+    }
   };
 
-  const handleRoleChange = async (userId: string, newRole: string) => {
-    if (!window.confirm(`Yetkiyi "${newRole.toUpperCase()}" olarak değiştirmek istediğinize emin misiniz?`)) return;
+  const handleRolDegistir = async (userId: string, newRole: string) => {
     try {
-      await updateDoc(doc(db, "users", userId), { role: newRole }); fetchUsers(); 
-    } catch (error) { alert("Yetki güncellenemedi."); }
+      await updateDoc(doc(db, "users", userId), { role: newRole });
+      alert("Rol başarıyla güncellendi.");
+      fetchKullanicilar();
+    } catch (error) {
+      console.error(error);
+      alert("Rol güncellenirken hata oluştu.");
+    }
   };
 
-  const handleRevoke = async (userId: string, email: string) => {
-    if (!window.confirm("Bu personelin yetkisini almak veya kaydını SİLMEK istediğinize emin misiniz?")) return;
+  const handleSil = async (userId: string) => {
+    if (!window.confirm("DİKKAT: Bu personelin sisteme erişimini tamamen silmek istediğinize emin misiniz?")) return;
     try {
-      if (userId === email) await deleteDoc(doc(db, "users", userId));
-      else await updateDoc(doc(db, "users", userId), { isApproved: false, role: "pending" });
-      fetchUsers();
-    } catch (error) { console.error(error); }
+      await deleteDoc(doc(db, "users", userId));
+      alert("Kullanıcı kaydı başarıyla silindi.");
+      fetchKullanicilar();
+    } catch (error) {
+      console.error(error);
+      alert("Silme işlemi başarısız.");
+    }
   };
 
-  const handleManuelEkle = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!yeniEmail || !yeniEmail.includes("@")) return alert("Geçerli e-posta giriniz.");
-    if (yeniIsim.trim().length < 3) return alert("Personel ismini girin.");
-
-    setEkliyor(true);
-    try {
-      const lowerEmail = yeniEmail.toLowerCase().trim();
-      const userRef = doc(db, "users", lowerEmail); 
-      const mevcutSnap = await getDoc(userRef);
-      if (mevcutSnap.exists()) { alert("Bu e-posta sistemde var!"); setEkliyor(false); return; }
-
-      await setDoc(userRef, { email: lowerEmail, name: yeniIsim, role: yeniRol, isApproved: true, createdAt: new Date(), manuelEklendi: true });
-      alert(`${yeniIsim} peşinen onaylandı!`);
-      setYeniEmail(""); setYeniIsim(""); setYeniRol("teknisyen"); fetchUsers();
-    } catch (error: any) { alert("Hata: " + error.message); } finally { setEkliyor(false); }
-  };
+  if (loading) return <div className="min-h-screen bg-gray-950 flex justify-center items-center text-white">Veriler yükleniyor...</div>;
+  if (!isAdmin) return <div className="min-h-screen bg-gray-950 text-red-500 flex justify-center items-center">Yetkisiz Erişim!</div>;
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8">
+      <div className="max-w-6xl mx-auto bg-gray-900 border border-purple-500/50 rounded-2xl shadow-2xl p-6 md:p-10">
         
-        <div className="flex justify-between items-center mb-10 border-b border-gray-800 pb-5">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-gray-800 pb-6 gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Personel ve Yetki Yönetimi</h1>
-            <p className="text-gray-400 mt-1">Sisteme kayıt olanları onaylayın veya manuel olarak yetkilendirin.</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-purple-400 flex items-center gap-3">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+              Sistem Personel ve Yetki Yönetimi
+            </h1>
+            <p className="text-gray-400 mt-2 text-sm">Sisteme kayıt olanları onaylayın, silin veya rollerini (Yetkilerini) güncelleyin.</p>
           </div>
-          <Link href="/admin" className="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg font-medium transition">← Panele Dön</Link>
+          <Link href="/admin" className="bg-gray-800 hover:bg-gray-700 px-6 py-3 rounded-lg text-sm font-bold shadow-lg transition flex items-center">← Panele Dön</Link>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          <div className="lg:col-span-1">
-            <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-lg">
-              <h2 className="text-xl font-bold mb-4 text-purple-400">Yeni Personel Ekle</h2>
-              <form onSubmit={handleManuelEkle} className="space-y-4">
-                <div><label className="block text-sm text-gray-400 mb-1">E-Posta</label><input type="email" required value={yeniEmail} onChange={(e) => setYeniEmail(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-lg p-3 focus:border-purple-500" /></div>
-                <div><label className="block text-sm text-gray-400 mb-1">Resmi İsim - Soyisim</label><input type="text" required value={yeniIsim} onChange={(e) => setYeniIsim(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-lg p-3 focus:border-purple-500" /></div>
-                <div>
-                  <label className="block text-sm text-gray-400 mb-1">Yetki (Rol)</label>
-                  <select value={yeniRol} onChange={(e) => setYeniRol(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-lg p-3 focus:border-purple-500">
-                    <option value="teknisyen">Teknisyen</option>
-                    <option value="operator">Operatör</option>
-                    <option value="uretim">Üretim Yetkilisi</option>
-                    {/* YENİ: İSG Rolü Eklendi */}
-                    <option value="isg">İSG Yetkilisi</option>
-                    <option value="ik">İnsan Kaynakları (İK)</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                </div>
-                <button type="submit" disabled={ekliyor} className="w-full bg-purple-600 hover:bg-purple-500 font-bold py-3 rounded-lg mt-4 disabled:opacity-50">
-                  {ekliyor ? "Ekleniyor..." : "Sisteme Kaydet"}
-                </button>
-              </form>
-            </div>
-          </div>
-
-          <div className="lg:col-span-3">
-            <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-lg overflow-x-auto">
-              <h2 className="text-xl font-bold mb-4">Sistemdeki Tüm Personeller</h2>
-              {users.length === 0 ? <p className="text-gray-500">Personel yok.</p> : (
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-800 text-gray-400">
-                      <th className="pb-3 px-2">İsim & Soyisim</th><th className="pb-3 px-2">E-Posta</th><th className="pb-3 px-2">Durum</th><th className="pb-3 px-2">Yetki</th><th className="pb-3 px-2 text-right">Aksiyon</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map((u) => (
-                      <tr key={u.id} className="border-b border-gray-800 hover:bg-gray-800/50 transition">
-                        <td className="py-4 px-2 font-medium">{u.name}</td>
-                        <td className="py-4 px-2 text-gray-400">{u.email}</td>
-                        <td className="py-4 px-2">
-                          {u.isApproved ? <span className="bg-green-900/30 text-green-400 px-2 py-1 rounded">Onaylı</span> : <span className="bg-orange-900/30 text-orange-400 px-2 py-1 rounded">Onay Bekliyor</span>}
-                        </td>
-                        <td className="py-4 px-2 font-medium">
-                          {u.isApproved ? (
-                            <select value={u.role} onChange={(e) => handleRoleChange(u.id, e.target.value)} className="bg-gray-800 border-gray-700 rounded p-1 text-blue-400">
-                              <option value="teknisyen">Teknisyen</option>
-                              <option value="operator">Operatör</option>
-                              <option value="uretim">Üretim Yetkilisi</option>
-                              <option value="isg">İSG Yetkilisi</option>
-                              <option value="ik">İnsan Kaynakları</option>
-                              <option value="admin">Admin</option>
-                            </select>
-                          ) : <span className="text-gray-500">Bekliyor</span>}
-                        </td>
-                        <td className="py-4 px-2 text-right space-x-1 whitespace-nowrap">
-                          {!u.isApproved ? (
-                            <>
-                              <button onClick={() => handleApprove(u.id, "teknisyen")} className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-2 py-1 rounded mb-1">Teknisyen</button>
-                              <button onClick={() => handleApprove(u.id, "operator")} className="bg-gray-600 hover:bg-gray-500 text-white text-xs px-2 py-1 rounded mb-1">Operatör</button>
-                              {/* Hızlı İSG Onay Butonu */}
-                              <button onClick={() => handleApprove(u.id, "isg")} className="bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-xs px-2 py-1 rounded">İSG Yap</button>
-                            </>
-                          ) : (
-                            <button onClick={() => handleRevoke(u.id, u.email)} className="bg-red-900/50 text-red-400 text-xs px-2 py-1 rounded border border-red-800/50">Erişimi Kes</button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+        <div className="overflow-x-auto bg-gray-800/30 rounded-xl border border-gray-800">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-gray-800">
+              <tr className="text-gray-400 text-sm">
+                <th className="py-4 px-4 font-bold border-b border-gray-700">İsim Soyisim</th>
+                <th className="py-4 px-4 font-bold border-b border-gray-700">E-Posta</th>
+                <th className="py-4 px-4 font-bold border-b border-gray-700">Sistem Durumu</th>
+                <th className="py-4 px-4 font-bold border-b border-gray-700">Kullanıcı Rolü (Yetki)</th>
+                <th className="py-4 px-4 font-bold border-b border-gray-700 text-right">İşlemler</th>
+              </tr>
+            </thead>
+            <tbody>
+              {kullanicilar.map((user) => (
+                <tr key={user.id} className="border-b border-gray-800 hover:bg-gray-800/80 transition">
+                  
+                  <td className="py-4 px-4 font-bold text-white">
+                    {user.name}
+                  </td>
+                  
+                  <td className="py-4 px-4 text-gray-400 text-sm">
+                    {user.email}
+                  </td>
+                  
+                  <td className="py-4 px-4">
+                    {user.isApproved ? (
+                      <span className="bg-green-900/40 text-green-400 px-3 py-1 rounded-full text-xs font-bold border border-green-800/50">✅ Onaylı</span>
+                    ) : (
+                      <span className="bg-red-900/40 text-red-400 px-3 py-1 rounded-full text-xs font-bold border border-red-800/50 animate-pulse">⏳ Bekliyor</span>
+                    )}
+                  </td>
+                  
+                  <td className="py-4 px-4">
+                    <select 
+                      value={user.role || ""} 
+                      onChange={(e) => user.isApproved ? handleRolDegistir(user.id, e.target.value) : null}
+                      id={`role-${user.id}`}
+                      className="bg-gray-900 border border-gray-600 rounded-lg p-2 text-sm text-gray-300 focus:border-purple-500 w-full min-w-[150px]"
+                    >
+                      <option value="">-- Rol Seçin --</option>
+                      <option value="admin">Yönetici (Admin)</option>
+                      <option value="teknisyen">Bakım Teknisyeni</option>
+                      <option value="operator">Teknik Operatör</option>
+                      <option value="uretim">Üretim Bildiricisi</option>
+                      <option value="isg">İSG (Güvenlik)</option>
+                      {/* YENİ EKLENEN: Depo Rolü Seçeneği */}
+                      <option value="depo">Depo ve Stok Sorumlusu</option>
+                    </select>
+                  </td>
+                  
+                  <td className="py-4 px-4 text-right flex justify-end gap-2">
+                    {!user.isApproved && (
+                      <button 
+                        onClick={() => {
+                          const seciliRol = (document.getElementById(`role-${user.id}`) as HTMLSelectElement).value;
+                          handleOnayla(user.id, seciliRol);
+                        }} 
+                        className="bg-green-700 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-bold transition"
+                      >
+                        Onayla
+                      </button>
+                    )}
+                    <button 
+                      onClick={() => handleSil(user.id)} 
+                      className="bg-red-900/50 hover:bg-red-600 text-red-400 hover:text-white border border-red-800/50 px-4 py-2 rounded-lg text-xs font-bold transition"
+                    >
+                      Sil
+                    </button>
+                  </td>
+                  
+                </tr>
+              ))}
+              
+              {kullanicilar.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-gray-500">Sistemde henüz kayıtlı kullanıcı bulunmamaktadır.</td>
+                </tr>
               )}
-            </div>
-          </div>
+            </tbody>
+          </table>
         </div>
 
       </div>

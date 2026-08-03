@@ -1,20 +1,116 @@
 "use client";
 
-import { useState } from "react";
-import { collection, writeBatch, doc } from "firebase/firestore";
-import { db } from "../../../lib/firebase"; // Yolunuz farklıysa ../ ayarlayın
+import { useState, useEffect } from "react";
+import { collection, writeBatch, doc, getDocs, getDoc, setDoc } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth, db } from "../../../lib/firebase"; 
 import * as XLSX from "xlsx";
 import Link from "next/link";
 
 export default function YedekParcaYoneticisi() {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [userRole, setUserRole] = useState("");
+  const [userName, setUserName] = useState("");
+  const [isAdminOrDepo, setIsAdminOrDepo] = useState(false);
 
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [kullanilanMalzemeler, setKullanilanMalzemeler] = useState<any[]>([]);
+  const [listeYukleniyor, setListeYukleniyor] = useState(false);
+
+  // YENİ EKLENEN: 24 Saatlik Geri Sayım State'leri
+  const [sonYuklemeZamani, setSonYuklemeZamani] = useState<Date | null>(null);
+  const [beklemeSuresiVar, setBeklemeSuresiVar] = useState(false);
+  const [kalanZamanMetni, setKalanZamanMetni] = useState("");
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists() && userSnap.data().isApproved) {
+          const role = userSnap.data().role;
+          setUserRole(role);
+          setUserName(userSnap.data().name);
+          
+          if (role === "admin" || role === "depo") {
+            setIsAdminOrDepo(true);
+            checkLastUploadTime(); // Firebase'den son yükleme tarihini çek
+          } else {
+            window.location.href = "/dashboard";
+          }
+        }
+      } else {
+        window.location.href = "/";
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Firebase'den Son Yükleme Tarihini Çeker
+  const checkLastUploadTime = async () => {
+    try {
+      const uploadLogRef = doc(db, "system_logs", "excel_upload");
+      const uploadLogSnap = await getDoc(uploadLogRef);
+      if (uploadLogSnap.exists() && uploadLogSnap.data().lastUpload) {
+        const lastTime = uploadLogSnap.data().lastUpload.toDate();
+        setSonYuklemeZamani(lastTime);
+      }
+    } catch (error) {
+      console.error("Zaman kontrol hatası:", error);
+    }
+  };
+
+  // YENİ EKLENEN: Canlı Geri Sayım (Timer) Mekanizması
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    
+    const zamaniHesapla = () => {
+      if (!sonYuklemeZamani) return;
+      
+      const simdikiZaman = new Date().getTime();
+      const bitisZamani = sonYuklemeZamani.getTime() + (24 * 60 * 60 * 1000); // Üstüne tam 24 saat ekler
+      const kalanFarkMs = bitisZamani - simdikiZaman;
+
+      if (kalanFarkMs > 0) {
+        // Süre henüz bitmedi, geri sayım sürüyor
+        setBeklemeSuresiVar(true);
+        
+        const saat = Math.floor((kalanFarkMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const dakika = Math.floor((kalanFarkMs % (1000 * 60 * 60)) / (1000 * 60));
+        const saniye = Math.floor((kalanFarkMs % (1000 * 60)) / 1000);
+        
+        setKalanZamanMetni(
+          `${saat.toString().padStart(2, '0')}:${dakika.toString().padStart(2, '0')}:${saniye.toString().padStart(2, '0')}`
+        );
+      } else {
+        // 24 saat doldu, butonu aktif et
+        setBeklemeSuresiVar(false);
+        setKalanZamanMetni("");
+      }
+    };
+
+    if (sonYuklemeZamani) {
+      zamaniHesapla(); // İlk açılışta hesapla
+      timer = setInterval(zamaniHesapla, 1000); // Her 1 saniyede bir güncelle
+    }
+
+    return () => clearInterval(timer);
+  }, [sonYuklemeZamani]);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!window.confirm("Bu işlem Excel'deki tüm stokları veritabanına yazacak/güncelleyecektir. Emin misiniz?")) return;
+    if (beklemeSuresiVar) {
+      alert("Hata: 24 saatlik süre henüz dolmadı!");
+      e.target.value = '';
+      return;
+    }
+
+    if (!window.confirm("Bu işlem Excel'deki tüm stokları veritabanına yazacak/güncelleyecektir. Emin misiniz?")) {
+      e.target.value = '';
+      return;
+    }
 
     setLoading(true);
     setProgress(0);
@@ -35,7 +131,6 @@ export default function YedekParcaYoneticisi() {
 
       const toplam = islenecekData.length;
       let islenen = 0;
-      // DİKKAT: Paketi 400'den 250'ye düşürdük, Firebase yorulmasın
       const CHUNK_SIZE = 250; 
 
       for (let i = 0; i < toplam; i += CHUNK_SIZE) {
@@ -47,52 +142,199 @@ export default function YedekParcaYoneticisi() {
           batch.set(docRef, item, { merge: true });
         });
 
-        // Paketi Firebase'e yolla
         await batch.commit();
-        
         islenen += chunk.length;
         setProgress(Math.floor((islenen / toplam) * 100));
-
-        // YENİ VE EN KRİTİK EKLENTİ: Firebase'e "Nefes Alma" molası veriyoruz.
-        // Her 250 veriyi yazdıktan sonra sistem yarım saniye (500ms) duraklar.
-        // Bu sayede Google Sunucuları "Quota Exceeded (Limit Aşıldı)" hatası fırlatmaz!
         await new Promise((resolve) => setTimeout(resolve, 500)); 
       }
 
-      alert(`✅ BAŞARILI! Toplam ${toplam} adet yedek parça stoğu sisteme aktarıldı/güncellendi.`);
+      // Yükleme bitti, tarihi kaydet ve Sayacı tetikle
+      const simdi = new Date();
+      await setDoc(doc(db, "system_logs", "excel_upload"), { 
+        lastUpload: simdi, 
+        uploadedBy: userName,
+        role: userRole 
+      });
       
-      // İşlem bittikten sonra File Input'u sıfırlıyoruz ki aynı dosyayı bir daha seçebilelim
+      setSonYuklemeZamani(simdi); // State'i günceller ve sayacı anında ekrana düşürür
+
+      alert(`✅ BAŞARILI! Toplam ${toplam} adet yedek parça stoğu sisteme aktarıldı.`);
       e.target.value = ''; 
 
     } catch (error) {
       console.error(error);
-      alert("Yükleme sırasında hata oluştu veya bağlantı koptu!");
+      alert("Yükleme sırasında hata oluştu!");
     }
     setLoading(false);
   };
 
+  const fetchKullanilanMalzemeler = async () => {
+    setListeYukleniyor(true);
+    try {
+      const partsSnap = await getDocs(collection(db, "spare_parts"));
+      const partsMap: Record<string, string> = {};
+      partsSnap.forEach(d => { partsMap[d.id] = d.data().parcaAdi; });
+
+      const logsSnap = await getDocs(collection(db, "maintenance_logs"));
+      const usedPartsList: any[] = [];
+
+      logsSnap.forEach(d => {
+        const data = d.data();
+        if (data.yedekParcaKodu && Number(data.yedekParcaMiktar) > 0) {
+          usedPartsList.push({
+            id: d.id,
+            tarihObj: data.kayitTarihi ? data.kayitTarihi.toDate() : new Date(),
+            tarihStr: data.kayitTarihi ? data.kayitTarihi.toDate().toLocaleString('tr-TR') : "-",
+            stokKodu: data.yedekParcaKodu,
+            parcaAdi: partsMap[data.yedekParcaKodu] || "İsimsiz Parça",
+            miktar: Number(data.yedekParcaMiktar),
+            birim: data.yedekParcaBirim || "Adet",
+            hat: data.hatAdi || "-",
+            ekipman: data.ekipmanAdi || "-",
+            personel: Array.isArray(data.isiYapanlar) ? data.isiYapanlar.join(", ") : (data.bildirenKisi || "-")
+          });
+        }
+      });
+
+      usedPartsList.sort((a, b) => b.tarihObj.getTime() - a.tarihObj.getTime());
+      setKullanilanMalzemeler(usedPartsList);
+
+    } catch (error) {
+      console.error("Malzemeler çekilirken hata:", error);
+    }
+    setListeYukleniyor(false);
+  };
+
+  const exportKullanilanMalzemelerToXLSX = () => {
+    if (kullanilanMalzemeler.length === 0) return alert("Dışa aktarılacak veri bulunamadı. Önce listeyi getirin.");
+
+    const excelData = kullanilanMalzemeler.map(p => ({
+      "Kullanım Tarihi": p.tarihStr,
+      "Stok Kodu": p.stokKodu,
+      "Yedek Parça Adı": p.parcaAdi,
+      "Miktar": p.miktar,
+      "Birim": p.birim,
+      "Kullanıldığı Hat": p.hat,
+      "Kullanıldığı Ekipman": p.ekipman,
+      "Kullanan Personel": p.personel
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Kullanilan_Malzemeler");
+    XLSX.writeFile(workbook, `Kullanilan_Yedek_Parcalar_${new Date().toLocaleDateString('tr-TR')}.xlsx`);
+  };
+
+  if (!isAdminOrDepo) return <div className="min-h-screen bg-gray-950 flex justify-center items-center text-white">Erişim Kontrolü...</div>;
+
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-6 md:p-12 flex justify-center items-center">
-      <div className="max-w-2xl w-full bg-gray-900 border border-fuchsia-500/50 rounded-2xl shadow-2xl p-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-fuchsia-400">⚙️ Yedek Parça Stok Yönetimi</h1>
-          <Link href="/admin" className="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm transition">← Panele Dön</Link>
-        </div>
+    <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8">
+      <div className="max-w-7xl mx-auto space-y-8">
         
-        <div className="bg-gray-800/50 border border-gray-700 p-6 rounded-xl text-center">
-          <h2 className="text-lg text-gray-300 font-bold mb-4">Sisteme Excel (.xlsx) İle Stok Yükle / Güncelle</h2>
-          <p className="text-sm text-gray-500 mb-6">Excel dosyasındaki "Malzeme", "Malzeme kısa metni" ve "Tahditsiz klnb." sütunları otomatik eşleştirilecektir.</p>
+        <div className="bg-gray-900 border border-fuchsia-500/50 rounded-2xl shadow-2xl p-6 md:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <p className="text-fuchsia-400 font-bold mb-1 text-sm tracking-wider uppercase">Tedarik Zinciri ve Envanter</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-white">Yedek Parça & Depo Yönetimi</h1>
+            <p className="text-gray-400 mt-2 text-sm">Hoş geldin <span className="text-fuchsia-300 font-bold">{userName}</span> (Yetki: {userRole.toUpperCase()})</p>
+          </div>
+          <Link href={userRole === "admin" ? "/admin" : "/dashboard"} className="bg-gray-800 hover:bg-gray-700 px-6 py-3 rounded-lg text-sm font-bold transition flex items-center shadow-lg">← Panele Dön</Link>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          <label className="cursor-pointer bg-fuchsia-700 hover:bg-fuchsia-600 text-white font-bold py-3 px-6 rounded-lg transition inline-block">
-            {loading ? `Yükleniyor... (%${progress})` : "Excel Dosyasını Seçin"}
-            <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleFileUpload} disabled={loading} />
-          </label>
-          
-          {loading && (
-            <div className="w-full bg-gray-700 rounded-full h-4 mt-6 overflow-hidden">
-              <div className="bg-fuchsia-500 h-4 rounded-full transition-all duration-300" style={{ width: `${progress}%` }}></div>
+          {/* SOL PANEL: EXCEL YÜKLEME VE GERİ SAYIM SAYACI */}
+          <div className="lg:col-span-1 bg-gray-900 border border-gray-700 p-6 rounded-2xl shadow-xl flex flex-col justify-center items-center text-center">
+            <div className="bg-fuchsia-900/20 p-4 rounded-full mb-4">
+              <svg className="w-10 h-10 text-fuchsia-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
             </div>
-          )}
+            <h2 className="text-xl text-white font-bold mb-2">Master Stok Yükle</h2>
+            
+            {beklemeSuresiVar ? (
+              // 24 SAAT DOLMADIYSA GÖRÜNECEK KIRMIZI SAYAÇ
+              <div className="w-full mt-4 p-5 bg-red-900/20 border border-red-800/50 rounded-xl shadow-[0_0_20px_rgba(220,38,38,0.15)]">
+                <p className="text-red-400 text-sm font-bold mb-2">YENİ YÜKLEME İÇİN KALAN SÜRE</p>
+                <div className="text-4xl font-black text-red-500 tracking-wider font-mono animate-pulse">
+                  {kalanZamanMetni}
+                </div>
+                <p className="text-gray-500 text-xs mt-3">24 saat kuralı gereği buton kilitlidir.</p>
+              </div>
+            ) : (
+              // SÜRE DOLDUYSA GÖRÜNECEK MOR YÜKLEME BUTONU
+              <div className="w-full mt-2">
+                <p className="text-xs text-green-400 font-bold mb-4 border border-green-900/50 bg-green-900/10 p-2 rounded">
+                  ✅ Yükleme işlemine izin verildi.
+                </p>
+                <label className="w-full cursor-pointer bg-fuchsia-700 hover:bg-fuchsia-600 text-white font-bold py-4 px-6 rounded-xl transition shadow-[0_0_15px_rgba(192,38,211,0.4)] block">
+                  {loading ? `Yükleniyor... (%${progress})` : "Excel (.xlsx) Seç ve Yükle"}
+                  <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleFileUpload} disabled={loading} />
+                </label>
+              </div>
+            )}
+            
+            {loading && (
+              <div className="w-full bg-gray-800 rounded-full h-3 mt-6 overflow-hidden">
+                <div className="bg-fuchsia-500 h-3 rounded-full transition-all duration-300" style={{ width: `${progress}%` }}></div>
+              </div>
+            )}
+          </div>
+
+          {/* SAĞ PANEL: KULLANILAN MALZEMELER DÖKÜMÜ */}
+          <div className="lg:col-span-2 bg-gray-900 border border-gray-700 p-6 rounded-2xl shadow-xl flex flex-col">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 border-b border-gray-800 pb-4">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <svg className="w-6 h-6 text-fuchsia-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                Kullanılan Malzemeler Listesi
+              </h2>
+              
+              <div className="flex gap-2 w-full sm:w-auto">
+                <button onClick={fetchKullanilanMalzemeler} disabled={listeYukleniyor} className="flex-1 sm:flex-none bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition border border-gray-600">
+                  {listeYukleniyor ? "Aranıyor..." : "Listeyi Getir"}
+                </button>
+                <button onClick={exportKullanilanMalzemelerToXLSX} className="flex-1 sm:flex-none bg-green-700 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg transition flex items-center justify-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                  .XLSX İndir
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-auto bg-gray-800/50 rounded-xl border border-gray-800 max-h-[400px]">
+              <table className="w-full text-left border-collapse text-sm">
+                <thead className="sticky top-0 bg-gray-800 shadow-md">
+                  <tr className="text-gray-400">
+                    <th className="py-3 px-4 border-b border-gray-700">Tarih</th>
+                    <th className="py-3 px-4 border-b border-gray-700">Stok Kodu / Parça Adı</th>
+                    <th className="py-3 px-4 border-b border-gray-700">Miktar</th>
+                    <th className="py-3 px-4 border-b border-gray-700">Kullanıldığı Yer</th>
+                    <th className="py-3 px-4 border-b border-gray-700">Kullanan</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {kullanilanMalzemeler.length > 0 ? kullanilanMalzemeler.map((row, index) => (
+                    <tr key={index} className="border-b border-gray-800 hover:bg-gray-800/80 transition">
+                      <td className="py-3 px-4 text-gray-300 whitespace-nowrap">{row.tarihStr}</td>
+                      <td className="py-3 px-4">
+                        <div className="font-bold text-fuchsia-300">{row.stokKodu}</div>
+                        <div className="text-xs text-gray-400">{row.parcaAdi}</div>
+                      </td>
+                      <td className="py-3 px-4 font-bold text-red-400">{row.miktar} <span className="text-xs font-normal text-gray-500">{row.birim}</span></td>
+                      <td className="py-3 px-4">
+                        <div className="text-gray-200">{row.hat}</div>
+                        <div className="text-xs text-teal-400">{row.ekipman}</div>
+                      </td>
+                      <td className="py-3 px-4 text-gray-300">{row.personel}</td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td colSpan={5} className="py-12 text-center text-gray-500">
+                        Henüz veri çekilmedi. Görmek için "Listeyi Getir" butonuna basınız.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+          </div>
         </div>
       </div>
     </div>

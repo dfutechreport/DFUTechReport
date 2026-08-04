@@ -17,7 +17,6 @@ export default function YedekParcaYoneticisi() {
   const [kullanilanMalzemeler, setKullanilanMalzemeler] = useState<any[]>([]);
   const [listeYukleniyor, setListeYukleniyor] = useState(false);
 
-  // YENİ EKLENEN: 24 Saatlik Geri Sayım State'leri
   const [sonYuklemeZamani, setSonYuklemeZamani] = useState<Date | null>(null);
   const [beklemeSuresiVar, setBeklemeSuresiVar] = useState(false);
   const [kalanZamanMetni, setKalanZamanMetni] = useState("");
@@ -34,7 +33,7 @@ export default function YedekParcaYoneticisi() {
           
           if (role === "admin" || role === "depo") {
             setIsAdminOrDepo(true);
-            checkLastUploadTime(); // Firebase'den son yükleme tarihini çek
+            checkLastUploadTime(); 
           } else {
             window.location.href = "/dashboard";
           }
@@ -46,7 +45,6 @@ export default function YedekParcaYoneticisi() {
     return () => unsubscribe();
   }, []);
 
-  // Firebase'den Son Yükleme Tarihini Çeker
   const checkLastUploadTime = async () => {
     try {
       const uploadLogRef = doc(db, "system_logs", "excel_upload");
@@ -60,40 +58,31 @@ export default function YedekParcaYoneticisi() {
     }
   };
 
-  // YENİ EKLENEN: Canlı Geri Sayım (Timer) Mekanizması
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    
     const zamaniHesapla = () => {
       if (!sonYuklemeZamani) return;
       
       const simdikiZaman = new Date().getTime();
-      const bitisZamani = sonYuklemeZamani.getTime() + (24 * 60 * 60 * 1000); // Üstüne tam 24 saat ekler
+      const bitisZamani = sonYuklemeZamani.getTime() + (24 * 60 * 60 * 1000); 
       const kalanFarkMs = bitisZamani - simdikiZaman;
 
       if (kalanFarkMs > 0) {
-        // Süre henüz bitmedi, geri sayım sürüyor
         setBeklemeSuresiVar(true);
-        
         const saat = Math.floor((kalanFarkMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         const dakika = Math.floor((kalanFarkMs % (1000 * 60 * 60)) / (1000 * 60));
         const saniye = Math.floor((kalanFarkMs % (1000 * 60)) / 1000);
-        
-        setKalanZamanMetni(
-          `${saat.toString().padStart(2, '0')}:${dakika.toString().padStart(2, '0')}:${saniye.toString().padStart(2, '0')}`
-        );
+        setKalanZamanMetni(`${saat.toString().padStart(2, '0')}:${dakika.toString().padStart(2, '0')}:${saniye.toString().padStart(2, '0')}`);
       } else {
-        // 24 saat doldu, butonu aktif et
         setBeklemeSuresiVar(false);
         setKalanZamanMetni("");
       }
     };
 
     if (sonYuklemeZamani) {
-      zamaniHesapla(); // İlk açılışta hesapla
-      timer = setInterval(zamaniHesapla, 1000); // Her 1 saniyede bir güncelle
+      zamaniHesapla(); 
+      timer = setInterval(zamaniHesapla, 1000); 
     }
-
     return () => clearInterval(timer);
   }, [sonYuklemeZamani]);
 
@@ -148,7 +137,6 @@ export default function YedekParcaYoneticisi() {
         await new Promise((resolve) => setTimeout(resolve, 500)); 
       }
 
-      // Yükleme bitti, tarihi kaydet ve Sayacı tetikle
       const simdi = new Date();
       await setDoc(doc(db, "system_logs", "excel_upload"), { 
         lastUpload: simdi, 
@@ -156,7 +144,7 @@ export default function YedekParcaYoneticisi() {
         role: userRole 
       });
       
-      setSonYuklemeZamani(simdi); // State'i günceller ve sayacı anında ekrana düşürür
+      setSonYuklemeZamani(simdi); 
 
       alert(`✅ BAŞARILI! Toplam ${toplam} adet yedek parça stoğu sisteme aktarıldı.`);
       e.target.value = ''; 
@@ -237,12 +225,12 @@ export default function YedekParcaYoneticisi() {
             <h1 className="text-2xl md:text-3xl font-bold text-white">Yedek Parça & Depo Yönetimi</h1>
             <p className="text-gray-400 mt-2 text-sm">Hoş geldin <span className="text-fuchsia-300 font-bold">{userName}</span> (Yetki: {userRole.toUpperCase()})</p>
           </div>
-          <Link href={userRole === "admin" ? "/admin" : "/dashboard"} className="bg-gray-800 hover:bg-gray-700 px-6 py-3 rounded-lg text-sm font-bold transition flex items-center shadow-lg">← Panele Dön</Link>
+          {/* YENİ GÜNCELLENEN AKILLI GERİ DÖNÜŞ BUTONU */}
+          <Link href={userRole === "depo" ? "/depo" : "/admin"} className="bg-gray-800 hover:bg-gray-700 px-6 py-3 rounded-lg text-sm font-bold transition flex items-center shadow-lg">← Panele Dön</Link>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* SOL PANEL: EXCEL YÜKLEME VE GERİ SAYIM SAYACI */}
           <div className="lg:col-span-1 bg-gray-900 border border-gray-700 p-6 rounded-2xl shadow-xl flex flex-col justify-center items-center text-center">
             <div className="bg-fuchsia-900/20 p-4 rounded-full mb-4">
               <svg className="w-10 h-10 text-fuchsia-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
@@ -250,7 +238,6 @@ export default function YedekParcaYoneticisi() {
             <h2 className="text-xl text-white font-bold mb-2">Master Stok Yükle</h2>
             
             {beklemeSuresiVar ? (
-              // 24 SAAT DOLMADIYSA GÖRÜNECEK KIRMIZI SAYAÇ
               <div className="w-full mt-4 p-5 bg-red-900/20 border border-red-800/50 rounded-xl shadow-[0_0_20px_rgba(220,38,38,0.15)]">
                 <p className="text-red-400 text-sm font-bold mb-2">YENİ YÜKLEME İÇİN KALAN SÜRE</p>
                 <div className="text-4xl font-black text-red-500 tracking-wider font-mono animate-pulse">
@@ -259,7 +246,6 @@ export default function YedekParcaYoneticisi() {
                 <p className="text-gray-500 text-xs mt-3">24 saat kuralı gereği buton kilitlidir.</p>
               </div>
             ) : (
-              // SÜRE DOLDUYSA GÖRÜNECEK MOR YÜKLEME BUTONU
               <div className="w-full mt-2">
                 <p className="text-xs text-green-400 font-bold mb-4 border border-green-900/50 bg-green-900/10 p-2 rounded">
                   ✅ Yükleme işlemine izin verildi.
@@ -278,11 +264,10 @@ export default function YedekParcaYoneticisi() {
             )}
           </div>
 
-          {/* SAĞ PANEL: KULLANILAN MALZEMELER DÖKÜMÜ */}
           <div className="lg:col-span-2 bg-gray-900 border border-gray-700 p-6 rounded-2xl shadow-xl flex flex-col">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 border-b border-gray-800 pb-4">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <svg className="w-6 h-6 text-fuchsia-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                <svg className="w-6 h-6 text-fuchsia-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
                 Kullanılan Malzemeler Listesi
               </h2>
               

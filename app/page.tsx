@@ -33,13 +33,11 @@ export default function LoginPage() {
                 router.push("/dashboard"); 
               }
             } else {
-              // Kayıtlı ama onaylanmamış
               setError(`Hesabınız (${user.email}) sistemde kayıtlı ancak henüz onaylanmamış. Lütfen yöneticinizle görüşün.`);
               auth.signOut();
               setLoading(false);
             }
           } else {
-            // İLK DEFA GİRİŞ YAPIYOR: Sisteme onaysız olarak kaydet
             await setDoc(doc(db, "users", user.uid), {
               name: user.displayName || "İsimsiz Kullanıcı",
               email: user.email,
@@ -69,9 +67,7 @@ export default function LoginPage() {
     const provider = new GoogleAuthProvider();
     
     try {
-      // Google Popup Penceresini Açar
       await signInWithPopup(auth, provider);
-      // İşlem başarılı olursa sayfanın yukarısındaki useEffect tetiklenir (Yönlendirme veya Onay kaydı yapar)
     } catch (err: any) {
       console.error(err);
       if (err.code === 'auth/popup-closed-by-user') {
@@ -89,21 +85,23 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gray-950 flex flex-col justify-center items-center p-4">
       <div className="max-w-md w-full bg-gray-900 border border-gray-800 rounded-3xl shadow-2xl p-8">
         
-        {/* LOGO VE BAŞLIK ALANI */}
+        {/* YENİ GÜNCELLENEN LOGO VE BAŞLIK ALANI */}
         <div className="flex flex-col items-center mb-8">
-          <img src="/dfulogo.png" alt="DFU Logo" className="h-16 w-auto mb-6 bg-white p-2 rounded-xl" />
-          <h1 className="text-2xl font-bold text-white text-center">CMMS Yönetim Sistemi</h1>
-          <p className="text-gray-500 text-sm mt-2 text-center">Kurumsal Giriş Portalı</p>
+          <img src="/dfulogo.png" alt="DFU Logo" className="h-16 w-auto mb-6 rounded-xl" />
+          <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 to-yellow-200 text-center tracking-widest mb-1">
+            DFU TECH REPORT
+          </h1>
+          <p className="text-gray-400 text-sm mt-1 text-center font-medium tracking-wide">
+            Teknik Bakım Raporlama ve Takip Sistemi
+          </p>
         </div>
 
-        {/* HATA/BİLGİ MESAJI */}
         {error && (
           <div className="bg-red-900/30 border border-red-800/50 text-red-300 p-4 rounded-xl mb-8 text-sm text-center leading-relaxed font-medium">
             {error}
           </div>
         )}
 
-        {/* GOOGLE GİRİŞ BUTONU */}
         <button 
           onClick={handleGoogleLogin}
           disabled={isProcessing} 

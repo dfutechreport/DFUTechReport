@@ -8,12 +8,12 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword
 } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../lib/firebase"; 
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
-  const [isLoginMode, setIsLoginMode] = useState(true); // Giriş mi Kayıt mı?
+  const [isLoginMode, setIsLoginMode] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -25,7 +25,6 @@ export default function LoginPage() {
   
   const router = useRouter();
 
-  // Sistem açıldığında yetki kontrolü
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -38,29 +37,30 @@ export default function LoginPage() {
             
             if (userData.isApproved) {
               const role = userData.role;
-              if (role === "admin" || role === "isg") {
-                router.push("/admin");
-              } else if (role === "depo") {
-                router.push("/depo"); 
-              } else {
-                router.push("/dashboard"); 
-              }
+              if (role === "admin" || role === "isg") router.push("/admin");
+              else if (role === "depo") router.push("/depo"); 
+              else router.push("/dashboard"); 
             } else {
               setError(`Hesabınız (${user.email}) sistemde kayıtlı ancak henüz onaylanmamış. Lütfen yöneticinizle görüşün.`);
-              auth.signOut();
+              await auth.signOut();
               setLoading(false);
             }
           } else {
-            // Google ile ilk defa girenler için arka planda kayıt oluştur
-            await setDoc(doc(db, "users", user.uid), {
-              name: user.displayName || "İsimsiz Kullanıcı",
-              email: user.email,
-              role: "",
-              isApproved: false,
-              createdAt: new Date()
-            });
-            setError(`Kayıt başvurunuz (${user.email}) alındı! Yöneticiniz onayladıktan sonra tekrar giriş yapabilirsiniz.`);
-            auth.signOut();
+            // İLK GOOGLE GİRİŞİ: Firestore'a %100 yazıldığından emin ol
+            try {
+              await setDoc(userRef, {
+                name: user.displayName || "İsimsiz Google Kullanıcısı",
+                email: user.email,
+                role: "",
+                isApproved: false,
+                createdAt: serverTimestamp()
+              });
+              setError(`Kayıt başvurunuz (${user.email}) alındı! Yöneticiniz onayladıktan sonra tekrar giriş yapabilirsiniz.`);
+            } catch (firestoreErr) {
+              console.error("Firestore Kayıt Hatası:", firestoreErr);
+              setError("Sunucuya kayıt yapılamadı. Lütfen yöneticiyle iletişime geçin.");
+            }
+            await auth.signOut(); // Yazma bittikten SONRA çıkış yap
             setLoading(false);
           }
         } catch (err) {
@@ -75,7 +75,6 @@ export default function LoginPage() {
     return () => unsubscribe();
   }, [router]);
 
-  // E-Posta / Şifre ile Giriş veya Kayıt İşlemi
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsProcessing(true);
@@ -93,20 +92,23 @@ export default function LoginPage() {
           setIsProcessing(false);
           return;
         }
+        
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         
-        // Yeni kullanıcıyı Firestore'a "Onaysız" kaydet
-        await setDoc(doc(db, "users", user.uid), {
+        // Önce veritabanına YAZ, sonra ÇIKIŞ yap
+        const userRef = doc(db, "users", user.uid);
+        await setDoc(userRef, {
           name: name,
           email: email,
           role: "",
           isApproved: false,
-          createdAt: new Date()
+          createdAt: serverTimestamp()
         });
 
         setSuccessMsg("Kayıt başarılı! Yöneticiniz hesabınızı onayladığında giriş yapabilirsiniz.");
-        auth.signOut(); 
+        await auth.signOut(); // Yazma garanti edildikten sonra oturumu sonlandır
+        
         setIsLoginMode(true); 
         setEmail("");
         setPassword("");
@@ -121,7 +123,6 @@ export default function LoginPage() {
     setIsProcessing(false);
   };
 
-  // Google ile Giriş İşlemi
   const handleGoogleLogin = async () => {
     setIsProcessing(true);
     setError("");
@@ -145,7 +146,6 @@ export default function LoginPage() {
         <div className="absolute -top-20 -right-20 w-40 h-40 bg-teal-600/10 rounded-full blur-3xl"></div>
         <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-yellow-600/10 rounded-full blur-3xl"></div>
 
-        {/* LOGO, BAŞLIK VE SLOGAN */}
         <div className="flex flex-col items-center mb-8 relative z-10">
           <img src="/dfulogo.png" alt="DFU Logo" className="h-16 w-auto mb-5 rounded-xl drop-shadow-[0_0_15px_rgba(234,179,8,0.2)]" />
           <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 to-yellow-200 text-center tracking-widest mb-1">
@@ -165,10 +165,8 @@ export default function LoginPage() {
         {error && <div className="bg-red-900/30 border border-red-800/50 text-red-300 p-3 rounded-xl mb-4 text-sm text-center leading-relaxed font-medium relative z-10">{error}</div>}
         {successMsg && <div className="bg-green-900/30 border border-green-800/50 text-green-300 p-3 rounded-xl mb-4 text-sm text-center leading-relaxed font-medium relative z-10">{successMsg}</div>}
 
-        {/* E-POSTA İLE GİRİŞ / KAYIT FORMU */}
         <div className="relative z-10">
           
-          {/* Giriş / Kayıt Geçiş Butonları */}
           <div className="flex bg-gray-800 p-1 rounded-xl mb-5">
             <button type="button" onClick={() => { setIsLoginMode(true); setError(""); setSuccessMsg(""); }} className={`flex-1 py-2 text-sm font-bold rounded-lg transition ${isLoginMode ? 'bg-gray-600 text-white shadow' : 'text-gray-400 hover:text-gray-200'}`}>Giriş Yap</button>
             <button type="button" onClick={() => { setIsLoginMode(false); setError(""); setSuccessMsg(""); }} className={`flex-1 py-2 text-sm font-bold rounded-lg transition ${!isLoginMode ? 'bg-gray-600 text-white shadow' : 'text-gray-400 hover:text-gray-200'}`}>Kayıt Ol</button>
@@ -191,14 +189,12 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* AYIRICI ÇİZGİ */}
           <div className="flex items-center my-5">
             <div className="flex-1 border-t border-gray-700"></div>
             <span className="px-3 text-xs text-gray-500 font-bold">VEYA</span>
             <div className="flex-1 border-t border-gray-700"></div>
           </div>
 
-          {/* GOOGLE İLE GİRİŞ BUTONU */}
           <button onClick={handleGoogleLogin} disabled={isProcessing} className="w-full bg-white hover:bg-gray-100 text-gray-900 text-sm font-bold py-3.5 px-6 rounded-xl shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-3">
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />

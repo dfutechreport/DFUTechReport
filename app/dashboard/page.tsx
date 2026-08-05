@@ -88,7 +88,7 @@ function DashboardIcerik() {
   // Sesi Metne Çevirme ve Veritabanında Arama Fonksiyonu
   const sesliAramaBaslat = () => {
     // Tarayıcının yerleşik ses tanıma motorunu çağır (Sıfır Maliyet)
-    const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
       alert("Cihazınız veya tarayıcınız sesli aramayı desteklemiyor (Chrome kullanın).");
       return;

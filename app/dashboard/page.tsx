@@ -142,6 +142,37 @@ function DashboardIcerik() {
         setAsistanMetni("Veritabanı bağlantısında hata oluştu.");
       }
     };
+  // --- YENİ EKLENEN: AÇIKLAMA KUTUSU İÇİN SESLE YAZDIRMA ---
+  const [isDictating, setIsDictating] = useState(false);
+
+  const sesliYazimBaslat = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Cihazınız sesli yazmayı desteklemiyor.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "tr-TR"; // Türkçe dinleme
+    
+    recognition.onstart = () => setIsDictating(true);
+    
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      const mevcutMetin = getValues("aciklama") || "";
+      
+      // Eğer kutuda yazı varsa, sonuna boşluk bırakıp yeni cümleyi ekler
+      const yeniMetin = mevcutMetin ? mevcutMetin + " " + transcript : transcript;
+      
+      setValue("aciklama", yeniMetin, { shouldValidate: true });
+      setIsDictating(false);
+    };
+
+    recognition.onerror = () => setIsDictating(false);
+    recognition.onend = () => setIsDictating(false);
+
+    recognition.start();
+  };
 
     recognition.onerror = (event: any) => {
       setIsListening(false);
@@ -156,7 +187,7 @@ function DashboardIcerik() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const { register, handleSubmit, control, watch, formState: { errors }, reset, setValue } = useForm({
+    const { register, handleSubmit, control, watch, formState: { errors }, reset, setValue, getValues } = useForm({
     resolver: yupResolver(arizaSemasi),
     defaultValues: { isDuruslu: false, yedekParcaBirim: "Adet" }
   });
@@ -641,9 +672,25 @@ function DashboardIcerik() {
               <div className="md:col-span-2 text-center pt-2"><p className="text-sm text-gray-400">Otomatik Hesaplanan Süre:</p><p className="text-3xl font-bold text-blue-500">{hesaplananSure} <span className="text-lg text-gray-500">Dakika</span></p></div>
             </div>
 
+                       {/* YENİ EKLENEN: SESLİ YAZDIRMA DESTEKLİ AÇIKLAMA KUTUSU */}
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-2">Açıklama / Yapılan İşlem</label>
-              <textarea {...register("aciklama")} rows={4} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 focus:border-blue-500" />
+              <div className="flex justify-between items-end mb-2">
+                <label className="block text-sm font-medium text-gray-400">Açıklama / Yapılan İşlem</label>
+                <button 
+                  type="button" 
+                  onClick={sesliYazimBaslat}
+                  className={`flex items-center gap-2 text-xs font-bold px-3 py-1.5 rounded-lg transition-all shadow-md ${isDictating ? 'bg-red-600 animate-pulse text-white' : 'bg-gray-800 hover:bg-gray-700 text-teal-400 border border-gray-600'}`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+                  {isDictating ? "Sizi Dinliyor..." : "Sesle Yazdır"}
+                </button>
+              </div>
+              <textarea 
+                {...register("aciklama")} 
+                rows={4} 
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-teal-500" 
+                placeholder="Açıklamayı klavyeyle yazabilir veya mikrofon butonuna basarak söyleyebilirsiniz..." 
+              />
             </div>
 
             <button type="submit" disabled={isSubmitting || hesaplananSure <= 0} className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-4 px-4 rounded-xl disabled:opacity-50 transition-all">

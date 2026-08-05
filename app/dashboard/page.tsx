@@ -56,8 +56,17 @@ function DashboardIcerik() {
   const [aktifIsgAlarmlari, setAktifIsgAlarmlari] = useState<any[]>([]); 
   const [aktifPmAlarmlari, setAktifPmAlarmlari] = useState<any[]>([]);
 
-  // YENİ EKLENEN: Canlı Stok Takip State'i
+  // CANLI STOK STATE
   const [aktifStokMiktari, setAktifStokMiktari] = useState<number | string | null>(null);
+
+  // SESLİ STOK ASİSTANI (YAPAY ZEKA)
+  const [isAsistanAcik, setIsAsistanAcik] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [asistanMetni, setAsistanMetni] = useState("Mikrofona dokunun ve aramak istediğiniz parça kodunu veya adını söyleyin.");
+  const [arananStok, setArananStok] = useState<any[]>([]);
+
+  // YENİ: AÇIKLAMA İÇİN SESLİ YAZDIRMA STATE'İ
+  const [isDictating, setIsDictating] = useState(false);
 
   const [isAutoFilled, setIsAutoFilled] = useState(false);
 
@@ -69,28 +78,71 @@ function DashboardIcerik() {
   const searchParams = useSearchParams();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLDivElement>(null);
-  // --- YENİ EKLENEN: SESLİ STOK ASİSTANI (YAPAY ZEKA) ---
-  const [isAsistanAcik, setIsAsistanAcik] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const [asistanMetni, setAsistanMetni] = useState("Mikrofona dokunun ve aramak istediğiniz parça kodunu veya adını söyleyin.");
-  const [arananStok, setArananStok] = useState<any[]>([]);
 
-  // Telefondan Sesi Dışarı Verme (Konuşturma) Fonksiyonu
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setDropdownAcik(false);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // YENİ: getValues FORM KONTROLCÜSÜNE EKLENDİ (Sesle yazdırma sırasında eski metni silmemek için)
+  const { register, handleSubmit, control, watch, formState: { errors }, reset, setValue, getValues } = useForm({
+    resolver: yupResolver(arizaSemasi),
+    defaultValues: { isDuruslu: false, yedekParcaBirim: "Adet" }
+  });
+
+  const watchBaslangic = watch("baslangicSaati");
+  const watchBitis = watch("bitisSaati");
+  const watchYedekParcaKodu = watch("yedekParcaKodu");
+
+  useEffect(() => {
+    if (watchBaslangic && watchBitis) {
+      const baslangic = new Date(watchBaslangic).getTime();
+      const bitis = new Date(watchBitis).getTime();
+      setHesaplananSure(Math.max(0, Math.floor((bitis - baslangic) / 60000)));
+    } else setHesaplananSure(0);
+  }, [watchBaslangic, watchBitis]);
+
+  // CANLI STOK KONTROLÜ
+  useEffect(() => {
+    const fetchAktifStok = async () => {
+      if (!watchYedekParcaKodu || watchYedekParcaKodu.trim() === "") {
+        setAktifStokMiktari(null);
+        return;
+      }
+      try {
+        const partRef = doc(db, "spare_parts", watchYedekParcaKodu.trim());
+        const partSnap = await getDoc(partRef);
+        if (partSnap.exists()) {
+          setAktifStokMiktari(partSnap.data().mevcutMiktar);
+        } else {
+          setAktifStokMiktari("Bulunamadı");
+        }
+      } catch (error) {
+        console.error("Stok çekme hatası:", error);
+      }
+    };
+    const timeoutId = setTimeout(() => fetchAktifStok(), 500);
+    return () => clearTimeout(timeoutId);
+  }, [watchYedekParcaKodu]);
+
+  // TELEFONDAN SES VERME (TTS)
   const asistanKonussun = (metin: string) => {
     if ("speechSynthesis" in window) {
       const ses = new SpeechSynthesisUtterance(metin);
       ses.lang = "tr-TR";
-      ses.rate = 1.0; // Konuşma hızı
+      ses.rate = 1.0; 
       window.speechSynthesis.speak(ses);
     }
   };
 
-  // Sesi Metne Çevirme ve Veritabanında Arama Fonksiyonu
+  // SESİ METNE ÇEVİRİP (STT) STOK ARAMA
   const sesliAramaBaslat = () => {
-    // Tarayıcının yerleşik ses tanıma motorunu çağır (Sıfır Maliyet)
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      alert("Cihazınız veya tarayıcınız sesli aramayı desteklemiyor (Chrome kullanın).");
+      alert("Cihazınız veya tarayıcınız sesli aramayı desteklemiyor.");
       return;
     }
 
@@ -102,20 +154,17 @@ function DashboardIcerik() {
     setAsistanMetni("Sizi dinliyorum... (Örn: Rulman veya 12000863 deyin)");
     setArananStok([]);
 
-    // Dinleme bittiğinde ve kelimeyi anladığında tetiklenir
     recognition.onresult = async (event: any) => {
       setIsListening(false);
-      const kelime = event.results[0][0].transcript.toUpperCase(); // Söylenen kelimeyi al ve büyüt
+      const kelime = event.results[0][0].transcript.toUpperCase(); 
       setAsistanMetni(`Aranıyor: "${kelime}" ...`);
 
       try {
-        // Firebase depolarında söylenen kelimeyi arıyoruz
         const partsSnap = await getDocs(collection(db, "spare_parts"));
         const bulunanlar: any[] = [];
         
         partsSnap.forEach(d => {
           const p = d.data();
-          // Stok kodu veya parça adının içinde geçiyorsa bul
           if (p.stokKodu.toUpperCase().includes(kelime) || p.parcaAdi.toUpperCase().includes(kelime)) {
             bulunanlar.push(p);
           }
@@ -123,7 +172,6 @@ function DashboardIcerik() {
 
         setArananStok(bulunanlar);
 
-        // BULUNAN SONUCA GÖRE ASİSTANI KONUŞTUR
         if (bulunanlar.length === 0) {
           setAsistanMetni(`Maalesef "${kelime}" için depoda kayıt bulunamadı.`);
           asistanKonussun(`${kelime} için depoda kayıt bulunamadı.`);
@@ -142,9 +190,14 @@ function DashboardIcerik() {
         setAsistanMetni("Veritabanı bağlantısında hata oluştu.");
       }
     };
-  // --- YENİ EKLENEN: AÇIKLAMA KUTUSU İÇİN SESLE YAZDIRMA ---
-  const [isDictating, setIsDictating] = useState(false);
 
+    recognition.onerror = () => {
+      setIsListening(false);
+      setAsistanMetni("Sizi tam anlayamadım, lütfen tekrar mikrofona basarak konuşun.");
+    };
+  };
+
+  // YENİ EKLENEN: AÇIKLAMA KUTUSU İÇİN SESLE YAZDIRMA (Dictation)
   const sesliYazimBaslat = () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -153,17 +206,14 @@ function DashboardIcerik() {
     }
 
     const recognition = new SpeechRecognition();
-    recognition.lang = "tr-TR"; // Türkçe dinleme
+    recognition.lang = "tr-TR"; 
     
     recognition.onstart = () => setIsDictating(true);
     
     recognition.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript;
       const mevcutMetin = getValues("aciklama") || "";
-      
-      // Eğer kutuda yazı varsa, sonuna boşluk bırakıp yeni cümleyi ekler
       const yeniMetin = mevcutMetin ? mevcutMetin + " " + transcript : transcript;
-      
       setValue("aciklama", yeniMetin, { shouldValidate: true });
       setIsDictating(false);
     };
@@ -174,68 +224,8 @@ function DashboardIcerik() {
     recognition.start();
   };
 
-    recognition.onerror = (event: any) => {
-      setIsListening(false);
-      setAsistanMetni("Sizi tam anlayamadım, lütfen tekrar mikrofona basarak konuşun.");
-    };
-  };
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) setDropdownAcik(false);
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-    const { register, handleSubmit, control, watch, formState: { errors }, reset, setValue, getValues } = useForm({
-    resolver: yupResolver(arizaSemasi),
-    defaultValues: { isDuruslu: false, yedekParcaBirim: "Adet" }
-  });
-
-  const watchBaslangic = watch("baslangicSaati");
-  const watchBitis = watch("bitisSaati");
-  // YENİ EKLENEN: Stok kodunu anlık izleme
-  const watchYedekParcaKodu = watch("yedekParcaKodu");
-
-  useEffect(() => {
-    if (watchBaslangic && watchBitis) {
-      const baslangic = new Date(watchBaslangic).getTime();
-      const bitis = new Date(watchBitis).getTime();
-      setHesaplananSure(Math.max(0, Math.floor((bitis - baslangic) / 60000)));
-    } else setHesaplananSure(0);
-  }, [watchBaslangic, watchBitis]);
-
-  // YENİ EKLENEN: Canlı Stok Kontrol Algoritması
-  useEffect(() => {
-    const fetchAktifStok = async () => {
-      if (!watchYedekParcaKodu || watchYedekParcaKodu.trim() === "") {
-        setAktifStokMiktari(null);
-        return;
-      }
-      try {
-        const partRef = doc(db, "spare_parts", watchYedekParcaKodu.trim());
-        const partSnap = await getDoc(partRef);
-        
-        if (partSnap.exists()) {
-          setAktifStokMiktari(partSnap.data().mevcutMiktar);
-        } else {
-          setAktifStokMiktari("Bulunamadı");
-        }
-      } catch (error) {
-        console.error("Stok çekme hatası:", error);
-      }
-    };
-
-    const timeoutId = setTimeout(() => {
-      fetchAktifStok();
-    }, 500);
-
-    return () => clearTimeout(timeoutId);
-  }, [watchYedekParcaKodu]);
-
   useEffect(() => {
     if (assets.length === 0) return; 
-
     const otoHat = searchParams.get("hat");
     const otoEkipman = searchParams.get("ekipman");
     const otoSorun = searchParams.get("sorun");
@@ -248,7 +238,6 @@ function DashboardIcerik() {
       setValue("hatAdi", otoHat);
       setValue("sorunTipi", otoSorun || "");
       setValue("isDuruslu", otoDurus === 'true');
-      
       setTimeout(() => { setValue("ekipmanAdi", otoEkipman || ""); }, 50);
 
       if (otoAciklama) {
@@ -364,7 +353,6 @@ function DashboardIcerik() {
   const benzersizHatlar = Array.from(new Set(assets.map(a => a.hatAdi)));
   const filtrelenmisEkipmanlar = assets.filter(a => a.hatAdi === seciliHat);
 
-  // GÜNCELLENEN: Form Kaydet ve Await Fetch Mail Mantığı
   const formKaydet = async (data: any) => {
     if (seciliPersoneller.length === 0) return alert("Lütfen işi yapan en az 1 personel seçin!");
     setIsSubmitting(true); 
@@ -401,8 +389,6 @@ function DashboardIcerik() {
               
               if (!mailResponse.ok) {
                 console.warn("Mail sunucusu reddetti, durum kodu:", mailResponse.status);
-              } else {
-                console.log("Stok alarm maili başarıyla tetiklendi!");
               }
             } catch (err) {
               console.error("Mail API'ye ulaşılamadı (Network Hatası):", err);
@@ -464,6 +450,52 @@ function DashboardIcerik() {
           </div>
         </div>
       )}
+
+      {/* YÜZEN SESLİ STOK ASİSTANI BUTONU */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end no-print">
+        {isAsistanAcik && (
+          <div className="bg-gray-900 border border-teal-500/50 rounded-2xl shadow-[0_0_30px_rgba(20,184,166,0.3)] p-5 mb-4 w-80 max-w-[90vw] animate-fade-in">
+            <div className="flex justify-between items-center mb-3 border-b border-gray-800 pb-2">
+              <h3 className="text-teal-400 font-bold flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+                AI Stok Asistanı
+              </h3>
+              <button onClick={() => setIsAsistanAcik(false)} className="text-gray-500 hover:text-white">✖</button>
+            </div>
+            
+            <p className="text-sm text-gray-300 mb-4">{asistanMetni}</p>
+
+            {arananStok.length > 0 && (
+              <div className="max-h-40 overflow-y-auto bg-gray-800 rounded-lg p-2 space-y-2 mb-4">
+                {arananStok.map((stok, idx) => (
+                  <div key={idx} className="bg-gray-900 p-2 rounded border border-gray-700">
+                    <p className="text-xs text-fuchsia-400 font-bold">{stok.stokKodu}</p>
+                    <p className="text-xs text-white line-clamp-1">{stok.parcaAdi}</p>
+                    <p className="text-sm text-green-400 font-bold mt-1">Stok: {stok.mevcutMiktar} {stok.birim}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <button 
+              onClick={sesliAramaBaslat} 
+              className={`w-full font-bold py-3 rounded-xl flex justify-center items-center gap-2 transition ${isListening ? 'bg-red-600 animate-pulse text-white shadow-[0_0_15px_rgba(220,38,38,0.5)]' : 'bg-teal-700 hover:bg-teal-600 text-white'}`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+              {isListening ? "Dinleniyor..." : "Konuşmak İçin Bas"}
+            </button>
+          </div>
+        )}
+
+        {!isAsistanAcik && (
+          <button 
+            onClick={() => setIsAsistanAcik(true)} 
+            className="bg-teal-600 hover:bg-teal-500 text-white w-16 h-16 rounded-full shadow-[0_0_20px_rgba(13,148,136,0.6)] flex justify-center items-center transition-transform hover:scale-110"
+          >
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+          </button>
+        )}
+      </div>
 
       <div className={`max-w-4xl mx-auto ${showDuyuruModal ? 'opacity-20 pointer-events-none' : ''}`}>
         
@@ -669,10 +701,11 @@ function DashboardIcerik() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-800/50 p-4 rounded-xl border border-gray-700">
               <div><label className="block text-sm font-medium text-gray-400 mb-2">Başlangıç Saati</label><input type="datetime-local" {...register("baslangicSaati")} className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 focus:border-blue-500" /></div>
               <div><label className="block text-sm font-medium text-gray-400 mb-2">Bitiş Saati</label><input type="datetime-local" {...register("bitisSaati")} className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 focus:border-blue-500" /></div>
-              <div className="md:col-span-2 text-center pt-2"><p className="text-sm text-gray-400">Otomatik Hesaplanan Süre:</p><p className="text-3xl font-bold text-blue-500">{hesaplananSure} <span className="text-lg text-gray-500">Dakika</span></p></div>
+              <div className="md:col-span-2 text-center pt-2"><p className="text-sm text-gray-400">Otomatik Hesaplanan Süre:</p><p 
+className="text-3xl font-bold text-blue-500">{hesaplananSure} <span className="text-lg text-gray-500">Dakika</span></p></div>
             </div>
 
-                       {/* YENİ EKLENEN: SESLİ YAZDIRMA DESTEKLİ AÇIKLAMA KUTUSU */}
+            {/* SESLİ YAZDIRMA DESTEKLİ AÇIKLAMA KUTUSU */}
             <div>
               <div className="flex justify-between items-end mb-2">
                 <label className="block text-sm font-medium text-gray-400">Açıklama / Yapılan İşlem</label>
@@ -698,55 +731,6 @@ function DashboardIcerik() {
             </button>
           </form>
         </div>
-      </div> 
-      {/* YENİ EKLENEN: SAĞ ALT KÖŞE YÜZEN SESLİ ASİSTAN BUTONU */}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end no-print">
-        
-        {/* Asistan Açıkken Görünen Pencere */}
-        {isAsistanAcik && (
-          <div className="bg-gray-900 border border-teal-500/50 rounded-2xl shadow-[0_0_30px_rgba(20,184,166,0.3)] p-5 mb-4 w-80 max-w-[90vw] animate-fade-in">
-            <div className="flex justify-between items-center mb-3 border-b border-gray-800 pb-2">
-              <h3 className="text-teal-400 font-bold flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
-                AI Stok Asistanı
-              </h3>
-              <button onClick={() => setIsAsistanAcik(false)} className="text-gray-500 hover:text-white">✖</button>
-            </div>
-            
-            <p className="text-sm text-gray-300 mb-4">{asistanMetni}</p>
-
-            {/* Arama Sonuçları Listesi */}
-            {arananStok.length > 0 && (
-              <div className="max-h-40 overflow-y-auto bg-gray-800 rounded-lg p-2 space-y-2 mb-4">
-                {arananStok.map((stok, idx) => (
-                  <div key={idx} className="bg-gray-900 p-2 rounded border border-gray-700">
-                    <p className="text-xs text-fuchsia-400 font-bold">{stok.stokKodu}</p>
-                    <p className="text-xs text-white line-clamp-1">{stok.parcaAdi}</p>
-                    <p className="text-sm text-green-400 font-bold mt-1">Stok: {stok.mevcutMiktar} {stok.birim}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <button 
-              onClick={sesliAramaBaslat} 
-              className={`w-full font-bold py-3 rounded-xl flex justify-center items-center gap-2 transition ${isListening ? 'bg-red-600 animate-pulse text-white shadow-[0_0_15px_rgba(220,38,38,0.5)]' : 'bg-teal-700 hover:bg-teal-600 text-white'}`}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
-              {isListening ? "Dinleniyor..." : "Konuşmak İçin Bas"}
-            </button>
-          </div>
-        )}
-
-        {/* Ana Yuvarlak Tetikleyici Buton */}
-        {!isAsistanAcik && (
-          <button 
-            onClick={() => setIsAsistanAcik(true)} 
-            className="bg-teal-600 hover:bg-teal-500 text-white w-16 h-16 rounded-full shadow-[0_0_20px_rgba(13,148,136,0.6)] flex justify-center items-center transition-transform hover:scale-110"
-          >
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
-          </button>
-        )}
       </div>
     </div>
   );

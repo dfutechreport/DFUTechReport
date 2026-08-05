@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     const mailOptions = {
       from: '"DFU Bakım Sistemi" <dfuteknik@gmail.com>', // Gönderen görünen isim
       // LÜTFEN AŞAĞIDAKİ SATIRA MAİLİN GİDECEĞİ KİŞİLERİ YAZIN (Virgülle ayırabilirsiniz)
-      to: 'emin.ogul@donukfirincilik.com.tr, ilker.yilmaz@donukfirincilik.com.tr, halil.cakir@donukfirincilik.com.tr', 
+      to: 'emin.ogul@donukfirincilik.com.tr, ilker.yilmaz@donukfirincilik.com.tr, murat.doganay@donukfirincilik.com.tr, cuneyt.ozturk@donukfirincilik.com.tr, cengiz.yilmaz@donukfirincilik.com.tr, burak.demir1@donukfirincilik.com.tr, halil.cakir@donukfirincilik.com.tr', 
       subject: `🚨 KRİTİK STOK UYARISI: ${parcaAdi} Tükendi!`,
       html: `
         <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; border: 2px solid #e53e3e; border-radius: 10px; max-width: 600px;">

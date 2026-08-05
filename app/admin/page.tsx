@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, writeBatch, setDoc } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, writeBatch, setDoc, serverTimestamp } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../../lib/firebase"; 
-import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid, LabelList, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts';
 import Link from "next/link";
 
 export default function AdminDashboard() {
@@ -49,14 +49,15 @@ export default function AdminDashboard() {
   const [personelHavuzu, setPersonelHavuzu] = useState<string[]>([]); 
 
   
-  // --- KÖK NEDEN ANALİZİ (RCA) MODÜLÜ ---
+  // --- PRATİK RCA MODÜLÜ (V3) ---
   const RCA_CATEGORIES = [
-    { id: "insan", label: "İnsan (Hata/Eğitim)", color: "#3B82F6" },
-    { id: "makine", label: "Makine (Tasarım/Kronik)", color: "#EF4444" },
-    { id: "malzeme", label: "Malzeme (Kalite/Parça)", color: "#10B981" },
-    { id: "metot", label: "Metot (Prosedür/Talimat)", color: "#F59E0B" },
-    { id: "ortam", label: "Ortam (Dış Etkenler)", color: "#8B5CF6" }
+    { id: "insan", label: "İnsan", color: "#3B82F6", quickNotes: ["Eğitim Eksikliği", "Dikkatsizlik", "Yanlış Müdahale"] },
+    { id: "makine", label: "Makine", color: "#EF4444", quickNotes: ["Metal Yorgunluğu", "Rulman/Kayış Arızası", "Kronik Tasarım Hatası"] },
+    { id: "malzeme", label: "Malzeme", color: "#10B981", quickNotes: ["Kalitesiz Yedek Parça", "Hammadde Uyumsuzluğu", "Miad Dolumu"] },
+    { id: "metot", label: "Metot", color: "#F59E0B", quickNotes: ["Yetersiz Yağlama", "Yanlış Temizlik", "Hatalı Parametre Girdisi"] },
+    { id: "ortam", label: "Ortam", color: "#8B5CF6", quickNotes: ["Aşırı Isınma", "Yüksek Nem/Toz", "Vibrasyon Kaynaklı Gevşeme"] }
   ];
+
   const [rcaLogs, setRcaLogs] = useState<any[]>([]);
   const [showRcaModal, setShowRcaModal] = useState(false);
   const [selectedLogForRca, setSelectedLogForRca] = useState<any>(null);
@@ -66,25 +67,32 @@ export default function AdminDashboard() {
     try {
       const snap = await getDocs(collection(db, "root_cause_analysis"));
       setRcaLogs(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error("Veri çekme hatası:", e); }
   };
-  
+
   const handleSaveRca = async () => {
-    if (!rcaForm.category) return alert("Kategori seçiniz.");
+    if (!rcaForm.category) return alert("Lütfen ana kategoriyi seçiniz.");
     try {
-      await setDoc(doc(db, "root_cause_analysis", selectedLogForRca.id), {
+      // Doğrudan doc() referansı ile kayıt - logId çakışmasını önler
+      const rcaRef = doc(db, "root_cause_analysis", String(selectedLogForRca.id));
+      await setDoc(rcaRef, {
         logId: selectedLogForRca.id,
-        ekipmanAdi: selectedLogForRca.ekipmanAdi,
+        ekipman: selectedLogForRca.ekipmanAdi || "Bilinmiyor",
+        hat: selectedLogForRca.hatAdi || "Bilinmiyor",
         category: rcaForm.category,
-        comment: rcaForm.comment,
         whyTree: rcaForm.whyTree,
+        comment: rcaForm.comment,
         analizEden: userName,
-        tarih: new Date()
-      });
-      alert("Analiz kaydedildi.");
+        timestamp: serverTimestamp()
+      }, { merge: true });
+
+      alert("Analiz başarıyla sisteme işlendi.");
       setShowRcaModal(false);
       fetchRcaData();
-    } catch (e) { alert("Hata oluştu."); }
+    } catch (e: any) {
+      console.error("Detaylı Hata:", e);
+      alert("Hata Oluştu: " + (e.message || "Bilinmeyen yetki hatası."));
+    }
   };
 
   const [kpiToplamIs, setKpiToplamIs] = useState(0);
@@ -156,8 +164,7 @@ export default function AdminDashboard() {
       setAktifEked(eSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
       const logs = (await getDocs(collection(db, "maintenance_logs"))).docs.map(doc => doc.data());
-      setRawLogs(logs);
-      fetchRcaData();
+      setRawLogs(logs); fetchRcaData();
 
       const qMeter = query(collection(db, "meter_logs"), orderBy("tarih", "asc"));
       const meterSnap = await getDocs(qMeter);
@@ -616,36 +623,28 @@ const globalMTTR = kpiToplamIs > 0 ? (kpiToplamSure / kpiToplamIs).toFixed(1) : 
                             </div>
 
               
-          {/* KÖK NEDEN ANALİZİ YÖNETİMİ */}
+          {/* PRATİK RCA YÖNETİMİ */}
           {userRole === "admin" && (
-            <div className="bg-gray-900 border-2 border-indigo-500/30 p-6 rounded-2xl mb-8 no-print shadow-xl">
-              <h2 className="text-xl font-bold text-indigo-400 mb-6 flex items-center gap-2">🧠 RCA Bekleyen Duruşlar</h2>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-800 text-gray-500">
-                      <th className="pb-3 px-2">Ekipman</th><th className="pb-3 px-2">Duruş</th><th className="pb-3 px-2">Durum</th><th className="pb-3 text-right">İşlem</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rawLogs.filter(l => l.isDuruslu).slice(0, 5).map((log, idx) => {
-                      const hasRca = rcaLogs.some(r => r.logId === log.id);
-                      return (
-                        <tr key={idx} className="border-b border-gray-800/50 hover:bg-white/5 transition">
-                          <td className="py-3 px-2 font-bold">{log.ekipmanAdi}</td>
-                          <td className="py-3 px-2 text-red-400 font-bold">{log.toplamSureDakika} dk</td>
-                          <td className="py-3 px-2">
-                            {hasRca ? <span className="text-green-500 text-[10px] font-bold border border-green-500 px-2 py-0.5 rounded">ANALİZ EDİLDİ</span> 
-                                    : <span className="text-yellow-500 text-[10px] font-bold border border-yellow-500 px-2 py-0.5 rounded animate-pulse">BEKLİYOR</span>}
-                          </td>
-                          <td className="py-3 text-right">
-                            <button onClick={() => { setSelectedLogForRca(log); setRcaForm({ category: "", comment: "", whyTree: "" }); setShowRcaModal(true); }} className="bg-indigo-600 text-white px-3 py-1 rounded text-xs">Analiz</button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+            <div className="bg-gray-900 border-2 border-indigo-500/20 p-6 rounded-3xl mb-8 shadow-2xl">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">🧠 Analiz Bekleyen Duruşlar</h2>
+                <span className="bg-indigo-900/40 text-indigo-400 text-[10px] px-3 py-1 rounded-full border border-indigo-500/30">Üretim Verimliliği Analizi</span>
+              </div>
+              <div className="space-y-3">
+                {rawLogs.filter(l => l.isDuruslu).slice(0, 5).map((log, idx) => {
+                  const hasRca = rcaLogs.some(r => r.logId === log.id);
+                  return (
+                    <div key={idx} className="bg-gray-800/40 border border-gray-700/50 p-4 rounded-2xl flex items-center justify-between hover:border-indigo-500/50 transition">
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">{log.hatAdi} / {new Date(log.baslangicSaati).toLocaleDateString('tr-TR')}</p>
+                        <p className="font-bold text-gray-200">{log.ekipmanAdi} <span className="text-red-400 ml-2">{log.toplamSureDakika} dk</span></p>
+                      </div>
+                      <button onClick={() => { setSelectedLogForRca(log); setShowRcaModal(true); }} className={`px-5 py-2 rounded-xl text-xs font-bold transition ${hasRca ? 'bg-green-600/20 text-green-400 border border-green-500/30' : 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'}`}>
+                        {hasRca ? "Güncelle" : "Analiz Et"}
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -729,33 +728,37 @@ const globalMTTR = kpiToplamIs > 0 ? (kpiToplamSure / kpiToplamIs).toFixed(1) : 
               </div>
 
               
-              {/* RCA PARETO ANALİZİ */}
-              <div className="bg-gray-900 border border-indigo-900/50 p-6 rounded-2xl mb-8 shadow-lg">
-                <h2 className="text-lg font-bold mb-6 text-indigo-400">📊 Kök Neden Dağılımı (5M)</h2>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie data={RCA_CATEGORIES.map(c => ({ name: c.label, value: rcaLogs.filter(r => r.category === c.id).length, color: c.color })).filter(d => d.value > 0)} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                          {RCA_CATEGORIES.map((e, i) => <Cell key={i} fill={e.color} />)}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
+              {/* RCA ÖZET RAPORU */}
+              <div className="bg-gray-900 border border-gray-800 p-6 rounded-3xl mb-8">
+                <h2 className="text-lg font-bold text-gray-200 mb-6">📉 Kök Neden Dağılımı (Pareto)</h2>
+                {rcaLogs.length > 0 ? (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                    <div className="h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie data={RCA_CATEGORIES.map(c => ({ name: c.label, value: rcaLogs.filter(r => r.category === c.id).length, color: c.color })).filter(d => d.value > 0)} cx="50%" cy="50%" innerRadius={65} outerRadius={85} paddingAngle={8} dataKey="value">
+                            {RCA_CATEGORIES.map((e, i) => <Cell key={i} fill={e.color} />)}
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="flex flex-col justify-center space-y-3">
+                      {RCA_CATEGORIES.map(c => {
+                        const count = rcaLogs.filter(r => r.category === c.id).length;
+                        if (count === 0) return null;
+                        return (
+                          <div key={c.id} className="flex items-center justify-between bg-gray-800/50 p-3 rounded-2xl border border-gray-700/30">
+                            <span className="text-xs text-gray-400 flex items-center gap-2"><span className="w-2 h-2 rounded-full" style={{backgroundColor: c.color}}></span> {c.label}</span>
+                            <span className="text-xs font-black text-white">{count} Vaka</span>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    {RCA_CATEGORIES.map(c => {
-                      const count = rcaLogs.filter(r => r.category === c.id).length;
-                      if (count === 0) return null;
-                      return (
-                        <div key={c.id} className="flex justify-between p-2 bg-gray-800/30 rounded border border-gray-800">
-                          <span className="text-xs text-gray-400">{c.label}</span>
-                          <span className="text-xs font-bold">{count} Adet</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+                ) : (
+                  <div className="py-12 text-center text-gray-600 text-sm border-2 border-dashed border-gray-800 rounded-3xl">Henüz kök neden analizi verisi girilmemiş.</div>
+                )}
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
@@ -804,22 +807,50 @@ const globalMTTR = kpiToplamIs > 0 ? (kpiToplamSure / kpiToplamIs).toFixed(1) : 
         </div>
       </div>
       
-      {/* RCA MODAL */}
+      {/* RCA MODAL V3 - PRATİK GİRİŞ */}
       {showRcaModal && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex justify-center items-center z-[999] p-4">
-          <div className="bg-gray-900 border border-indigo-500/50 p-8 rounded-3xl w-full max-w-xl shadow-2xl">
-            <h2 className="text-xl font-bold text-indigo-400 mb-4">Kök Neden Analizi: {selectedLogForRca?.ekipmanAdi}</h2>
-            <div className="space-y-4">
-              <select value={rcaForm.category} onChange={e => setRcaForm({...rcaForm, category: e.target.value})} className="w-full bg-gray-800 border-gray-700 rounded-xl p-3 text-sm">
-                <option value="">Kategori Seçin (5M)</option>
-                {RCA_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-              </select>
-              <textarea value={rcaForm.whyTree} onChange={e => setRcaForm({...rcaForm, whyTree: e.target.value})} placeholder="5 Neden (Why Tree) Analizi..." className="w-full bg-gray-800 border-gray-700 rounded-xl p-3 text-sm h-32" />
-              <textarea value={rcaForm.comment} onChange={e => setRcaForm({...rcaForm, comment: e.target.value})} placeholder="Kalıcı Aksiyon Planı..." className="w-full bg-gray-800 border-gray-800 rounded-xl p-3 text-sm h-20" />
-              <div className="flex gap-4">
-                <button onClick={() => setShowRcaModal(false)} className="flex-1 bg-gray-800 py-3 rounded-xl font-bold">Kapat</button>
-                <button onClick={handleSaveRca} className="flex-1 bg-indigo-600 py-3 rounded-xl font-bold">Kaydet</button>
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-md flex justify-center items-center z-[999] p-4">
+          <div className="bg-gray-900 border border-indigo-500/30 p-8 rounded-[40px] w-full max-w-2xl shadow-3xl">
+            <h2 className="text-2xl font-black text-white mb-2">Arıza Kök Neden Raporu</h2>
+            <p className="text-sm text-gray-500 mb-8">{selectedLogForRca?.ekipmanAdi} | {selectedLogForRca?.toplamSureDakika} Dakika Kayıp</p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-6">
+                <div>
+                  <label className="text-xs font-bold text-gray-400 uppercase mb-3 block">1. Ana Kategori</label>
+                  <div className="grid grid-cols-1 gap-2">
+                    {RCA_CATEGORIES.map(c => (
+                      <button key={c.id} onClick={() => setRcaForm({...rcaForm, category: c.id})} className={`text-left p-3 rounded-2xl text-xs font-bold transition border ${rcaForm.category === c.id ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-gray-800 border-gray-700 text-gray-500 hover:border-gray-500'}`}>
+                        {c.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
+
+              <div className="space-y-6">
+                {rcaForm.category && (
+                  <div>
+                    <label className="text-xs font-bold text-indigo-400 uppercase mb-3 block">Hızlı Notlar (Tıkla Ekle)</label>
+                    <div className="flex flex-wrap gap-2">
+                      {RCA_CATEGORIES.find(c => c.id === rcaForm.category)?.quickNotes.map((note, i) => (
+                        <button key={i} onClick={() => setRcaForm({...rcaForm, whyTree: rcaForm.whyTree + note + ", "})} className="bg-indigo-900/30 text-indigo-300 text-[10px] px-3 py-2 rounded-full border border-indigo-500/20 hover:bg-indigo-600 hover:text-white transition">
+                          + {note}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <label className="text-xs font-bold text-gray-400 uppercase mb-3 block">Analiz / Aksiyon Planı</label>
+                  <textarea value={rcaForm.whyTree} onChange={e => setRcaForm({...rcaForm, whyTree: e.target.value})} placeholder="Arıza nedenini ve alınan önlemleri buraya yazın..." className="w-full bg-gray-800 border-gray-700 rounded-2xl p-4 text-sm h-40 focus:ring-2 ring-indigo-500 outline-none text-white" />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-4 mt-10">
+              <button onClick={() => setShowRcaModal(false)} className="flex-1 bg-gray-800 py-4 rounded-2xl font-black text-gray-400 hover:bg-gray-700 transition">İptal</button>
+              <button onClick={handleSaveRca} className="flex-1 bg-indigo-600 py-4 rounded-2xl font-black text-white hover:bg-indigo-500 shadow-xl shadow-indigo-600/30 transition">Analizi Sisteme İşle</button>
             </div>
           </div>
         </div>

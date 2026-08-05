@@ -6,7 +6,8 @@ import {
   GoogleAuthProvider, 
   onAuthStateChanged,
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail // YENİ EKLENEN: Şifre sıfırlama kütüphanesi
 } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../lib/firebase"; 
@@ -14,6 +15,8 @@ import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const [isLoginMode, setIsLoginMode] = useState(true);
+  const [isResetMode, setIsResetMode] = useState(false); // YENİ EKLENEN: Şifre Sıfırlama Modu
+  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -46,7 +49,6 @@ export default function LoginPage() {
               setLoading(false);
             }
           } else {
-            // İLK GOOGLE GİRİŞİ: Firestore'a %100 yazıldığından emin ol
             try {
               await setDoc(userRef, {
                 name: user.displayName || "İsimsiz Google Kullanıcısı",
@@ -60,7 +62,7 @@ export default function LoginPage() {
               console.error("Firestore Kayıt Hatası:", firestoreErr);
               setError("Sunucuya kayıt yapılamadı. Lütfen yöneticiyle iletişime geçin.");
             }
-            await auth.signOut(); // Yazma bittikten SONRA çıkış yap
+            await auth.signOut(); 
             setLoading(false);
           }
         } catch (err) {
@@ -82,7 +84,18 @@ export default function LoginPage() {
     setSuccessMsg("");
 
     try {
-      if (isLoginMode) {
+      if (isResetMode) {
+        // --- YENİ EKLENEN: ŞİFRE SIFIRLAMA İŞLEMİ ---
+        if (!email) {
+          setError("Lütfen e-posta adresinizi girin.");
+          setIsProcessing(false);
+          return;
+        }
+        await sendPasswordResetEmail(auth, email);
+        setSuccessMsg("Şifre sıfırlama bağlantısı e-posta adresinize gönderildi. Lütfen gelen kutunuzu (ve Spam klasörünü) kontrol edin.");
+        setIsResetMode(false); // Başarılı olunca normal giriş ekranına dön
+        
+      } else if (isLoginMode) {
         // GİRİŞ YAP
         await signInWithEmailAndPassword(auth, email, password);
       } else {
@@ -96,7 +109,6 @@ export default function LoginPage() {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         
-        // Önce veritabanına YAZ, sonra ÇIKIŞ yap
         const userRef = doc(db, "users", user.uid);
         await setDoc(userRef, {
           name: name,
@@ -107,7 +119,7 @@ export default function LoginPage() {
         });
 
         setSuccessMsg("Kayıt başarılı! Yöneticiniz hesabınızı onayladığında giriş yapabilirsiniz.");
-        await auth.signOut(); // Yazma garanti edildikten sonra oturumu sonlandır
+        await auth.signOut(); 
         
         setIsLoginMode(true); 
         setEmail("");
@@ -118,6 +130,7 @@ export default function LoginPage() {
       if (err.code === 'auth/email-already-in-use') setError("Bu e-posta adresi zaten kullanımda.");
       else if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') setError("E-posta veya şifre hatalı.");
       else if (err.code === 'auth/weak-password') setError("Şifreniz en az 6 karakter olmalıdır.");
+      else if (err.code === 'auth/invalid-email') setError("Geçersiz e-posta formatı.");
       else setError("Bir hata oluştu: " + err.message);
     }
     setIsProcessing(false);
@@ -154,7 +167,6 @@ export default function LoginPage() {
           <p className="text-gray-400 text-xs text-center font-medium tracking-wide mb-5">
             Teknik Bakım Raporlama ve Takip Sistemi
           </p>
-          
           <div className="bg-gray-950/50 border border-gray-800 px-5 py-2 rounded-full inline-block backdrop-blur-sm shadow-inner">
             <p className="text-teal-400 text-xs font-bold tracking-wider italic text-center">
               "Veri Konuşur, Tesis Kazanır."
@@ -167,43 +179,82 @@ export default function LoginPage() {
 
         <div className="relative z-10">
           
-          <div className="flex bg-gray-800 p-1 rounded-xl mb-5">
-            <button type="button" onClick={() => { setIsLoginMode(true); setError(""); setSuccessMsg(""); }} className={`flex-1 py-2 text-sm font-bold rounded-lg transition ${isLoginMode ? 'bg-gray-600 text-white shadow' : 'text-gray-400 hover:text-gray-200'}`}>Giriş Yap</button>
-            <button type="button" onClick={() => { setIsLoginMode(false); setError(""); setSuccessMsg(""); }} className={`flex-1 py-2 text-sm font-bold rounded-lg transition ${!isLoginMode ? 'bg-gray-600 text-white shadow' : 'text-gray-400 hover:text-gray-200'}`}>Kayıt Ol</button>
-          </div>
+          {/* SEKME BUTONLARI (Şifre sıfırlama modunda gizlenir) */}
+          {!isResetMode && (
+            <div className="flex bg-gray-800 p-1 rounded-xl mb-5">
+              <button type="button" onClick={() => { setIsLoginMode(true); setError(""); setSuccessMsg(""); }} className={`flex-1 py-2 text-sm font-bold rounded-lg transition ${isLoginMode ? 'bg-gray-600 text-white shadow' : 'text-gray-400 hover:text-gray-200'}`}>Giriş Yap</button>
+              <button type="button" onClick={() => { setIsLoginMode(false); setError(""); setSuccessMsg(""); }} className={`flex-1 py-2 text-sm font-bold rounded-lg transition ${!isLoginMode ? 'bg-gray-600 text-white shadow' : 'text-gray-400 hover:text-gray-200'}`}>Kayıt Ol</button>
+            </div>
+          )}
 
           <form onSubmit={handleEmailSubmit} className="space-y-4 mb-6">
-            {!isLoginMode && (
-              <div>
-                <input type="text" value={name} onChange={(e) => setName(e.target.value)} required={!isLoginMode} className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-teal-500 transition-colors" placeholder="Ad Soyad" />
+            
+            {/* ŞİFRE SIFIRLAMA MODU BAŞLIĞI */}
+            {isResetMode && (
+              <div className="text-center mb-4">
+                <h3 className="text-white font-bold text-lg">Şifremi Unuttum</h3>
+                <p className="text-gray-400 text-xs mt-1">Kayıtlı e-posta adresinize sıfırlama bağlantısı gönderilecektir.</p>
               </div>
             )}
+
+            {!isLoginMode && !isResetMode && (
+              <div>
+                <input type="text" value={name} onChange={(e) => setName(e.target.value)} required={!isLoginMode && !isResetMode} className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-teal-500 transition-colors" placeholder="Ad Soyad" />
+              </div>
+            )}
+            
             <div>
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-teal-500 transition-colors" placeholder="E-Posta Adresi" />
             </div>
-            <div>
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-teal-500 transition-colors" placeholder="Şifre" />
-            </div>
+            
+            {/* Şifre kutusu sıfırlama modunda gizlenir */}
+            {!isResetMode && (
+              <div>
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required={!isResetMode} className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-teal-500 transition-colors" placeholder="Şifre" />
+                
+                {/* YENİ: Şifremi Unuttum Tıklanabilir Yazısı */}
+                {isLoginMode && (
+                  <div className="flex justify-end mt-2">
+                    <button type="button" onClick={() => { setIsResetMode(true); setError(""); setSuccessMsg(""); }} className="text-xs text-teal-500 hover:text-teal-400 transition font-medium">
+                      Şifremi Unuttum
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
             <button type="submit" disabled={isProcessing} className="w-full bg-teal-700 hover:bg-teal-600 text-white text-sm font-bold py-3.5 rounded-xl shadow-lg transition-all disabled:opacity-50 mt-1">
-              {isProcessing ? "İşlem Yapılıyor..." : (isLoginMode ? "Giriş Yap" : "Kayıt Ol")}
+              {isProcessing ? "İşlem Yapılıyor..." : (isResetMode ? "Sıfırlama Bağlantısı Gönder" : (isLoginMode ? "Giriş Yap" : "Kayıt Ol"))}
             </button>
+
+            {/* Sıfırlama modundan geriye (İptal) dönüş butonu */}
+            {isResetMode && (
+              <button type="button" onClick={() => { setIsResetMode(false); setError(""); setSuccessMsg(""); }} className="w-full bg-transparent border border-gray-600 hover:bg-gray-800 text-gray-300 text-sm font-bold py-3 rounded-xl transition-all mt-2">
+                İptal Et ve Geri Dön
+              </button>
+            )}
           </form>
 
-          <div className="flex items-center my-5">
-            <div className="flex-1 border-t border-gray-700"></div>
-            <span className="px-3 text-xs text-gray-500 font-bold">VEYA</span>
-            <div className="flex-1 border-t border-gray-700"></div>
-          </div>
+          {/* GOOGLE İLE GİRİŞ (Şifre sıfırlama modunda gizlenir) */}
+          {!isResetMode && (
+            <>
+              <div className="flex items-center my-5">
+                <div className="flex-1 border-t border-gray-700"></div>
+                <span className="px-3 text-xs text-gray-500 font-bold">VEYA</span>
+                <div className="flex-1 border-t border-gray-700"></div>
+              </div>
 
-          <button onClick={handleGoogleLogin} disabled={isProcessing} className="w-full bg-white hover:bg-gray-100 text-gray-900 text-sm font-bold py-3.5 px-6 rounded-xl shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-3">
-            <svg className="w-5 h-5" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-            </svg>
-            Google ile Giriş Yap
-          </button>
+              <button onClick={handleGoogleLogin} disabled={isProcessing} className="w-full bg-white hover:bg-gray-100 text-gray-900 text-sm font-bold py-3.5 px-6 rounded-xl shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-3">
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                </svg>
+                Google ile Kurumsal Giriş
+              </button>
+            </>
+          )}
         </div>
 
       </div>

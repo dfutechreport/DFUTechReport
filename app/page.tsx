@@ -7,7 +7,7 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  sendPasswordResetEmail // YENİ EKLENEN: Şifre sıfırlama kütüphanesi
+  sendPasswordResetEmail 
 } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../lib/firebase"; 
@@ -15,7 +15,7 @@ import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const [isLoginMode, setIsLoginMode] = useState(true);
-  const [isResetMode, setIsResetMode] = useState(false); // YENİ EKLENEN: Şifre Sıfırlama Modu
+  const [isResetMode, setIsResetMode] = useState(false);
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -85,7 +85,6 @@ export default function LoginPage() {
 
     try {
       if (isResetMode) {
-        // --- YENİ EKLENEN: ŞİFRE SIFIRLAMA İŞLEMİ ---
         if (!email) {
           setError("Lütfen e-posta adresinizi girin.");
           setIsProcessing(false);
@@ -93,13 +92,11 @@ export default function LoginPage() {
         }
         await sendPasswordResetEmail(auth, email);
         setSuccessMsg("Şifre sıfırlama bağlantısı e-posta adresinize gönderildi. Lütfen gelen kutunuzu (ve Spam klasörünü) kontrol edin.");
-        setIsResetMode(false); // Başarılı olunca normal giriş ekranına dön
+        setIsResetMode(false); 
         
       } else if (isLoginMode) {
-        // GİRİŞ YAP
         await signInWithEmailAndPassword(auth, email, password);
       } else {
-        // KAYIT OL
         if (!name) {
           setError("Lütfen Ad Soyad giriniz.");
           setIsProcessing(false);
@@ -179,7 +176,6 @@ export default function LoginPage() {
 
         <div className="relative z-10">
           
-          {/* SEKME BUTONLARI (Şifre sıfırlama modunda gizlenir) */}
           {!isResetMode && (
             <div className="flex bg-gray-800 p-1 rounded-xl mb-5">
               <button type="button" onClick={() => { setIsLoginMode(true); setError(""); setSuccessMsg(""); }} className={`flex-1 py-2 text-sm font-bold rounded-lg transition ${isLoginMode ? 'bg-gray-600 text-white shadow' : 'text-gray-400 hover:text-gray-200'}`}>Giriş Yap</button>
@@ -189,7 +185,6 @@ export default function LoginPage() {
 
           <form onSubmit={handleEmailSubmit} className="space-y-4 mb-6">
             
-            {/* ŞİFRE SIFIRLAMA MODU BAŞLIĞI */}
             {isResetMode && (
               <div className="text-center mb-4">
                 <h3 className="text-white font-bold text-lg">Şifremi Unuttum</h3>
@@ -207,12 +202,10 @@ export default function LoginPage() {
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-teal-500 transition-colors" placeholder="E-Posta Adresi" />
             </div>
             
-            {/* Şifre kutusu sıfırlama modunda gizlenir */}
             {!isResetMode && (
               <div>
                 <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required={!isResetMode} className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-teal-500 transition-colors" placeholder="Şifre" />
                 
-                {/* YENİ: Şifremi Unuttum Tıklanabilir Yazısı */}
                 {isLoginMode && (
                   <div className="flex justify-end mt-2">
                     <button type="button" onClick={() => { setIsResetMode(true); setError(""); setSuccessMsg(""); }} className="text-xs text-teal-500 hover:text-teal-400 transition font-medium">
@@ -223,11 +216,14 @@ export default function LoginPage() {
               </div>
             )}
 
-            <button type="submit" disabled={isProcessing} className="w-full bg-teal-700 hover:bg-teal-600 text-white text-sm font-bold py-3.5 rounded-xl shadow-lg transition-all disabled:opacity-50 mt-1">
-              {isProcessing ? "İşlem Yapılıyor..." : (isResetMode ? "Sıfırlama Bağlantısı Gönder" : (isLoginMode ? "Giriş Yap" : "Kayıt Ol"))}
+            {/* YENİ GÜNCELLENEN: Şirket Logolu Kurumsal Giriş / Kayıt Butonu */}
+            <button type="submit" disabled={isProcessing} className="w-full bg-teal-700 hover:bg-teal-600 text-white text-sm font-bold py-3.5 px-6 rounded-xl shadow-lg transition-all disabled:opacity-50 mt-1 flex items-center justify-center gap-3">
+              {!isResetMode && (
+                <img src="/dfulogo.png" alt="DFU" className="h-6 w-auto bg-white rounded px-1" />
+              )}
+              {isProcessing ? "İşlem Yapılıyor..." : (isResetMode ? "Sıfırlama Bağlantısı Gönder" : (isLoginMode ? "Kurumsal Şirket Maili ile Giriş Yap" : "Kurumsal Şirket Maili ile Kayıt Ol"))}
             </button>
 
-            {/* Sıfırlama modundan geriye (İptal) dönüş butonu */}
             {isResetMode && (
               <button type="button" onClick={() => { setIsResetMode(false); setError(""); setSuccessMsg(""); }} className="w-full bg-transparent border border-gray-600 hover:bg-gray-800 text-gray-300 text-sm font-bold py-3 rounded-xl transition-all mt-2">
                 İptal Et ve Geri Dön
@@ -235,7 +231,6 @@ export default function LoginPage() {
             )}
           </form>
 
-          {/* GOOGLE İLE GİRİŞ (Şifre sıfırlama modunda gizlenir) */}
           {!isResetMode && (
             <>
               <div className="flex items-center my-5">
@@ -244,6 +239,7 @@ export default function LoginPage() {
                 <div className="flex-1 border-t border-gray-700"></div>
               </div>
 
+              {/* YENİ GÜNCELLENEN: Sadeleştirilmiş Google Butonu */}
               <button onClick={handleGoogleLogin} disabled={isProcessing} className="w-full bg-white hover:bg-gray-100 text-gray-900 text-sm font-bold py-3.5 px-6 rounded-xl shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-3">
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -251,7 +247,7 @@ export default function LoginPage() {
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                 </svg>
-                Google ile Kurumsal Giriş
+                Google ile Giriş
               </button>
             </>
           )}

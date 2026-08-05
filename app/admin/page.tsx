@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, writeBatch } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../../lib/firebase"; 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts';
@@ -11,6 +11,7 @@ export default function AdminDashboard() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [userRole, setUserRole] = useState(""); 
   const [userName, setUserName] = useState(""); 
+  const [userEmail, setUserEmail] = useState(""); // Süper Admin kontrolü için
   const [loading, setLoading] = useState(true);
   
   const [rawLogs, setRawLogs] = useState<any[]>([]);
@@ -46,17 +47,13 @@ export default function AdminDashboard() {
   const [filterPerfDurus, setFilterPerfDurus] = useState(""); 
   const [filterPerfSiralama, setFilterPerfSiralama] = useState("is"); 
   const [personelHavuzu, setPersonelHavuzu] = useState<string[]>([]); 
-  // YENİ: En Sık Arızalanan Ekipmanlar (Bad Actors) State'leri
-  const [filterEqYil, setFilterEqYil] = useState("");
-  const [filterEqAy, setFilterEqAy] = useState("");
-  const [filterEqHat, setFilterEqHat] = useState("");
-  const [filterEqLimit, setFilterEqLimit] = useState("5"); 
-  const [ekipmanPerformans, setEkipmanPerformans] = useState<any[]>([]);
+
   const [kpiToplamIs, setKpiToplamIs] = useState(0);
   const [kpiToplamSure, setKpiToplamSure] = useState(0);
   const [kpiAylikDurus, setKpiAylikDurus] = useState(0);
   const [kpiDurusluIsSayisi, setKpiDurusluIsSayisi] = useState(0);
   const [globalMTBF, setGlobalMTBF] = useState("0");
+  
   const [grafikDurusVerisi, setGrafikDurusVerisi] = useState<any[]>([]);
   const [grafikTumIslerVerisi, setGrafikTumIslerVerisi] = useState<any[]>([]);
   const [personelPerformans, setPersonelPerformans] = useState<any[]>([]);
@@ -65,20 +62,33 @@ export default function AdminDashboard() {
   const [grafikDogalgaz, setGrafikDogalgaz] = useState<any[]>([]);
   const [grafikSu, setGrafikSu] = useState<any[]>([]);
 
+  // Bad Actors State'leri
+  const [filterEqYil, setFilterEqYil] = useState("");
+  const [filterEqAy, setFilterEqAy] = useState("");
+  const [filterEqHat, setFilterEqHat] = useState("");
+  const [filterEqLimit, setFilterEqLimit] = useState("5"); 
+  const [ekipmanPerformans, setEkipmanPerformans] = useState<any[]>([]);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
+        setUserEmail(user.email || ""); 
         const userRef = doc(db, "users", user.uid);
         const userSnap = await getDoc(userRef);
         if (userSnap.exists() && userSnap.data().isApproved) {
           const role = userSnap.data().role;
           setUserRole(role);
           setUserName(userSnap.data().name);
+          // Tüm admin ekranlarını sadece bu 4 rol görebilir
           if (role === "admin" || role === "operator" || role === "uretim" || role === "isg") {
             setIsAdmin(true); 
             fetchIlkVeriler(); 
+          } else {
+            window.location.href = "/dashboard";
           }
         }
+      } else {
+        window.location.href = "/";
       }
       setLoading(false);
     });
@@ -139,44 +149,53 @@ export default function AdminDashboard() {
     window.location.href = `/dashboard/periyodik-bakim?makine=${encodeURIComponent(islem.ekipmanAdi)}&pmOrderId=${islem.id}`;
   };
 
-  const exportToCSV = () => {
-    const filteredLogs = rawLogs.filter(data => {
-      let tarihObj = data.baslangicSaati ? new Date(data.baslangicSaati) : (data.kayitTarihi ? data.kayitTarihi.toDate() : null);
-      const yil = tarihObj ? tarihObj.getFullYear().toString() : "";
-      const ay = tarihObj ? (tarihObj.getMonth() + 1).toString() : ""; 
-      if (filterYil && yil !== filterYil) return false;
-      if (filterAy && ay !== filterAy) return false;
-      if (filterHat && data.hatAdi !== filterHat) return false;
-      if (filterEkipman && data.ekipmanAdi !== filterEkipman) return false;
-      return true;
-    });
+  // YENİ: SÜPER ADMİN - SİSTEMİ SIFIRLAMA FONKSİYONU
+  const handleFactoryReset = async () => {
+    // Sadece izin verilen iki maile yetki verilir
+    if (userEmail !== "dfutechreport@gmail.com" && userEmail !== "ilker.yilmaz@donukfirincilik.com.tr") {
+      return alert("Yetkisiz işlem! Bu alanı sadece Sistem Kurucuları kullanabilir.");
+    }
 
-    if (filteredLogs.length === 0) return alert("Dışa aktarılacak filtrelenmiş veri bulunamadı.");
+    const onay1 = window.confirm("🚨 1. UYARI: Sistemdeki tüm operasyonel dataları (Arıza, EKED, PM, Sayaç, Mesai, Pano ve Stok/Sarfiyat) KALICI olarak silmek üzeresiniz. Bu işlem asla geri alınamaz. Devam etmek istiyor musunuz?");
+    if (!onay1) return;
 
-    let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
-    csvContent += "Tarih;Vardiya;Hat;Ekipman;Sorun Tipi;Duruslu Mu;Sure(Dk);Personel;Aciklama\n";
+    const onay2 = window.confirm("⚠️ 2. SON UYARI: Sadece kullanıcıların oluşturduğu günlük veriler silinecektir. Altyapı verileri (Kullanıcılar, Makine Listesi, PM Master Plan) KORUNACAKTIR. İşlemi kesin olarak onaylıyor musunuz?");
+    if (!onay2) return;
 
-    filteredLogs.forEach(row => {
-      const tarih = row.baslangicSaati || (row.kayitTarihi ? row.kayitTarihi.toDate().toLocaleString('tr-TR') : "-");
-      const vardiya = row.vardiya || "-";
-      const hat = row.hatAdi || "-";
-      const ekipman = row.ekipmanAdi || "-";
-      const sorun = row.sorunTipi || "-";
-      const durus = row.isDuruslu ? "Evet" : "Hayir";
-      const sure = row.toplamSureDakika || 0;
-      const personel = Array.isArray(row.isiYapanlar) ? row.isiYapanlar.join(" & ") : (row.bildirenKisi || "-");
-      const aciklama = row.aciklama ? row.aciklama.replace(/;/g, ",").replace(/\n/g, " ") : "-";
+    const onay3 = window.prompt("🛑 GÜVENLİK KİLİDİ: İşlemi tetiklemek için aşağıdaki kutucuğa büyük harflerle SİL yazın.");
+    if (onay3 !== "SİL") {
+      return alert("Güvenlik kelimesi hatalı girildi. Sistem sıfırlama işlemi iptal edildi.");
+    }
 
-      csvContent += `${tarih};${vardiya};${hat};${ekipman};${sorun};${durus};${sure};${personel};${aciklama}\n`;
-    });
+    setLoading(true);
+    try {
+      const collectionsToWipe = [
+        "work_orders", "maintenance_logs", "meter_logs", "eked_logs", 
+        "pm_logs", "panel_logs", "mesai_logs", "overtime_logs", 
+        "kar_logs", "spare_parts", "system_logs"
+      ];
 
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `bakim_raporu_${new Date().toLocaleDateString('tr-TR')}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      for (const colName of collectionsToWipe) {
+        const q = query(collection(db, colName));
+        const snap = await getDocs(q);
+        const docsArr = snap.docs;
+        
+        for (let i = 0; i < docsArr.length; i += 400) {
+          const chunk = docsArr.slice(i, i + 400);
+          const batch = writeBatch(db);
+          chunk.forEach(d => batch.delete(d.ref));
+          await batch.commit();
+        }
+      }
+
+      alert("✅ SİSTEM BAŞARIYLA SIFIRLANDI! Tüm operasyonel veriler silindi, altyapı korundu.");
+      window.location.reload(); 
+
+    } catch (error) {
+      console.error("Sıfırlama hatası:", error);
+      alert("Sıfırlama işlemi sırasında sunucu kaynaklı bir hata oluştu.");
+    }
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -214,18 +233,34 @@ export default function AdminDashboard() {
     setGrafikElektrik(formatData(tuketimElektrik)); setGrafikDogalgaz(formatData(tuketimDogalgaz)); setGrafikSu(formatData(tuketimSu));
   }, [rawMeterLogs, filterElektrikSayac, filterDogalgazSayac, filterSuSayac]);
 
-      useEffect(() => {
+  useEffect(() => {
     if (rawLogs.length === 0) return;
     let topDurusDk = 0; let topIsAdedi = 0; let topMudahaleDk = 0; let durusluIsAdedi = 0;
     const tumIslerData: Record<string, { adet: number, dakika: number }> = {};
     const durusluIslerData: Record<string, { adet: number, dakika: number }> = {};
     const personelAnaliz: Record<string, { isSayisi: number, eforDk: number }> = {};
     const aktifEkipmanlar = new Set<string>(); const tumPersoneller = new Set<string>(); 
+    const eqData: Record<string, { hat: string, count: number, sure: number }> = {};
 
     rawLogs.forEach((data) => {
       let tarihObj = data.baslangicSaati ? new Date(data.baslangicSaati) : (data.kayitTarihi ? data.kayitTarihi.toDate() : null);
       const yil = tarihObj ? tarihObj.getFullYear().toString() : "";
       const ay = tarihObj ? (tarihObj.getMonth() + 1).toString() : ""; 
+      
+      if (data.isDuruslu && data.ekipmanAdi) {
+        let eqPass = true;
+        if (filterEqYil && yil !== filterEqYil) eqPass = false;
+        if (filterEqAy && ay !== filterEqAy) eqPass = false;
+        if (filterEqHat && data.hatAdi !== filterEqHat) eqPass = false;
+        
+        if (eqPass) {
+          const ekipman = data.ekipmanAdi;
+          if (!eqData[ekipman]) eqData[ekipman] = { hat: data.hatAdi || "-", count: 0, sure: 0 };
+          eqData[ekipman].count += 1;
+          eqData[ekipman].sure += (Number(data.toplamSureDakika) || 0);
+        }
+      }
+
       let grafikPass = true;
       if (filterYil && yil !== filterYil) grafikPass = false;
       if (filterAy && ay !== filterAy) grafikPass = false;
@@ -264,7 +299,6 @@ export default function AdminDashboard() {
       }
     });
 
-    // --- MTBF ALGORİTMASI ---
     const ekipmanArizalari: Record<string, number[]> = {};
     rawLogs.forEach((data: any) => {
       if (data.isDuruslu === true) {
@@ -304,53 +338,48 @@ export default function AdminDashboard() {
 
     const hesaplananMTBF = mtbfCount > 0 ? (totalMtbfMs / mtbfCount / (1000 * 60 * 60)).toFixed(1) : "Veri Yetersiz";
     setGlobalMTBF(hesaplananMTBF); 
-    // --- MTBF ALGORİTMASI BİTİŞ ---
 
-    setEkipmanListesi(Array.from(aktifEkipmanlar).sort()); 
-    setPersonelHavuzu(Array.from(tumPersoneller).sort());
-    setKpiAylikDurus(topDurusDk); 
-    setKpiToplamIs(topIsAdedi); 
-    setKpiToplamSure(topMudahaleDk); 
-    setKpiDurusluIsSayisi(durusluIsAdedi);
+    let arrEq = Object.keys(eqData).map(k => ({ ekipman: k, ...eqData[k] }));
+    arrEq.sort((a, b) => b.count - a.count || b.sure - a.sure); 
+    if (filterEqLimit !== "all") {
+      arrEq = arrEq.slice(0, Number(filterEqLimit)); 
+    }
+    setEkipmanPerformans(arrEq);
+
+    setEkipmanListesi(Array.from(aktifEkipmanlar).sort()); setPersonelHavuzu(Array.from(tumPersoneller).sort());
+    setKpiAylikDurus(topDurusDk); setKpiToplamIs(topIsAdedi); setKpiToplamSure(topMudahaleDk); setKpiDurusluIsSayisi(durusluIsAdedi);
     setGrafikTumIslerVerisi(Object.keys(tumIslerData).map(k => ({ isim: k, ...tumIslerData[k] })).sort((a, b) => b.adet - a.adet));
     setGrafikDurusVerisi(Object.keys(durusluIslerData).map(k => ({ isim: k, ...durusluIslerData[k] })).sort((a, b) => b.dakika - a.dakika));
-    
     const formatliPersonel = Object.keys(personelAnaliz).map(k => ({ isim: k, ...personelAnaliz[k] }));
     if (filterPerfSiralama === "efor") formatliPersonel.sort((a, b) => b.eforDk - a.eforDk);
     else formatliPersonel.sort((a, b) => b.isSayisi - a.isSayisi); 
     setPersonelPerformans(formatliPersonel);
-    
-  }, [rawLogs, filterYil, filterAy, filterHat, filterEkipman, filterPerfYil, filterPerfAy, filterPerfVardiya, filterPerfPersonel, filterPerfDurus, filterPerfSiralama]);
-// YENİ: Ekipman Performans Analizi (Sadece Duruşlu Arızalar)
-  useEffect(() => {
-    if (rawLogs.length === 0) return;
-    const eqData: Record<string, { hat: string, count: number, sure: number }> = {};
+  }, [rawLogs, filterYil, filterAy, filterHat, filterEkipman, filterPerfYil, filterPerfAy, filterPerfVardiya, filterPerfPersonel, filterPerfDurus, filterPerfSiralama, filterEqYil, filterEqAy, filterEqHat, filterEqLimit]);
 
-    rawLogs.forEach(data => {
-      if (!data.isDuruslu || !data.ekipmanAdi) return; // Sadece duruşluları al
-      let tarihObj = data.baslangicSaati ? new Date(data.baslangicSaati) : (data.kayitTarihi ? data.kayitTarihi.toDate() : null);
-      const yil = tarihObj ? tarihObj.getFullYear().toString() : "";
-      const ay = tarihObj ? (tarihObj.getMonth() + 1).toString() : ""; 
-
-      if (filterEqYil && yil !== filterEqYil) return;
-      if (filterEqAy && ay !== filterEqAy) return;
-      if (filterEqHat && data.hatAdi !== filterEqHat) return;
-
-      const ekipman = data.ekipmanAdi;
-      if (!eqData[ekipman]) eqData[ekipman] = { hat: data.hatAdi || "-", count: 0, sure: 0 };
-      eqData[ekipman].count += 1;
-      eqData[ekipman].sure += (Number(data.toplamSureDakika) || 0);
+  const exportToCSV = () => {
+    let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
+    csvContent += "Tarih;Vardiya;Hat;Ekipman;Sorun Tipi;Duruslu Mu;Sure(Dk);Personel;Aciklama\n";
+    rawLogs.forEach(row => {
+      const tarih = row.baslangicSaati || (row.kayitTarihi ? row.kayitTarihi.toDate().toLocaleString('tr-TR') : "-");
+      const vardiya = row.vardiya || "-";
+      const hat = row.hatAdi || "-";
+      const ekipman = row.ekipmanAdi || "-";
+      const sorun = row.sorunTipi || "-";
+      const durus = row.isDuruslu ? "Evet" : "Hayir";
+      const sure = row.toplamSureDakika || 0;
+      const personel = Array.isArray(row.isiYapanlar) ? row.isiYapanlar.join(" & ") : (row.bildirenKisi || "-");
+      const aciklama = row.aciklama ? row.aciklama.replace(/;/g, ",").replace(/\n/g, " ") : "-";
+      csvContent += `${tarih};${vardiya};${hat};${ekipman};${sorun};${durus};${sure};${personel};${aciklama}\n`;
     });
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Tum_Bakim_Verileri_${new Date().toLocaleDateString('tr-TR')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
-    let arr = Object.keys(eqData).map(k => ({ ekipman: k, ...eqData[k] }));
-    // Önce Duruş Sayısına, eşitse Duruş Süresine göre ÇOKTAN AZA sırala
-    arr.sort((a, b) => b.count - a.count || b.sure - a.sure); 
-
-    if (filterEqLimit !== "all") {
-      arr = arr.slice(0, Number(filterEqLimit)); // İlk 5 veya İlk 10
-    }
-    setEkipmanPerformans(arr);
-  }, [rawLogs, filterEqYil, filterEqAy, filterEqHat, filterEqLimit]);
   if (loading) return <div className="min-h-screen bg-gray-950 flex justify-center items-center text-white">Sistem yükleniyor...</div>;
   if (!isAdmin) return <div className="min-h-screen bg-gray-950 text-red-500 flex justify-center items-center">Yetkisiz Erişim!</div>;
 
@@ -364,9 +393,8 @@ export default function AdminDashboard() {
       );
     } return null;
   };
+  
   const durusSureYuzde = kpiToplamSure > 0 ? ((kpiAylikDurus / kpiToplamSure) * 100).toFixed(1) : "0";
-   
-const globalMTTR = kpiToplamIs > 0 ? (kpiToplamSure / kpiToplamIs).toFixed(1) : "0";
 
   return (
     <>
@@ -384,10 +412,16 @@ const globalMTTR = kpiToplamIs > 0 ? (kpiToplamSure / kpiToplamIs).toFixed(1) : 
               </div>
             </div>
             <div className="flex flex-wrap gap-3 no-print">
+              {(userEmail === "dfutechreport@gmail.com" || userEmail === "ilker.yilmaz@donukfirincilik.com.tr") && (
+                <button onClick={handleFactoryReset} className="bg-red-900 hover:bg-red-800 text-white font-bold px-4 py-2 rounded-lg shadow-lg transition text-sm flex items-center gap-2 border border-red-500">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                  Sistemi Sıfırla (Reset)
+                </button>
+              )}
               {(userRole === "admin" || userRole === "operator" || userRole === "isg") && (
                 <button onClick={exportToCSV} className="bg-green-700 text-white font-bold px-4 py-2 rounded-lg shadow-lg hover:bg-green-600 transition text-sm flex items-center gap-2">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg> 
-                  Excel'e Aktar
+                  Tüm Verileri Excel'e Aktar
                 </button>
               )}
               {(userRole === "admin" || userRole === "isg") && (
@@ -432,12 +466,7 @@ const globalMTTR = kpiToplamIs > 0 ? (kpiToplamSure / kpiToplamIs).toFixed(1) : 
             {userRole !== "uretim" && userRole !== "isg" && (
               <>
                 <Link href="/dashboard/kontrol-formlari" className="bg-cyan-600 hover:bg-cyan-500 text-white p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(6,182,212,0.4)] transition">✅ Kontrol Formları</Link>
-<Link href="/admin/pm-takvim" className="bg-teal-700 hover:bg-teal-600 text-white p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(15,118,110,0.5)] transition">
-  📅 Yıllık PM Takvimi
-</Link>
-<Link href="/dashboard/periyodik-bakim" className="bg-teal-600 hover:bg-teal-500 text-white p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(13,148,136,0.4)] transition">
-  📋 Manuel PM (Checklist)
-</Link>
+                <Link href="/admin/pm-takvim" className="bg-teal-700 hover:bg-teal-600 text-white p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(15,118,110,0.5)] transition">📅 Yıllık PM Takvimi</Link>
                 <Link href="/admin/periyodik-bakim-arsiv" className="bg-teal-800 hover:bg-teal-700 text-teal-100 p-3 rounded-xl font-bold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">🗄️ PM Arşivi</Link>
                 <Link href="/admin/yedek-parca" className="bg-fuchsia-700 hover:bg-fuchsia-600 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-[0_0_15px_rgba(192,38,211,0.4)] transition">⚙️ Yedek Parça</Link>
                 <Link href="/admin/is-listesi" className="bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-xl font-semibold text-xs md:text-sm flex items-center justify-center text-center shadow-lg transition">📋 Yapılan İşler</Link>
@@ -528,7 +557,7 @@ const globalMTTR = kpiToplamIs > 0 ? (kpiToplamSure / kpiToplamIs).toFixed(1) : 
                 <p className="text-sm text-gray-500 mt-1">Oluşturulma Tarihi: {new Date().toLocaleString('tr-TR')}</p>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
                 <div className="bg-gray-900 border border-gray-800 p-4 md:p-5 rounded-2xl shadow-lg"><p className="text-xs md:text-sm text-gray-400 font-semibold mb-1">Toplam Yapılan İş</p><h3 className="text-2xl md:text-3xl font-bold text-green-400">{kpiToplamIs} <span className="text-sm text-gray-500 font-normal">Adet</span></h3><p className="text-xs text-gray-500 mt-2 font-medium">Toplam Efor: <span className="text-white">{kpiToplamSure} dk</span></p></div>
                 <div className="bg-gray-900 border border-gray-800 p-4 md:p-5 rounded-2xl shadow-lg"><p className="text-xs md:text-sm text-gray-400 font-semibold mb-1">Duruşlu İş Sayısı</p><h3 className="text-2xl md:text-3xl font-bold text-red-400">{kpiDurusluIsSayisi} <span className="text-sm text-gray-500 font-normal">Adet</span></h3><p className="text-xs text-gray-500 mt-2 font-medium">Kritik Duruş: <span className="text-white">{kpiAylikDurus} dk</span></p></div>
                 <div className="bg-gray-900 border border-orange-500/30 p-4 md:p-5 rounded-2xl shadow-[0_0_15px_rgba(249,115,22,0.1)] relative overflow-hidden flex flex-col justify-center"><div className="flex justify-between items-center border-b border-gray-700/50 pb-2 mb-2"><span className="text-xs md:text-sm text-green-400 font-bold">Toplam Çalışma:</span><span className="text-lg md:text-xl font-bold text-white">{kpiToplamSure} <span className="text-xs text-gray-400">dk</span></span></div><div className="flex justify-between items-center"><span className="text-xs md:text-sm text-red-400 font-bold">Toplam Duruş:</span><span className="text-lg md:text-xl font-bold text-white">{kpiAylikDurus} <span className="text-xs text-gray-400">dk</span></span></div></div>
@@ -538,47 +567,52 @@ const globalMTTR = kpiToplamIs > 0 ? (kpiToplamSure / kpiToplamIs).toFixed(1) : 
                   <h3 className="text-2xl md:text-3xl font-bold text-purple-400 relative z-10">{globalMTTR} <span className="text-sm text-gray-500 font-normal">dk / İş</span></h3>
                   <p className="text-xs text-gray-400 mt-2 relative z-10">Ort. Müdahale Süresi</p>
                 </div>
-{/* YENİ MTBF KARTI */}
-<div className="bg-gray-900 border border-emerald-500/30 p-4 md:p-5 rounded-2xl shadow-[0_0_15px_rgba(16,185,129,0.1)] relative overflow-hidden col-span-2 md:col-span-1 lg:col-span-1">
-  <p className="text-xs md:text-sm text-emerald-300 font-semibold mb-1 relative z-10">Tesis Geneli MTBF</p>
-  <h3 className="text-2xl md:text-3xl font-bold text-emerald-400 relative z-10">{globalMTBF} <span className="text-sm text-gray-500 font-normal">{globalMTBF === "Veri Yetersiz" ? "" : "Saat"}</span></h3>
-  <p className="text-xs text-gray-400 mt-2 relative z-10">İki Arıza Arası Ort. Süre</p>
-</div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
                 <div className="bg-gray-900 border border-yellow-500/30 p-4 rounded-2xl shadow-lg border-t-4 border-t-yellow-500"><div className="flex justify-between items-center mb-4 border-b border-gray-800 pb-2"><h2 className="text-sm font-bold text-yellow-400 print:text-black flex items-center gap-2">⚡ Elektrik Tüketimi (kWh)</h2></div><select value={filterElektrikSayac} onChange={(e) => setFilterElektrikSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 text-gray-300 rounded-lg p-2 text-xs mb-4 no-print focus:border-yellow-500"><option value="">Tüm Elektrik Sayaçları</option>{elektrikSayacListesi.map(s => <option key={s} value={s}>{s}</option>)}</select>{grafikElektrik.length === 0 ? <div className="h-40 flex justify-center items-center text-gray-500 text-xs border border-dashed border-gray-800 rounded-lg">Veri yok</div> : (<div className="h-48 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikElektrik}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="ay" tick={{fontSize: 10, fill: '#9CA3AF'}} /><YAxis tick={{fontSize: 10, fill: '#9CA3AF'}} width={35} /><Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} /><Bar name="Tüketim" dataKey="tuketim" fill="#EAB308" maxBarSize={40}><LabelList dataKey="tuketim" position="top" fill="#EAB308" fontSize={10} fontWeight="bold" /></Bar></BarChart></ResponsiveContainer></div>)}</div>
                 <div className="bg-gray-900 border border-red-500/30 p-4 rounded-2xl shadow-lg border-t-4 border-t-red-500"><div className="flex justify-between items-center mb-4 border-b border-gray-800 pb-2"><h2 className="text-sm font-bold text-red-400 print:text-black flex items-center gap-2">🔥 Doğalgaz Tüketimi (m³)</h2></div><select value={filterDogalgazSayac} onChange={(e) => setFilterDogalgazSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 text-gray-300 rounded-lg p-2 text-xs mb-4 no-print focus:border-red-500"><option value="">Tüm Doğalgaz Sayaçları</option>{dogalgazSayacListesi.map(s => <option key={s} value={s}>{s}</option>)}</select>{grafikDogalgaz.length === 0 ? <div className="h-40 flex justify-center items-center text-gray-500 text-xs border border-dashed border-gray-800 rounded-lg">Veri yok</div> : (<div className="h-48 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikDogalgaz}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="ay" tick={{fontSize: 10, fill: '#9CA3AF'}} /><YAxis tick={{fontSize: 10, fill: '#9CA3AF'}} width={35} /><Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} /><Bar name="Tüketim" dataKey="tuketim" fill="#EF4444" maxBarSize={40}><LabelList dataKey="tuketim" position="top" fill="#EF4444" fontSize={10} fontWeight="bold" /></Bar></BarChart></ResponsiveContainer></div>)}</div>
                 <div className="bg-gray-900 border border-blue-500/30 p-4 rounded-2xl shadow-lg border-t-4 border-t-blue-500"><div className="flex justify-between items-center mb-4 border-b border-gray-800 pb-2"><h2 className="text-sm font-bold text-blue-400 print:text-black flex items-center gap-2">💧 Su Tüketimi (Ton)</h2></div><select value={filterSuSayac} onChange={(e) => setFilterSuSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 text-gray-300 rounded-lg p-2 text-xs mb-4 no-print focus:border-blue-500"><option value="">Tüm Su Sayaçları</option>{suSayacListesi.map(s => <option key={s} value={s}>{s}</option>)}</select>{grafikSu.length === 0 ? <div className="h-40 flex justify-center items-center text-gray-500 text-xs border border-dashed border-gray-800 rounded-lg">Veri yok</div> : (<div className="h-48 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikSu}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="ay" tick={{fontSize: 10, fill: '#9CA3AF'}} /><YAxis tick={{fontSize: 10, fill: '#9CA3AF'}} width={35} /><Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} /><Bar name="Tüketim" dataKey="tuketim" fill="#3B82F6" maxBarSize={40}><LabelList dataKey="tuketim" position="top" fill="#3B82F6" fontSize={10} fontWeight="bold" /></Bar></BarChart></ResponsiveContainer></div>)}</div>
-              </div>
+                            </div>
 
-              <div className="bg-gray-900 border border-blue-700/50 p-5 rounded-2xl mb-6 flex flex-wrap gap-4 items-end no-print shadow-[0_0_15px_rgba(59,130,246,0.1)]">
-                <div className="w-full mb-1 border-b border-gray-800 pb-2"><h3 className="text-blue-500 font-bold flex items-center gap-2"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg> Arıza ve Bakım Filtreleri</h3></div>
-                <div className="flex-1 min-w-[120px]"><label className="block text-xs text-gray-400 mb-1">Yıl</label><select value={filterYil} onChange={(e) => setFilterYil(e.target.value)} className="w-full bg-gray-800 rounded-lg p-2 text-sm"><option value="">Tümü</option>{yilListesi.map(y => <option key={y} value={y}>{y}</option>)}</select></div>
-                <div className="flex-1 min-w-[120px]"><label className="block text-xs text-gray-400 mb-1">Ay</label><select value={filterAy} onChange={(e) => setFilterAy(e.target.value)} className="w-full bg-gray-800 rounded-lg p-2 text-sm"><option value="">Tümü</option><option value="1">Ocak</option><option value="2">Şubat</option><option value="3">Mart</option><option value="4">Nisan</option><option value="5">Mayıs</option><option value="6">Haziran</option><option value="7">Temmuz</option><option value="8">Ağustos</option><option value="9">Eylül</option><option value="10">Ekim</option><option value="11">Kasım</option><option value="12">Aralık</option></select></div>
-                <div className="flex-1 min-w-[120px]"><label className="block text-xs text-gray-400 mb-1">Üretim Hattı</label><select value={filterHat} onChange={(e) => { setFilterHat(e.target.value); setFilterEkipman(""); }} className="w-full bg-gray-800 rounded-lg p-2 text-sm"><option value="">Tümü</option>{hatListesi.map(h => <option key={h} value={h}>{h}</option>)}</select></div>
-                <div className="flex-1 min-w-[120px]"><label className="block text-xs text-gray-400 mb-1">Ekipman</label><select value={filterEkipman} onChange={(e) => setFilterEkipman(e.target.value)} disabled={!filterHat} className="w-full bg-gray-800 rounded-lg p-2 text-sm disabled:opacity-50"><option value="">{filterHat ? "Tüm Ekipmanlar" : "Önce Hat Seçin"}</option>{ekipmanListesi.map(e => <option key={e} value={e}>{e}</option>)}</select></div>
-                <button onClick={() => {setFilterYil(""); setFilterAy(""); setFilterHat(""); setFilterEkipman("");}} className="bg-red-900/40 text-red-400 px-4 py-2 rounded-lg text-sm h-9">Sıfırla</button>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
-                <div className="bg-gray-900 border border-gray-800 p-4 md:p-6 rounded-2xl"><h2 className="text-lg font-bold mb-6 text-green-400 print:text-black">Yapılan İşler</h2>{grafikTumIslerVerisi.length > 0 ? (<div className="h-72 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikTumIslerVerisi} margin={{ top: 25, right: 5, left: -25, bottom: 5 }}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="isim" tick={{fontSize: 10, fill: '#9CA3AF'}} interval={0} angle={-15} textAnchor="end" /><YAxis tick={{fontSize: 10, fill: '#9CA3AF'}} /><Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} trigger="hover" /><Legend wrapperStyle={{ fontSize: '11px', paddingTop: '15px' }} /><Bar name="İş Adedi" dataKey="adet" fill="#10B981" maxBarSize={40}><LabelList dataKey="adet" position="top" fill="#10B981" fontSize={11} fontWeight="bold" /></Bar><Bar name="Süre (Dk)" dataKey="dakika" fill="#3B82F6" maxBarSize={40}><LabelList dataKey="dakika" position="top" fill="#3B82F6" fontSize={11} fontWeight="bold" /></Bar></BarChart></ResponsiveContainer></div>) : <div className="h-48 flex justify-center items-center text-gray-500 border border-dashed border-gray-800 rounded-xl">Veri yok</div>}</div>
-                <div className="bg-gray-900 border border-gray-800 p-4 md:p-6 rounded-2xl"><h2 className="text-lg font-bold mb-6 text-red-400 print:text-black">Sadece Duruşlu Arızalar</h2>{grafikDurusVerisi.length > 0 ? (<div className="h-72 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikDurusVerisi} 
-margin={{ top: 25, right: 5, left: -25, bottom: 5 }}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="isim" tick={{fontSize: 10, fill: '#9CA3AF'}} interval={0} angle={-15} textAnchor="end" /><YAxis tick={{fontSize: 10, fill: '#9CA3AF'}} /><Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} trigger="hover" /><Legend wrapperStyle={{ fontSize: '11px', paddingTop: '15px' }} /><Bar name="Duruş Adedi" dataKey="adet" fill="#F59E0B" maxBarSize={40}><LabelList dataKey="adet" position="top" fill="#F59E0B" fontSize={11} fontWeight="bold" /></Bar><Bar name="Süre (Dk)" dataKey="dakika" fill="#EF4444" maxBarSize={40}><LabelList dataKey="dakika" position="top" fill="#EF4444" fontSize={11} fontWeight="bold" /></Bar></BarChart></ResponsiveContainer></div>) : <div className="h-48 flex justify-center items-center text-gray-500 border border-dashed border-gray-800 rounded-xl">Veri yok</div>}</div>
-              </div>
-              {/* YENİ: EN SIK DURUŞ YAPAN EKİPMANLAR (BAD ACTORS) */}
+              {/* YENİ EKLENEN: EN SIK DURUŞ YAPAN EKİPMANLAR (BAD ACTORS) */}
               <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl mb-8 print-break">
                 <h2 className="text-xl font-bold mb-6 text-red-400 print:text-black flex items-center gap-2">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                  En Sık Duruş Yapan Ekipmanlar
+                  En Sık Duruş Yapan Ekipmanlar (Bad Actors Matrisi)
                 </h2>
                 
                 {/* Ekipman Filtreleri */}
                 <div className="bg-gray-800 border-gray-700 p-4 rounded-xl mb-6 flex flex-wrap gap-4 items-end no-print">
-                  <div className="flex-1 min-w-[120px]"><label className="block text-xs text-gray-400 mb-1">Yıl</label><select value={filterEqYil} onChange={(e) => setFilterEqYil(e.target.value)} className="w-full bg-gray-900 rounded-lg p-2 text-sm"><option value="">Tümü</option>{yilListesi.map(y => <option key={y} value={y}>{y}</option>)}</select></div>
-                  <div className="flex-1 min-w-[120px]"><label className="block text-xs text-gray-400 mb-1">Ay</label><select value={filterEqAy} onChange={(e) => setFilterEqAy(e.target.value)} className="w-full bg-gray-900 rounded-lg p-2 text-sm"><option value="">Tümü</option><option value="1">Ocak</option><option value="2">Şubat</option><option value="3">Mart</option><option value="4">Nisan</option><option value="5">Mayıs</option><option value="6">Haziran</option><option value="7">Temmuz</option><option value="8">Ağustos</option><option value="9">Eylül</option><option value="10">Ekim</option><option value="11">Kasım</option><option value="12">Aralık</option></select></div>
-                  <div className="flex-1 min-w-[120px]"><label className="block text-xs text-gray-400 mb-1">Üretim Hattı</label><select value={filterEqHat} onChange={(e) => setFilterEqHat(e.target.value)} className="w-full bg-gray-900 rounded-lg p-2 text-sm"><option value="">Tümü</option>{hatListesi.map(h => <option key={h} value={h}>{h}</option>)}</select></div>
-                  <div className="flex-1 min-w-[120px]"><label className="block text-xs text-red-400 mb-1 font-bold">Listeleme</label><select value={filterEqLimit} onChange={(e) => setFilterEqLimit(e.target.value)} className="w-full bg-red-900/30 text-red-400 rounded-lg p-2 text-sm font-bold border border-red-800/50"><option value="5">İlk 5 (Top 5)</option><option value="10">İlk 10 (Top 10)</option><option value="all">Tümünü Göster</option></select></div>
+                  <div className="flex-1 min-w-[120px]">
+                    <label className="block text-xs text-gray-400 mb-1">Yıl</label>
+                    <select value={filterEqYil} onChange={(e) => setFilterEqYil(e.target.value)} className="w-full bg-gray-900 rounded-lg p-2 text-sm">
+                      <option value="">Tümü</option>{yilListesi.map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex-1 min-w-[120px]">
+                    <label className="block text-xs text-gray-400 mb-1">Ay</label>
+                    <select value={filterEqAy} onChange={(e) => setFilterEqAy(e.target.value)} className="w-full bg-gray-900 rounded-lg p-2 text-sm">
+                      <option value="">Tümü</option><option value="1">Ocak</option><option value="2">Şubat</option>
+                      <option value="3">Mart</option><option value="4">Nisan</option><option value="5">Mayıs</option>
+                      <option value="6">Haziran</option><option value="7">Temmuz</option><option value="8">Ağustos</option>
+                      <option value="9">Eylül</option><option value="10">Ekim</option><option value="11">Kasım</option><option value="12">Aralık</option>
+                    </select>
+                  </div>
+                  <div className="flex-1 min-w-[120px]">
+                    <label className="block text-xs text-gray-400 mb-1">Üretim Hattı</label>
+                    <select value={filterEqHat} onChange={(e) => setFilterEqHat(e.target.value)} className="w-full bg-gray-900 rounded-lg p-2 text-sm">
+                      <option value="">Tümü</option>{hatListesi.map(h => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex-1 min-w-[120px]">
+                    <label className="block text-xs text-red-400 mb-1 font-bold">Listeleme</label>
+                    <select value={filterEqLimit} onChange={(e) => setFilterEqLimit(e.target.value)} className="w-full bg-red-900/30 text-red-400 rounded-lg p-2 text-sm font-bold border border-red-800/50">
+                      <option value="5">İlk 5 (Top 5)</option>
+                      <option value="10">İlk 10 (Top 10)</option>
+                      <option value="all">Tümünü Göster</option>
+                    </select>
+                  </div>
                   <button onClick={() => { setFilterEqYil(""); setFilterEqAy(""); setFilterEqHat(""); setFilterEqLimit("5"); }} className="bg-gray-700 px-4 py-2 rounded-lg text-sm h-9">Sıfırla</button>
                 </div>
 
@@ -609,6 +643,21 @@ margin={{ top: 25, right: 5, left: -25, bottom: 5 }}><CartesianGrid strokeDashar
                   </table>
                 </div>
               </div>
+
+              <div className="bg-gray-900 border border-blue-700/50 p-5 rounded-2xl mb-6 flex flex-wrap gap-4 items-end no-print shadow-[0_0_15px_rgba(59,130,246,0.1)]">
+                <div className="w-full mb-1 border-b border-gray-800 pb-2"><h3 className="text-blue-500 font-bold flex items-center gap-2"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg> Arıza ve Bakım Filtreleri</h3></div>
+                <div className="flex-1 min-w-[120px]"><label className="block text-xs text-gray-400 mb-1">Yıl</label><select value={filterYil} onChange={(e) => setFilterYil(e.target.value)} className="w-full bg-gray-800 rounded-lg p-2 text-sm"><option value="">Tümü</option>{yilListesi.map(y => <option key={y} value={y}>{y}</option>)}</select></div>
+                <div className="flex-1 min-w-[120px]"><label className="block text-xs text-gray-400 mb-1">Ay</label><select value={filterAy} onChange={(e) => setFilterAy(e.target.value)} className="w-full bg-gray-800 rounded-lg p-2 text-sm"><option value="">Tümü</option><option value="1">Ocak</option><option value="2">Şubat</option><option value="3">Mart</option><option value="4">Nisan</option><option value="5">Mayıs</option><option value="6">Haziran</option><option value="7">Temmuz</option><option value="8">Ağustos</option><option value="9">Eylül</option><option value="10">Ekim</option><option value="11">Kasım</option><option value="12">Aralık</option></select></div>
+                <div className="flex-1 min-w-[120px]"><label className="block text-xs text-gray-400 mb-1">Üretim Hattı</label><select value={filterHat} onChange={(e) => { setFilterHat(e.target.value); setFilterEkipman(""); }} className="w-full bg-gray-800 rounded-lg p-2 text-sm"><option value="">Tümü</option>{hatListesi.map(h => <option key={h} value={h}>{h}</option>)}</select></div>
+                <div className="flex-1 min-w-[120px]"><label className="block text-xs text-gray-400 mb-1">Ekipman</label><select value={filterEkipman} onChange={(e) => setFilterEkipman(e.target.value)} disabled={!filterHat} className="w-full bg-gray-800 rounded-lg p-2 text-sm disabled:opacity-50"><option value="">{filterHat ? "Tüm Ekipmanlar" : "Önce Hat Seçin"}</option>{ekipmanListesi.map(e => <option key={e} value={e}>{e}</option>)}</select></div>
+                <button onClick={() => {setFilterYil(""); setFilterAy(""); setFilterHat(""); setFilterEkipman("");}} className="bg-red-900/40 text-red-400 px-4 py-2 rounded-lg text-sm h-9">Sıfırla</button>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+                <div className="bg-gray-900 border border-gray-800 p-4 md:p-6 rounded-2xl"><h2 className="text-lg font-bold mb-6 text-green-400 print:text-black">Yapılan İşler</h2>{grafikTumIslerVerisi.length > 0 ? (<div className="h-72 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikTumIslerVerisi} margin={{ top: 25, right: 5, left: -25, bottom: 5 }}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="isim" tick={{fontSize: 10, fill: '#9CA3AF'}} interval={0} angle={-15} textAnchor="end" /><YAxis tick={{fontSize: 10, fill: '#9CA3AF'}} /><Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} trigger="hover" /><Legend wrapperStyle={{ fontSize: '11px', paddingTop: '15px' }} /><Bar name="İş Adedi" dataKey="adet" fill="#10B981" maxBarSize={40}><LabelList dataKey="adet" position="top" fill="#10B981" fontSize={11} fontWeight="bold" /></Bar><Bar name="Süre (Dk)" dataKey="dakika" fill="#3B82F6" maxBarSize={40}><LabelList dataKey="dakika" position="top" fill="#3B82F6" fontSize={11} fontWeight="bold" /></Bar></BarChart></ResponsiveContainer></div>) : <div className="h-48 flex justify-center items-center text-gray-500 border border-dashed border-gray-800 rounded-xl">Veri yok</div>}</div>
+                <div className="bg-gray-900 border border-gray-800 p-4 md:p-6 rounded-2xl"><h2 className="text-lg font-bold mb-6 text-red-400 print:text-black">Sadece Duruşlu Arızalar</h2>{grafikDurusVerisi.length > 0 ? (<div className="h-72 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikDurusVerisi} margin={{ top: 25, right: 5, left: -25, bottom: 5 }}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="isim" tick={{fontSize: 10, fill: '#9CA3AF'}} interval={0} angle={-15} textAnchor="end" /><YAxis tick={{fontSize: 10, fill: '#9CA3AF'}} /><Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} trigger="hover" /><Legend wrapperStyle={{ fontSize: '11px', paddingTop: '15px' }} /><Bar name="Duruş Adedi" dataKey="adet" fill="#F59E0B" maxBarSize={40}><LabelList dataKey="adet" position="top" fill="#F59E0B" fontSize={11} fontWeight="bold" /></Bar><Bar name="Süre (Dk)" dataKey="dakika" fill="#EF4444" maxBarSize={40}><LabelList dataKey="dakika" position="top" fill="#EF4444" fontSize={11} fontWeight="bold" /></Bar></BarChart></ResponsiveContainer></div>) : <div className="h-48 flex justify-center items-center text-gray-500 border border-dashed border-gray-800 rounded-xl">Veri yok</div>}</div>
+              </div>
+
               <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl print-break">
                 <h2 className="text-xl font-bold mb-6 text-blue-400 print:text-black">Personel Performans Matrisi</h2>
                 <div className="bg-gray-800 border-gray-700 p-4 rounded-xl mb-6 flex flex-wrap gap-4 items-end no-print">

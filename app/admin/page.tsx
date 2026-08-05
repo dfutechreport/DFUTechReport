@@ -51,11 +51,11 @@ export default function AdminDashboard() {
   
   // --- RCA ANALİZ MODÜLÜ ---
   const RCA_CATEGORIES = [
-    { id: "insan", label: "İnsan", color: "#3B82F6", notes: ["Eğitim", "Hata", "Dikkatsizlik"] },
-    { id: "makine", label: "Makine", color: "#EF4444", notes: ["Rulman", "Sensör", "Yorulma"] },
-    { id: "malzeme", label: "Malzeme", color: "#10B981", notes: ["Kalitesiz Parça", "Uyumsuzluk"] },
-    { id: "metot", label: "Metot", color: "#F59E0B", notes: ["Yağsızlık", "Hatalı Ayar"] },
-    { id: "ortam", label: "Ortam", color: "#8B5CF6", notes: ["Isı", "Toz", "Vibrasyon"] }
+    { id: "insan", label: "İnsan", color: "#3B82F6", notes: ["Eğitim Eksikliği", "Dikkatsizlik"] },
+    { id: "makine", label: "Makine", color: "#EF4444", notes: ["Rulman Arızası", "Sensör Hatası"] },
+    { id: "malzeme", label: "Malzeme", color: "#10B981", notes: ["Yedek Parça Kalitesi"] },
+    { id: "metot", label: "Metot", color: "#F59E0B", notes: ["Yağsızlık/Bakımsızlık"] },
+    { id: "ortam", label: "Ortam", color: "#8B5CF6", notes: ["Aşırı Toz/Isı"] }
   ];
   const [rcaLogs, setRcaLogs] = useState<any[]>([]);
   const [showRcaModal, setShowRcaModal] = useState(false);
@@ -66,25 +66,33 @@ export default function AdminDashboard() {
     try {
       const snap = await getDocs(collection(db, "root_cause_analysis"));
       setRcaLogs(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error("RCA Yükleme Hatası:", e); }
   };
 
   const handleSaveRca = async () => {
-    if (!rcaForm.category) return alert("Kategori seçin.");
+    if (!rcaForm.category) return alert("Lütfen kategori seçin.");
+    if (!selectedLogForRca?.id) return alert("Hata: Arıza ID bulunamadı.");
+    
     try {
-      const ref = doc(db, "root_cause_analysis", String(selectedLogForRca.id));
-      await setDoc(ref, {
-        logId: selectedLogForRca.id,
-        ekipman: selectedLogForRca.ekipmanAdi,
+      const docId = String(selectedLogForRca.id);
+      const rcaRef = doc(db, "root_cause_analysis", docId);
+      
+      await setDoc(rcaRef, {
+        logId: docId,
+        ekipman: selectedLogForRca.ekipmanAdi || "Bilinmiyor",
         category: rcaForm.category,
-        why: rcaForm.why,
-        analizEden: userName,
+        why: rcaForm.why || "",
+        analizEden: userName || "Admin",
         tarih: serverTimestamp()
       }, { merge: true });
-      alert("Başarıyla kaydedildi.");
+
+      alert("Analiz başarıyla kaydedildi.");
       setShowRcaModal(false);
       fetchRcaData();
-    } catch (e) { alert("Hata: Kaydedilemedi."); }
+    } catch (e: any) { 
+      console.error("Firestore Kayıt Hatası:", e);
+      alert("KAYDEDİLEMEDİ: " + e.message); 
+    }
   };
 
   const [kpiToplamIs, setKpiToplamIs] = useState(0);
@@ -155,7 +163,7 @@ export default function AdminDashboard() {
       const eSnap = await getDocs(eQ);
       setAktifEked(eSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
-      const logs = (await getDocs(collection(db, "maintenance_logs"))).docs.map(doc => doc.data());
+      const logs = (await getDocs(collection(db, "maintenance_logs"))).docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setRawLogs(logs); fetchRcaData();
 
       const qMeter = query(collection(db, "meter_logs"), orderBy("tarih", "asc"));
@@ -616,7 +624,7 @@ const globalMTTR = kpiToplamIs > 0 ? (kpiToplamSure / kpiToplamIs).toFixed(1) : 
 
               
           {userRole === "admin" && (
-            <div className="bg-gray-900 border-2 border-indigo-500/20 p-6 rounded-3xl mb-8 shadow-xl">
+            <div className="bg-gray-900 border-2 border-indigo-500/20 p-6 rounded-3xl mb-8 shadow-xl no-print">
               <h2 className="text-xl font-bold text-indigo-400 mb-6 flex items-center gap-2">🧠 Analiz Bekleyen Duruşlar</h2>
               <div className="space-y-3">
                 {rawLogs.filter(l => l.isDuruslu).slice(0, 5).map((log, idx) => {
@@ -624,11 +632,11 @@ const globalMTTR = kpiToplamIs > 0 ? (kpiToplamSure / kpiToplamIs).toFixed(1) : 
                   return (
                     <div key={idx} className="bg-gray-800/40 p-4 rounded-2xl flex items-center justify-between border border-gray-700/50">
                       <div>
-                        <p className="text-[10px] text-gray-500">{log.hatAdi}</p>
+                        <p className="text-[10px] text-gray-500">{log.hatAdi} | {log.id}</p>
                         <p className="font-bold text-gray-200 text-sm">{log.ekipmanAdi} <span className="text-red-400 ml-2">{log.toplamSureDakika} dk</span></p>
                       </div>
-                      <button onClick={() => { setSelectedLogForRca(log); setShowRcaModal(true); }} className={`px-4 py-2 rounded-xl text-[10px] font-bold ${hasRca ? 'bg-green-600/20 text-green-400 border border-green-500/30' : 'bg-indigo-600 text-white'}`}>
-                        {hasRca ? "Güncelle" : "Analiz Et"}
+                      <button onClick={() => { setSelectedLogForRca(log); setShowRcaModal(true); setRcaForm({ category: hasRca?.category || "", why: hasRca?.why || "" }); }} className={`px-4 py-2 rounded-xl text-[10px] font-bold ${hasRca ? 'bg-green-600/20 text-green-400 border border-green-500/30' : 'bg-indigo-600 text-white'}`}>
+                        {hasRca ? "Güncellendi" : "Analiz Et"}
                       </button>
                     </div>
                   );
@@ -717,7 +725,7 @@ const globalMTTR = kpiToplamIs > 0 ? (kpiToplamSure / kpiToplamIs).toFixed(1) : 
 
               
               <div className="bg-gray-900 border border-gray-800 p-6 rounded-3xl mb-8">
-                <h2 className="text-lg font-bold text-indigo-400 mb-6">📊 Kök Neden Dağılımı</h2>
+                <h2 className="text-lg font-bold text-indigo-400 mb-6 flex items-center gap-2">📊 Kök Neden Dağılımı</h2>
                 {rcaLogs.length > 0 ? (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                     <div className="h-64">
@@ -743,7 +751,7 @@ const globalMTTR = kpiToplamIs > 0 ? (kpiToplamSure / kpiToplamIs).toFixed(1) : 
                       })}
                     </div>
                   </div>
-                ) : <div className="py-10 text-center text-gray-600 text-xs italic">Henüz analiz verisi girilmemiş.</div>}
+                ) : <div className="py-10 text-center text-gray-600 text-xs italic">Analiz verisi bekleniyor...</div>}
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
@@ -795,19 +803,19 @@ const globalMTTR = kpiToplamIs > 0 ? (kpiToplamSure / kpiToplamIs).toFixed(1) : 
       {showRcaModal && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex justify-center items-center z-[999] p-4">
           <div className="bg-gray-900 border border-indigo-500/30 p-8 rounded-[30px] w-full max-w-xl shadow-2xl">
-            <h2 className="text-xl font-bold text-white mb-4">Kök Neden Raporu</h2>
+            <h2 className="text-xl font-bold text-white mb-4">Kök Neden Raporu (RCA)</h2>
             <div className="space-y-6">
               <div className="grid grid-cols-3 gap-2">
                 {RCA_CATEGORIES.map(c => (
-                  <button key={c.id} onClick={() => setRcaForm({...rcaForm, category: c.id})} className={`p-2 rounded-xl text-[10px] font-bold border ${rcaForm.category === c.id ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-gray-800 border-gray-700 text-gray-500'}`}>
+                  <button key={c.id} onClick={() => setRcaForm({...rcaForm, category: c.id})} className={`p-2 rounded-xl text-[10px] font-bold border transition ${rcaForm.category === c.id ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-gray-800 border-gray-700 text-gray-500'}`}>
                     {c.label}
                   </button>
                 ))}
               </div>
-              <textarea value={rcaForm.why} onChange={e => setRcaForm({...rcaForm, why: e.target.value})} placeholder="Analiz ve Aksiyon Notları..." className="w-full bg-gray-800 border-gray-700 rounded-2xl p-4 text-sm h-40 text-white outline-none focus:ring-1 ring-indigo-500" />
+              <textarea value={rcaForm.why} onChange={e => setRcaForm({...rcaForm, why: e.target.value})} placeholder="Duruşun kök nedenini ve aksiyonu girin..." className="w-full bg-gray-800 border-gray-700 rounded-2xl p-4 text-sm h-40 text-white outline-none focus:ring-1 ring-indigo-500" />
               <div className="flex gap-4">
                 <button onClick={() => setShowRcaModal(false)} className="flex-1 bg-gray-800 py-3 rounded-2xl font-bold text-gray-400">İptal</button>
-                <button onClick={handleSaveRca} className="flex-1 bg-indigo-600 py-3 rounded-2xl font-bold text-white">Kaydet</button>
+                <button onClick={handleSaveRca} className="flex-1 bg-indigo-600 py-3 rounded-2xl font-bold text-white">Analizi Kaydet</button>
               </div>
             </div>
           </div>

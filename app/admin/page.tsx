@@ -1,78 +1,13 @@
 "use client";
+
 import { useEffect, useState } from "react";
-import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, writeBatch, setDoc, serverTimestamp } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, writeBatch } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../../lib/firebase"; 
-import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid, LabelList, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts';
 import Link from "next/link";
 
 export default function AdminDashboard() {
-
-  // --- DFU YÖNETİM SİSTEMİ GENİŞLETİLMİŞ MANTIK ---
-  const [rcaLogs, setRcaLogs] = useState<any[]>([]);
-  const [activeFloor, setActiveFloor] = useState(1);
-  const [showRcaModal, setShowRcaModal] = useState(false);
-  const [selectedLogForRca, setSelectedLogForRca] = useState<any>(null);
-  const [rcaForm, setRcaForm] = useState({ category: "", why: "" });
-  const [manualStockSearch, setManualStockSearch] = useState("");
-
-  const RCA_CATEGORIES = [
-    { id: "insan", label: "İnsan", color: "#3B82F6" },
-    { id: "makine", label: "Makine", color: "#EF4444" },
-    { id: "malzeme", label: "Malzeme", color: "#10B981" },
-    { id: "metot", label: "Metot", color: "#F59E0B" },
-    { id: "ortam", label: "Ortam", color: "#8B5CF6" }
-  ];
-
-  const fetchRcaData = async () => {
-    try {
-      const snap = await getDocs(collection(db, "root_cause_analysis"));
-      setRcaLogs(snap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
-    } catch (e) { console.error("RCA Hatası:", e); }
-  };
-
-  const handleSaveRca = async () => {
-    if (!rcaForm.category) return alert("Lütfen bir kategori seçiniz.");
-    if (!selectedLogForRca?.id) return alert("Hata: Kayıt kimliği eksik.");
-    try {
-      const docId = String(selectedLogForRca.id);
-      await setDoc(doc(db, "root_cause_analysis", docId), {
-        logId: docId,
-        ekipman: selectedLogForRca.ekipmanAdi || "Bilinmiyor",
-        category: rcaForm.category,
-        why: rcaForm.why || "",
-        analizEden: userName || "Admin",
-        tarih: serverTimestamp()
-      }, { merge: true });
-      alert("Analiz kaydedildi.");
-      setShowRcaModal(false);
-      fetchRcaData();
-    } catch (e: any) { alert("Kaydetme Hatası: " + e.message); }
-  };
-
-  const handleManualStockSearch = () => {
-    if (!manualStockSearch.trim()) return;
-    window.location.href = `/admin/yedek-parca?q=${encodeURIComponent(manualStockSearch)}`;
-  };
-
-  const getHealthStatus = (ekipmanAdi: string) => {
-    const isArıza = aktifIsler.some((is: any) => is.ekipmanAdi === ekipmanAdi && is.isDuruslu);
-    if (isArıza) return "bg-red-500 animate-ping";
-    const rca = rcaLogs.find((r: any) => r.ekipman === ekipmanAdi);
-    if (rca && !rca.category) return "bg-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.6)]";
-    return "bg-green-500";
-  };
-
-  const EQUIPMENT_LOCATIONS = [
-    { id: "kek-hatti", name: "KEK HATTI", floor: 1, x: "65%", y: "48%" },
-    { id: "baget-hatti", name: "BAGET HATTI", floor: 1, x: "78%", y: "35%" },
-    { id: "silo-grubu", name: "SILO GRUBU", floor: 0, x: "85%", y: "22%" },
-    { id: "hamurhane", name: "HAMURHANE", floor: 0, x: "55%", y: "40%" },
-    { id: "su-deposu", name: "SU DEPOSU", floor: -1, x: "20%", y: "60%" },
-    { id: "pogaca-hatti", name: "PASTRY POĞAÇA HATTI", floor: 2, x: "70%", y: "28%" }
-  ];
-
-
   const [isAdmin, setIsAdmin] = useState(false);
   const [userRole, setUserRole] = useState(""); 
   const [userName, setUserName] = useState(""); 
@@ -147,7 +82,7 @@ export default function AdminDashboard() {
           // Tüm admin ekranlarını sadece bu 4 rol görebilir
           if (role === "admin" || role === "operator" || role === "uretim" || role === "isg") {
             setIsAdmin(true); 
-            fetchIlkVeriler(); fetchRcaData(); 
+            fetchIlkVeriler(); 
           } else {
             window.location.href = "/dashboard";
           }
@@ -181,8 +116,8 @@ export default function AdminDashboard() {
       const eSnap = await getDocs(eQ);
       setAktifEked(eSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
-      const logs = (await getDocs(collection(db, "maintenance_logs"))).docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
-      setRawLogs(logs); fetchRcaData();
+      const logs = (await getDocs(collection(db, "maintenance_logs"))).docs.map(doc => doc.data());
+      setRawLogs(logs);
 
       const qMeter = query(collection(db, "meter_logs"), orderBy("tarih", "asc"));
       const meterSnap = await getDocs(qMeter);
@@ -542,60 +477,6 @@ const globalMTTR = kpiToplamIs > 0 ? (kpiToplamSure / kpiToplamIs).toFixed(1) : 
             )}
           </div>
 
-
-          {/* HARİTA MODÜLÜ (V12) */}
-          {(userRole === "admin" || userRole === "operator" || userRole === "teknisyen") && (
-            <div className="bg-gray-900 border border-gray-800 rounded-[40px] p-6 md:p-8 mb-8 shadow-2xl no-print relative overflow-hidden">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                <h2 className="text-xl font-black text-white flex items-center gap-2">📍 Tesis Sağlık Haritası</h2>
-                <div className="flex bg-gray-800 p-1.5 rounded-2xl border border-gray-700">
-                  {[-1, 0, 1, 2].map(f => (
-                    <button key={f} onClick={() => setActiveFloor(f)} className={`px-4 py-1.5 rounded-xl text-[10px] font-bold ${activeFloor === f ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>
-                      KAT {f===0?"ZEMİN":f}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="relative w-full aspect-[16/9] md:aspect-[21/9] bg-black/40 rounded-3xl overflow-hidden border border-gray-800/50">
-                <img src={`/map/floor${activeFloor}.png`} className="w-full h-full object-contain opacity-60" onError={(e) => {(e.target as HTMLImageElement).src = 'https://placehold.co/1200x500/111827/4F46E5?text=Plan+Yuklenemedi';}} />
-                {EQUIPMENT_LOCATIONS.filter(eq => eq.floor === activeFloor).map(m => (
-                  <div key={m.id} className="absolute group cursor-pointer p-2 -m-2 z-10" style={{ top: m.y, left: m.x }}>
-                    <div className={`w-3 h-3 md:w-4 md:h-4 rounded-full border border-white/40 ${getHealthStatus(m.name)}`}></div>
-                    {/* Mobil İsim Etiketi */}
-                    <div className="block md:hidden absolute top-5 left-1/2 -translate-x-1/2 bg-black/80 px-2 py-0.5 rounded text-[8px] text-white font-bold border border-white/10 shadow-2xl">{m.name}</div>
-                    {/* Desktop İsim Etiketi */}
-                    <div className="hidden md:block absolute bottom-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-black border border-gray-800 p-2 rounded-xl text-[9px] z-50 whitespace-nowrap">{m.name}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-
-          {/* RCA ANALİZ YÖNETİMİ (Sadece Admin) */}
-          {userRole === "admin" && (
-            <div className="bg-gray-900 border-2 border-indigo-500/20 p-6 rounded-3xl mb-8 shadow-xl">
-              <h2 className="text-lg font-bold text-indigo-400 mb-6 flex items-center gap-2">🧠 Analiz Bekleyen Duruşlar</h2>
-              <div className="space-y-3">
-                {rawLogs.filter((l: any) => l.isDuruslu).slice(0, 5).map((log, idx) => {
-                  const hasRca = rcaLogs.find(r => r.logId === log.id);
-                  return (
-                    <div key={idx} className="bg-gray-800/40 p-4 rounded-2xl flex items-center justify-between border border-gray-700/50 hover:border-indigo-500/50 transition">
-                      <div className="flex-1 min-w-0 mr-4">
-                        <p className="text-[10px] text-gray-500 uppercase truncate">{log.hatAdi} | {log.id}</p>
-                        <p className="font-bold text-gray-200 text-sm truncate">{log.ekipmanAdi} <span className="text-red-400 ml-2">{log.toplamSureDakika} dk</span></p>
-                      </div>
-                      <button onClick={() => { setSelectedLogForRca(log); setShowRcaModal(true); setRcaForm({ category: hasRca?.category || "", why: hasRca?.why || "" }); }} className={`shrink-0 px-5 py-2 rounded-xl text-[10px] font-bold ${hasRca ? 'bg-green-600/20 text-green-400 border border-green-500/30' : 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'}`}>
-                        {hasRca ? "Güncellendi" : "Analiz Et"}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-
           {(userRole === "admin" || userRole === "operator" || userRole === "teknisyen") && aktifPmAlarmlari.length > 0 && (
             <div className="bg-cyan-900/30 border-2 border-cyan-500/50 p-6 rounded-2xl mb-10 shadow-[0_0_20px_rgba(6,182,212,0.3)] no-print relative overflow-hidden">
               <h2 className="text-xl font-bold text-cyan-400 mb-6 flex items-center gap-2 relative z-10">
@@ -772,38 +653,6 @@ const globalMTTR = kpiToplamIs > 0 ? (kpiToplamSure / kpiToplamIs).toFixed(1) : 
                 <button onClick={() => {setFilterYil(""); setFilterAy(""); setFilterHat(""); setFilterEkipman("");}} className="bg-red-900/40 text-red-400 px-4 py-2 rounded-lg text-sm h-9">Sıfırla</button>
               </div>
 
-              
-              {/* RCA PARETO GRAFİĞİ */}
-              <div className="bg-gray-900 border border-gray-800 p-6 rounded-3xl mb-8 shadow-lg">
-                <h2 className="text-lg font-bold text-indigo-400 mb-6 flex items-center gap-2">📊 Kök Neden Dağılımı (5M Analizi)</h2>
-                {rcaLogs.length > 0 ? (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-                    <div className="h-56 w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie data={RCA_CATEGORIES.map(c => ({ name: c.label, value: rcaLogs.filter(r => r.category === c.id).length, color: c.color })).filter(d => d.value > 0)} cx="50%" cy="50%" innerRadius={55} outerRadius={75} dataKey="value">
-                            {RCA_CATEGORIES.map((e, i) => <Cell key={i} fill={e.color} />)}
-                          </Pie>
-                          <Tooltip />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                    <div className="space-y-2">
-                      {RCA_CATEGORIES.map(c => {
-                        const count = rcaLogs.filter(r => r.category === c.id).length;
-                        if(count === 0) return null;
-                        return (
-                          <div key={c.id} className="flex justify-between p-3 bg-gray-800/50 rounded-xl border border-gray-700/50">
-                            <span className="text-[10px] text-gray-400 font-bold uppercase">{c.label}</span>
-                            <span className="text-xs font-black text-white">{count} Vaka</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : <div className="py-12 text-center text-gray-600 text-xs italic">Veri girişi bekleniyor...</div>}
-              </div>
-
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
                 <div className="bg-gray-900 border border-gray-800 p-4 md:p-6 rounded-2xl"><h2 className="text-lg font-bold mb-6 text-green-400 print:text-black">Yapılan İşler</h2>{grafikTumIslerVerisi.length > 0 ? (<div className="h-72 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikTumIslerVerisi} margin={{ top: 25, right: 5, left: -25, bottom: 5 }}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="isim" tick={{fontSize: 10, fill: '#9CA3AF'}} interval={0} angle={-15} textAnchor="end" /><YAxis tick={{fontSize: 10, fill: '#9CA3AF'}} /><Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} trigger="hover" /><Legend wrapperStyle={{ fontSize: '11px', paddingTop: '15px' }} /><Bar name="İş Adedi" dataKey="adet" fill="#10B981" maxBarSize={40}><LabelList dataKey="adet" position="top" fill="#10B981" fontSize={11} fontWeight="bold" /></Bar><Bar name="Süre (Dk)" dataKey="dakika" fill="#3B82F6" maxBarSize={40}><LabelList dataKey="dakika" position="top" fill="#3B82F6" fontSize={11} fontWeight="bold" /></Bar></BarChart></ResponsiveContainer></div>) : <div className="h-48 flex justify-center items-center text-gray-500 border border-dashed border-gray-800 rounded-xl">Veri yok</div>}</div>
                 <div className="bg-gray-900 border border-gray-800 p-4 md:p-6 rounded-2xl"><h2 className="text-lg font-bold mb-6 text-red-400 print:text-black">Sadece Duruşlu Arızalar</h2>{grafikDurusVerisi.length > 0 ? (<div className="h-72 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikDurusVerisi} margin={{ top: 25, right: 5, left: -25, bottom: 5 }}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="isim" tick={{fontSize: 10, fill: '#9CA3AF'}} interval={0} angle={-15} textAnchor="end" /><YAxis tick={{fontSize: 10, fill: '#9CA3AF'}} /><Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} trigger="hover" /><Legend wrapperStyle={{ fontSize: '11px', paddingTop: '15px' }} /><Bar name="Duruş Adedi" dataKey="adet" fill="#F59E0B" maxBarSize={40}><LabelList dataKey="adet" position="top" fill="#F59E0B" fontSize={11} fontWeight="bold" /></Bar><Bar name="Süre (Dk)" dataKey="dakika" fill="#EF4444" maxBarSize={40}><LabelList dataKey="dakika" position="top" fill="#EF4444" fontSize={11} fontWeight="bold" /></Bar></BarChart></ResponsiveContainer></div>) : <div className="h-48 flex justify-center items-center text-gray-500 border border-dashed border-gray-800 rounded-xl">Veri yok</div>}</div>
@@ -849,55 +698,6 @@ const globalMTTR = kpiToplamIs > 0 ? (kpiToplamSure / kpiToplamIs).toFixed(1) : 
 
         </div>
       </div>
-
-      {/* HİBRİT STOK SORGU PANELİ (SES + KLAVYE) */}
-      <div className="fixed bottom-6 right-6 z-[900] flex flex-col items-end gap-3 no-print">
-        <div className="bg-indigo-600 text-white px-5 py-3 rounded-full shadow-[0_0_20px_rgba(79,70,229,0.5)] flex items-center gap-4 transition-all border border-indigo-400/30">
-          <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Stok Sorgula</span>
-          <div className="flex items-center bg-black/20 rounded-xl px-3 border border-white/10">
-            <input 
-              type="text" 
-              value={manualStockSearch} 
-              onChange={(e) => setManualStockSearch(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleManualStockSearch()}
-              placeholder="Parça adı/kod..." 
-              className="bg-transparent text-[10px] text-white w-28 sm:w-40 py-1.5 outline-none placeholder-indigo-300"
-            />
-            <button onClick={handleManualStockSearch} className="ml-2 text-indigo-200 hover:text-white transition">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-            </button>
-          </div>
-          <Link href="/admin/yedek-parca/sesli" className="p-1.5 hover:bg-indigo-400 rounded-full transition relative group">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
-            <div className="absolute bottom-10 right-0 bg-black text-[8px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">Sesli Komut</div>
-          </Link>
-        </div>
-      </div>
-
-      {/* RCA MODAL (GÜVENLİ FONKSİYON BAĞLANTISI) */}
-      {showRcaModal && (
-        <div className="fixed inset-0 bg-black/95 backdrop-blur-sm flex justify-center items-center z-[999] p-4">
-          <div className="bg-gray-900 border border-indigo-500/30 p-8 rounded-[40px] w-full max-w-xl shadow-2xl relative overflow-hidden">
-            <h2 className="text-xl font-bold text-white mb-1 uppercase tracking-tighter">Kök Neden Raporu</h2>
-            <p className="text-[10px] text-gray-500 mb-6 uppercase tracking-widest">{selectedLogForRca?.ekipmanAdi} | {selectedLogForRca?.toplamSureDakika} dk Duruş</p>
-            <div className="space-y-5">
-              <div className="grid grid-cols-3 gap-2">
-                {RCA_CATEGORIES.map(c => (
-                  <button key={c.id} onClick={() => setRcaForm({...rcaForm, category: c.id})} className={`p-2.5 rounded-xl text-[9px] font-bold border transition ${rcaForm.category === c.id ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-gray-800 border-gray-700 text-gray-500 hover:border-indigo-500'}`}>
-                    {c.label}
-                  </button>
-                ))}
-              </div>
-              <textarea value={rcaForm.why} onChange={e => setRcaForm({...rcaForm, why: e.target.value})} placeholder="Arıza nedenini ve aksiyon planını girin..." className="w-full bg-gray-800 border-gray-700 rounded-2xl p-4 text-xs h-40 text-white outline-none focus:ring-1 ring-indigo-500" />
-              <div className="flex gap-4">
-                <button onClick={() => setShowRcaModal(false)} className="flex-1 bg-gray-800 py-4 rounded-2xl font-bold text-xs text-gray-400 transition hover:bg-gray-700">Vazgeç</button>
-                <button onClick={handleSaveRca} className="flex-1 bg-indigo-600 py-4 rounded-2xl font-bold text-xs text-white shadow-xl shadow-indigo-600/20 transition hover:bg-indigo-500">Analizi Kaydet</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
     </>
   );
 }

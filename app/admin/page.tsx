@@ -49,9 +49,9 @@ export default function AdminDashboard() {
   const [personelHavuzu, setPersonelHavuzu] = useState<string[]>([]); 
 
   
-  // --- CANLI SAĞLIK HARİTASI VE RCA STATE'LERİ ---
+  // --- RCA & MAP LOGIC ---
   const [rcaLogs, setRcaLogs] = useState<any[]>([]);
-  const [activeFloor, setActiveFloor] = useState(0);
+  const [activeFloor, setActiveFloor] = useState(1);
   const [showRcaModal, setShowRcaModal] = useState(false);
   const [selectedLogForRca, setSelectedLogForRca] = useState<any>(null);
   const [rcaForm, setRcaForm] = useState({ category: "", why: "" });
@@ -71,11 +71,28 @@ export default function AdminDashboard() {
     } catch (e) { console.error(e); }
   };
 
+  const handleSaveRca = async () => {
+    if (!rcaForm.category) return alert("Kategori seçin.");
+    try {
+      await setDoc(doc(db, "root_cause_analysis", String(selectedLogForRca.id)), {
+        logId: selectedLogForRca.id,
+        ekipman: selectedLogForRca.ekipmanAdi,
+        category: rcaForm.category,
+        why: rcaForm.why,
+        analizEden: userName,
+        tarih: serverTimestamp()
+      }, { merge: true });
+      alert("Analiz kaydedildi.");
+      setShowRcaModal(false);
+      fetchRcaData();
+    } catch (e) { alert("Kaydedilemedi."); }
+  };
+
   const getHealthStatus = (ekipmanAdi: string) => {
     const isArıza = aktifIsler.some((is: any) => is.ekipmanAdi === ekipmanAdi && is.isDuruslu);
     if (isArıza) return "bg-red-500 animate-ping";
-    const hasRca = rcaLogs.find((r: any) => r.ekipmanAdi === ekipmanAdi);
-    if (hasRca && !hasRca.category) return "bg-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.6)]";
+    const rca = rcaLogs.find((r: any) => r.ekipman === ekipmanAdi);
+    if (rca && !rca.category) return "bg-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.6)]";
     return "bg-green-500";
   };
 
@@ -518,46 +535,53 @@ const globalMTTR = kpiToplamIs > 0 ? (kpiToplamSure / kpiToplamIs).toFixed(1) : 
           </div>
 
 
-          {/* CANLI TESİS SAĞLIK HARİTASI */}
+          {/* MAP AND RCA PANEL */}
           {(userRole === "admin" || userRole === "operator" || userRole === "teknisyen") && (
-            <div className="bg-gray-900 border border-gray-800 rounded-[40px] p-6 md:p-8 mb-8 shadow-2xl relative overflow-hidden no-print">
-              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-6">
-                <div>
-                  <h2 className="text-2xl font-black text-white flex items-center gap-3">
-                    <span className="relative flex h-3 w-3">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-indigo-500"></span>
-                    </span>
-                    Tesis Canlı Sağlık Haritası
-                  </h2>
-                  <p className="text-[10px] text-gray-500 mt-1 uppercase tracking-[0.2em]">İzometrik AutoCAD Yerleşim Planı</p>
+            <>
+              {/* CANLI HARİTA */}
+              <div className="bg-gray-900 border border-gray-800 rounded-[40px] p-6 md:p-8 mb-8 shadow-2xl no-print">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-black text-white flex items-center gap-2">📍 Tesis Sağlık Haritası</h2>
+                  <div className="flex bg-gray-800 p-1 rounded-xl">
+                    {[-1, 0, 1, 2].map(f => (
+                      <button key={f} onClick={() => setActiveFloor(f)} className={`px-4 py-1.5 rounded-lg text-[10px] font-bold ${activeFloor === f ? 'bg-indigo-600 text-white' : 'text-gray-500'}`}>KAT {f===0?"ZEMİN":f}</button>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex bg-gray-800/50 p-1.5 rounded-2xl border border-gray-700/50">
-                  {[-1, 0, 1, 2].map((f) => (
-                    <button key={f} onClick={() => setActiveFloor(f)} className={`px-5 py-2 rounded-xl text-[10px] font-black transition-all ${activeFloor === f ? 'bg-indigo-600 text-white shadow-xl' : 'text-gray-500 hover:text-white'}`}>
-                      KAT {f === 0 ? "ZEMİN" : f}
-                    </button>
+                <div className="relative w-full aspect-[21/9] bg-black/40 rounded-3xl overflow-hidden border border-gray-800/50">
+                  <img src={`/map/floor${activeFloor}.png`} className="w-full h-full object-contain opacity-60" onError={(e) => {(e.target as HTMLImageElement).src = 'https://placehold.co/1200x500/111827/4F46E5?text=Plan+Yuklenemedi';}} />
+                  {EQUIPMENT_LOCATIONS.filter(eq => eq.floor === activeFloor).map(m => (
+                    <div key={m.id} className="absolute group cursor-pointer" style={{ top: m.y, left: m.x }}>
+                      <div className={`w-3.5 h-3.5 rounded-full border border-white/40 ${getHealthStatus(m.name)}`}></div>
+                      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-black border border-gray-800 p-2 rounded-lg text-[9px] z-50 whitespace-nowrap">{m.name}</div>
+                    </div>
                   ))}
                 </div>
               </div>
-              <div className="relative w-full aspect-[16/8] lg:aspect-[21/9] bg-black/40 rounded-[32px] border border-gray-800/50 overflow-hidden group">
-                <img src={`/map/floor${activeFloor}.png`} className="w-full h-full object-contain opacity-60 transition-opacity duration-700 group-hover:opacity-80" onError={(e) => {(e.target as HTMLImageElement).src = 'https://placehold.co/1200x500/111827/4F46E5?text=Kat+Plani+Yuklenemedi';}} />
-                {EQUIPMENT_LOCATIONS.filter(eq => eq.floor === activeFloor).map((makine) => (
-                  <div key={makine.id} className="absolute group/pin cursor-pointer transition-transform hover:scale-125" style={{ top: makine.y, left: makine.x }}>
-                    <div className={`w-4 h-4 rounded-full border-2 border-white/40 ${getHealthStatus(makine.name)}`}></div>
-                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 scale-0 group-hover/pin:scale-100 transition-transform origin-bottom bg-gray-900 border border-indigo-500/50 p-3 rounded-2xl z-50 shadow-2xl min-w-[120px]">
-                      <p className="text-[10px] font-black text-indigo-400 mb-1">{makine.name}</p>
-                      <p className="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">Durum: <span className={getHealthStatus(makine.name).includes("red") ? "text-red-400" : "text-green-400"}>{getHealthStatus(makine.name).includes("red") ? "ARIZALI" : "NORMAL"}</span></p>
-                    </div>
+
+              {/* RCA BEKLEYENLER (Sadece Admin) */}
+              {userRole === "admin" && (
+                <div className="bg-gray-900 border-2 border-indigo-500/20 p-6 rounded-3xl mb-8 shadow-xl">
+                  <h2 className="text-lg font-bold text-indigo-400 mb-4 flex items-center gap-2">🧠 Analiz Bekleyen Duruşlar</h2>
+                  <div className="space-y-3">
+                    {rawLogs.filter((l: any) => l.isDuruslu).slice(0, 5).map((log, idx) => {
+                      const analysis = rcaLogs.find(r => r.logId === log.id);
+                      return (
+                        <div key={idx} className="bg-gray-800/40 p-4 rounded-2xl flex items-center justify-between border border-gray-700/50 hover:border-indigo-500/50 transition">
+                          <div>
+                            <p className="text-[10px] text-gray-500 uppercase">{log.hatAdi}</p>
+                            <p className="font-bold text-gray-200">{log.ekipmanAdi} <span className="text-red-400 ml-2">{log.toplamSureDakika} dk</span></p>
+                          </div>
+                          <button onClick={() => { setSelectedLogForRca(log); setShowRcaModal(true); setRcaForm({ category: analysis?.category || "", why: analysis?.why || "" }); }} className={`px-4 py-2 rounded-xl text-[10px] font-bold ${analysis ? 'bg-green-600/20 text-green-400 border border-green-500/30' : 'bg-indigo-600 text-white shadow-lg'}`}>
+                            {analysis ? "Analiz Edildi" : "Analiz Et"}
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
-                ))}
-                <div className="absolute bottom-6 right-8 flex gap-4 bg-black/60 p-4 rounded-2xl backdrop-blur-2xl border border-gray-800/50">
-                  <div className="flex items-center gap-2 text-[9px] text-gray-400 font-bold uppercase"><span className="w-2 h-2 bg-green-500 rounded-full"></span> Operasyonel</div>
-                  <div className="flex items-center gap-2 text-[9px] text-gray-400 font-bold uppercase"><span className="w-2 h-2 bg-orange-500 rounded-full"></span> RCA Analizi</div>
-                  <div className="flex items-center gap-2 text-[9px] text-gray-400 font-bold uppercase"><span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span> Acil Durus</div>
                 </div>
-              </div>
-            </div>
+              )}
+            </>
           )}
 
 
@@ -737,6 +761,38 @@ const globalMTTR = kpiToplamIs > 0 ? (kpiToplamSure / kpiToplamIs).toFixed(1) : 
                 <button onClick={() => {setFilterYil(""); setFilterAy(""); setFilterHat(""); setFilterEkipman("");}} className="bg-red-900/40 text-red-400 px-4 py-2 rounded-lg text-sm h-9">Sıfırla</button>
               </div>
 
+              
+              {/* RCA DAĞILIM GRAFİĞİ */}
+              <div className="bg-gray-900 border border-gray-800 p-6 rounded-3xl mb-8 shadow-lg">
+                <h2 className="text-lg font-bold text-indigo-400 mb-6 flex items-center gap-2">📊 Kök Neden Dağılımı (5M)</h2>
+                {rcaLogs.length > 0 ? (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                    <div className="h-56">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie data={RCA_CATEGORIES.map(c => ({ name: c.label, value: rcaLogs.filter(r => r.category === c.id).length, color: c.color })).filter(d => d.value > 0)} cx="50%" cy="50%" innerRadius={50} outerRadius={70} dataKey="value">
+                            {RCA_CATEGORIES.map((e, i) => <Cell key={i} fill={e.color} />)}
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="space-y-2">
+                      {RCA_CATEGORIES.map(c => {
+                        const count = rcaLogs.filter(r => r.category === c.id).length;
+                        if(count === 0) return null;
+                        return (
+                          <div key={c.id} className="flex justify-between p-2.5 bg-gray-800/50 rounded-xl border border-gray-700/50">
+                            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{c.label}</span>
+                            <span className="text-xs font-black text-white">{count} Analiz</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : <div className="py-10 text-center text-gray-600 text-xs italic">RCA verisi bekleniyor...</div>}
+              </div>
+
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
                 <div className="bg-gray-900 border border-gray-800 p-4 md:p-6 rounded-2xl"><h2 className="text-lg font-bold mb-6 text-green-400 print:text-black">Yapılan İşler</h2>{grafikTumIslerVerisi.length > 0 ? (<div className="h-72 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikTumIslerVerisi} margin={{ top: 25, right: 5, left: -25, bottom: 5 }}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="isim" tick={{fontSize: 10, fill: '#9CA3AF'}} interval={0} angle={-15} textAnchor="end" /><YAxis tick={{fontSize: 10, fill: '#9CA3AF'}} /><Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} trigger="hover" /><Legend wrapperStyle={{ fontSize: '11px', paddingTop: '15px' }} /><Bar name="İş Adedi" dataKey="adet" fill="#10B981" maxBarSize={40}><LabelList dataKey="adet" position="top" fill="#10B981" fontSize={11} fontWeight="bold" /></Bar><Bar name="Süre (Dk)" dataKey="dakika" fill="#3B82F6" maxBarSize={40}><LabelList dataKey="dakika" position="top" fill="#3B82F6" fontSize={11} fontWeight="bold" /></Bar></BarChart></ResponsiveContainer></div>) : <div className="h-48 flex justify-center items-center text-gray-500 border border-dashed border-gray-800 rounded-xl">Veri yok</div>}</div>
                 <div className="bg-gray-900 border border-gray-800 p-4 md:p-6 rounded-2xl"><h2 className="text-lg font-bold mb-6 text-red-400 print:text-black">Sadece Duruşlu Arızalar</h2>{grafikDurusVerisi.length > 0 ? (<div className="h-72 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikDurusVerisi} margin={{ top: 25, right: 5, left: -25, bottom: 5 }}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="isim" tick={{fontSize: 10, fill: '#9CA3AF'}} interval={0} angle={-15} textAnchor="end" /><YAxis tick={{fontSize: 10, fill: '#9CA3AF'}} /><Tooltip content={<OzelTooltip />} cursor={{fill: '#374151', opacity: 0.3}} trigger="hover" /><Legend wrapperStyle={{ fontSize: '11px', paddingTop: '15px' }} /><Bar name="Duruş Adedi" dataKey="adet" fill="#F59E0B" maxBarSize={40}><LabelList dataKey="adet" position="top" fill="#F59E0B" fontSize={11} fontWeight="bold" /></Bar><Bar name="Süre (Dk)" dataKey="dakika" fill="#EF4444" maxBarSize={40}><LabelList dataKey="dakika" position="top" fill="#EF4444" fontSize={11} fontWeight="bold" /></Bar></BarChart></ResponsiveContainer></div>) : <div className="h-48 flex justify-center items-center text-gray-500 border border-dashed border-gray-800 rounded-xl">Veri yok</div>}</div>
@@ -782,6 +838,31 @@ const globalMTTR = kpiToplamIs > 0 ? (kpiToplamSure / kpiToplamIs).toFixed(1) : 
 
         </div>
       </div>
+      
+      {/* RCA MODAL */}
+      {showRcaModal && (
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-sm flex justify-center items-center z-[999] p-4">
+          <div className="bg-gray-900 border border-indigo-500/30 p-8 rounded-[30px] w-full max-w-lg shadow-2xl">
+            <h2 className="text-xl font-bold text-white mb-1">Kök Neden Analizi</h2>
+            <p className="text-[10px] text-gray-500 mb-6 uppercase tracking-widest">{selectedLogForRca?.ekipmanAdi} Analizi</p>
+            <div className="space-y-5">
+              <div className="grid grid-cols-3 gap-2">
+                {RCA_CATEGORIES.map(c => (
+                  <button key={c.id} onClick={() => setRcaForm({...rcaForm, category: c.id})} className={`p-2.5 rounded-xl text-[10px] font-bold border transition ${rcaForm.category === c.id ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-gray-800 border-gray-700 text-gray-500'}`}>
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+              <textarea value={rcaForm.why} onChange={e => setRcaForm({...rcaForm, why: e.target.value})} placeholder="Analiz sonuçlarını girin (5 Why)..." className="w-full bg-gray-800 border-gray-700 rounded-2xl p-4 text-sm h-40 text-white outline-none focus:ring-1 ring-indigo-500" />
+              <div className="flex gap-4">
+                <button onClick={() => setShowRcaModal(false)} className="flex-1 bg-gray-800 py-3.5 rounded-2xl font-bold text-gray-400">Vazgeç</button>
+                <button onClick={handleSaveRca} className="flex-1 bg-indigo-600 py-3.5 rounded-2xl font-bold text-white shadow-lg shadow-indigo-600/20">Kaydet</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </>
   );
 }

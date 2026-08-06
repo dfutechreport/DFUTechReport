@@ -33,6 +33,11 @@ type Asset = { id: string; hatAdi: string; ekipmanAdi: string };
 type UserInfo = { id: string; name: string };
 
 function DashboardIcerik() {
+  const [manualStockSearch, setManualStockSearch] = useState("");
+  const handleManualStockSearch = () => {
+    if (!manualStockSearch.trim()) return;
+    window.location.href = `/admin/yedek-parca?q=${encodeURIComponent(manualStockSearch)}`;
+  };
   const [userId, setUserId] = useState("");
   const [userRole, setUserRole] = useState("");
   const [userName, setUserName] = useState("");
@@ -56,6 +61,8 @@ function DashboardIcerik() {
   const [aktifIsgAlarmlari, setAktifIsgAlarmlari] = useState<any[]>([]); 
   const [aktifPmAlarmlari, setAktifPmAlarmlari] = useState<any[]>([]);
 
+
+
   // CANLI STOK STATE
   const [aktifStokMiktari, setAktifStokMiktari] = useState<number | string | null>(null);
 
@@ -64,6 +71,8 @@ function DashboardIcerik() {
   const [isListening, setIsListening] = useState(false);
   const [asistanMetni, setAsistanMetni] = useState("Mikrofona dokunun ve aramak istediğiniz parça kodunu veya adını söyleyin.");
   const [arananStok, setArananStok] = useState<any[]>([]);
+
+
 
   // YENİ: AÇIKLAMA İÇİN SESLİ YAZDIRMA STATE'İ
   const [isDictating, setIsDictating] = useState(false);
@@ -730,6 +739,30 @@ className="text-3xl font-bold text-blue-500">{hesaplananSure} <span className="t
               {isSubmitting ? "Kaydediliyor..." : "Performansıma Kaydet ve İşi Bitir"}
             </button>
           </form>
+        </div>
+      </div>
+      {/* HİBRİT STOK SORGU PANELİ */}
+      <div className="fixed bottom-6 right-6 z-[900] flex flex-col items-end gap-3 no-print">
+        <div className="bg-indigo-600 text-white px-5 py-3 rounded-full shadow-[0_0_25px_rgba(79,70,229,0.5)] flex items-center gap-4 transition-all border border-indigo-400/30">
+          <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Stok Sorgula</span>
+          
+          <div className="flex items-center bg-black/20 rounded-xl px-3 border border-white/10">
+            <input 
+              type="text" 
+              value={manualStockSearch} 
+              onChange={(e) => setManualStockSearch(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleManualStockSearch()}
+              placeholder="Parça adı/kod..." 
+              className="bg-transparent text-[10px] text-white w-28 sm:w-44 py-2 outline-none placeholder-indigo-300"
+            />
+            <button onClick={handleManualStockSearch} className="ml-2 text-indigo-200 hover:text-white transition">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </button>
+          </div>
+
+          <Link href="/admin/yedek-parca/sesli" className="p-2 hover:bg-indigo-500 rounded-full transition-all border border-transparent hover:border-white/20 relative group">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+          </Link>
         </div>
       </div>
     </div>

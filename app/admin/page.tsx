@@ -49,12 +49,13 @@ export default function AdminDashboard() {
   const [personelHavuzu, setPersonelHavuzu] = useState<string[]>([]); 
 
   
-  // --- RCA & MAP LOGIC ---
+  // --- RCA, MAP VE STOK SORGU STATE'LERİ V11 ---
   const [rcaLogs, setRcaLogs] = useState<any[]>([]);
   const [activeFloor, setActiveFloor] = useState(1);
   const [showRcaModal, setShowRcaModal] = useState(false);
   const [selectedLogForRca, setSelectedLogForRca] = useState<any>(null);
   const [rcaForm, setRcaForm] = useState({ category: "", why: "" });
+  const [manualStockSearch, setManualStockSearch] = useState("");
 
   const RCA_CATEGORIES = [
     { id: "insan", label: "İnsan", color: "#3B82F6" },
@@ -71,23 +72,6 @@ export default function AdminDashboard() {
     } catch (e) { console.error(e); }
   };
 
-  const handleSaveRca = async () => {
-    if (!rcaForm.category) return alert("Kategori seçin.");
-    try {
-      await setDoc(doc(db, "root_cause_analysis", String(selectedLogForRca.id)), {
-        logId: selectedLogForRca.id,
-        ekipman: selectedLogForRca.ekipmanAdi,
-        category: rcaForm.category,
-        why: rcaForm.why,
-        analizEden: userName,
-        tarih: serverTimestamp()
-      }, { merge: true });
-      alert("Analiz kaydedildi.");
-      setShowRcaModal(false);
-      fetchRcaData();
-    } catch (e) { alert("Kaydedilemedi."); }
-  };
-
   const getHealthStatus = (ekipmanAdi: string) => {
     const isArıza = aktifIsler.some((is: any) => is.ekipmanAdi === ekipmanAdi && is.isDuruslu);
     if (isArıza) return "bg-red-500 animate-ping";
@@ -97,13 +81,18 @@ export default function AdminDashboard() {
   };
 
   const EQUIPMENT_LOCATIONS = [
-    { id: "kek-hatti", name: "KEK HATTI", floor: 1, x: "48%", y: "50%" },
-    { id: "baget-hatti", name: "BAGET HATTI", floor: 1, x: "70%", y: "18%" },
-    { id: "silo-grubu", name: "SILO GRUBU", floor: 0, x: "85%", y: "5%" },
-    { id: "hamurhane", name: "HAMURHANE", floor: 0, x: "55%", y: "28%" },
-    { id: "su-deposu", name: "SU DEPOSU", floor: -1, x: "20%", y: "75%" },
-    { id: "pogaca-hatti", name: "PASTRY POĞAÇA HATTI", floor: 2, x: "65%", y: "18%" }
+    { id: "kek-hatti", name: "KEK HATTI", floor: 1, x: "65%", y: "48%" },
+    { id: "baget-hatti", name: "BAGET HATTI", floor: 1, x: "78%", y: "35%" },
+    { id: "silo-grubu", name: "SILO GRUBU", floor: 0, x: "85%", y: "22%" },
+    { id: "hamurhane", name: "HAMURHANE", floor: 0, x: "55%", y: "40%" },
+    { id: "su-deposu", name: "SU DEPOSU", floor: -1, x: "20%", y: "60%" },
+    { id: "pogaca-hatti", name: "PASTRY POĞAÇA HATTI", floor: 2, x: "70%", y: "28%" }
   ];
+
+  const handleManualStockSearch = () => {
+    if (!manualStockSearch.trim()) return;
+    window.location.href = `/admin/yedek-parca?q=${encodeURIComponent(manualStockSearch)}`;
+  };
 
   const [kpiToplamIs, setKpiToplamIs] = useState(0);
   const [kpiToplamSure, setKpiToplamSure] = useState(0);
@@ -535,31 +524,46 @@ const globalMTTR = kpiToplamIs > 0 ? (kpiToplamSure / kpiToplamIs).toFixed(1) : 
           </div>
 
 
-          {/* MAP AND RCA PANEL */}
+          {/* MAP AND RCA PANEL - V11 MOBILE OPTIMIZED */}
           {(userRole === "admin" || userRole === "operator" || userRole === "teknisyen") && (
             <>
-              {/* CANLI HARİTA */}
               <div className="bg-gray-900 border border-gray-800 rounded-[40px] p-6 md:p-8 mb-8 shadow-2xl no-print">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-black text-white flex items-center gap-2">📍 Tesis Sağlık Haritası</h2>
-                  <div className="flex bg-gray-800 p-1 rounded-xl">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                  <h2 className="text-xl font-black text-white flex items-center gap-2 tracking-tighter">📍 Tesis Sağlık Haritası</h2>
+                  <div className="flex bg-gray-800 p-1 rounded-xl w-full sm:w-auto overflow-x-auto">
                     {[-1, 0, 1, 2].map(f => (
-                      <button key={f} onClick={() => setActiveFloor(f)} className={`px-4 py-1.5 rounded-lg text-[10px] font-bold ${activeFloor === f ? 'bg-indigo-600 text-white' : 'text-gray-500'}`}>KAT {f===0?"ZEMİN":f}</button>
+                      <button key={f} onClick={() => setActiveFloor(f)} className={`flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap ${activeFloor === f ? 'bg-indigo-600 text-white' : 'text-gray-500'}`}>KAT {f===0?"ZEMİN":f}</button>
                     ))}
                   </div>
                 </div>
-                <div className="relative w-full aspect-[21/9] bg-black/40 rounded-3xl overflow-hidden border border-gray-800/50">
+                <div className="relative w-full aspect-[16/9] md:aspect-[21/9] bg-black/40 rounded-3xl overflow-hidden border border-gray-800/50">
                   <img src={`/map/floor${activeFloor}.png`} className="w-full h-full object-contain opacity-60" onError={(e) => {(e.target as HTMLImageElement).src = 'https://placehold.co/1200x500/111827/4F46E5?text=Plan+Yuklenemedi';}} />
+                  
                   {EQUIPMENT_LOCATIONS.filter(eq => eq.floor === activeFloor).map(m => (
-                    <div key={m.id} className="absolute group cursor-pointer" style={{ top: m.y, left: m.x }}>
-                      <div className={`w-3.5 h-3.5 rounded-full border border-white/40 ${getHealthStatus(m.name)}`}></div>
-                      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-black border border-gray-800 p-2 rounded-lg text-[9px] z-50 whitespace-nowrap">{m.name}</div>
+                    <div key={m.id} className="absolute group cursor-pointer p-2 -m-2 z-10" style={{ top: m.y, left: m.x }}>
+                      <div className={`w-3 h-3 md:w-4 md:h-4 rounded-full border border-white/40 ${getHealthStatus(m.name)}`}></div>
+                      
+                      {/* MOBİL ETİKETLER (KALICI VE OKUNABİLİR) */}
+                      <div className="block md:hidden absolute top-5 left-1/2 -translate-x-1/2 bg-black/80 px-2 py-0.5 rounded text-[8px] text-white font-bold whitespace-nowrap border border-white/20 shadow-2xl pointer-events-none">
+                        {m.name}
+                      </div>
+
+                      {/* DESKTOP HOVER ETİKETLER */}
+                      <div className="hidden md:block absolute bottom-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-950 border border-indigo-500/30 p-2 rounded-xl text-[9px] z-50 whitespace-nowrap shadow-2xl pointer-events-none">
+                        <p className="font-black text-indigo-400">{m.name}</p>
+                      </div>
                     </div>
                   ))}
+
+                  <div className="absolute bottom-2 left-2 md:bottom-6 md:left-6 flex flex-col sm:flex-row gap-2 md:gap-6 bg-black/60 p-2 md:p-4 rounded-xl md:rounded-2xl backdrop-blur-xl border border-gray-800/50 scale-75 md:scale-100 origin-bottom-left">
+                    <div className="flex items-center gap-2 text-[8px] md:text-[10px] text-gray-400 font-bold uppercase"><span className="w-2 h-2 bg-green-500 rounded-full"></span> Operasyonel</div>
+                    <div className="flex items-center gap-2 text-[8px] md:text-[10px] text-gray-400 font-bold uppercase"><span className="w-2 h-2 bg-orange-500 rounded-full"></span> RCA Analizi</div>
+                    <div className="flex items-center gap-2 text-[8px] md:text-[10px] text-gray-400 font-bold uppercase"><span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span> Acil Durus</div>
+                  </div>
                 </div>
               </div>
 
-              {/* RCA BEKLEYENLER (Sadece Admin) */}
+              {/* RCA BEKLEYENLER (Admin) */}
               {userRole === "admin" && (
                 <div className="bg-gray-900 border-2 border-indigo-500/20 p-6 rounded-3xl mb-8 shadow-xl">
                   <h2 className="text-lg font-bold text-indigo-400 mb-4 flex items-center gap-2">🧠 Analiz Bekleyen Duruşlar</h2>
@@ -568,12 +572,12 @@ const globalMTTR = kpiToplamIs > 0 ? (kpiToplamSure / kpiToplamIs).toFixed(1) : 
                       const analysis = rcaLogs.find(r => r.logId === log.id);
                       return (
                         <div key={idx} className="bg-gray-800/40 p-4 rounded-2xl flex items-center justify-between border border-gray-700/50 hover:border-indigo-500/50 transition">
-                          <div>
-                            <p className="text-[10px] text-gray-500 uppercase">{log.hatAdi}</p>
-                            <p className="font-bold text-gray-200">{log.ekipmanAdi} <span className="text-red-400 ml-2">{log.toplamSureDakika} dk</span></p>
+                          <div className="flex-1 min-w-0 mr-4">
+                            <p className="text-[10px] text-gray-500 uppercase truncate">{log.hatAdi}</p>
+                            <p className="font-bold text-gray-200 text-sm truncate">{log.ekipmanAdi} <span className="text-red-400 ml-2">{log.toplamSureDakika} dk</span></p>
                           </div>
-                          <button onClick={() => { setSelectedLogForRca(log); setShowRcaModal(true); setRcaForm({ category: analysis?.category || "", why: analysis?.why || "" }); }} className={`px-4 py-2 rounded-xl text-[10px] font-bold ${analysis ? 'bg-green-600/20 text-green-400 border border-green-500/30' : 'bg-indigo-600 text-white shadow-lg'}`}>
-                            {analysis ? "Analiz Edildi" : "Analiz Et"}
+                          <button onClick={() => { setSelectedLogForRca(log); setShowRcaModal(true); setRcaForm({ category: analysis?.category || "", why: analysis?.why || "" }); }} className={`shrink-0 px-4 py-2 rounded-xl text-[10px] font-bold ${analysis ? 'bg-green-600/20 text-green-400 border border-green-500/30' : 'bg-indigo-600 text-white shadow-lg'}`}>
+                            {analysis ? "Tamam" : "Analiz"}
                           </button>
                         </div>
                       );
@@ -762,12 +766,12 @@ const globalMTTR = kpiToplamIs > 0 ? (kpiToplamSure / kpiToplamIs).toFixed(1) : 
               </div>
 
               
-              {/* RCA DAĞILIM GRAFİĞİ */}
+              {/* RCA DAĞILIM ANALİZİ */}
               <div className="bg-gray-900 border border-gray-800 p-6 rounded-3xl mb-8 shadow-lg">
                 <h2 className="text-lg font-bold text-indigo-400 mb-6 flex items-center gap-2">📊 Kök Neden Dağılımı (5M)</h2>
                 {rcaLogs.length > 0 ? (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-                    <div className="h-56">
+                    <div className="h-48 md:h-56">
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie data={RCA_CATEGORIES.map(c => ({ name: c.label, value: rcaLogs.filter(r => r.category === c.id).length, color: c.color })).filter(d => d.value > 0)} cx="50%" cy="50%" innerRadius={50} outerRadius={70} dataKey="value">
@@ -783,14 +787,14 @@ const globalMTTR = kpiToplamIs > 0 ? (kpiToplamSure / kpiToplamIs).toFixed(1) : 
                         if(count === 0) return null;
                         return (
                           <div key={c.id} className="flex justify-between p-2.5 bg-gray-800/50 rounded-xl border border-gray-700/50">
-                            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{c.label}</span>
+                            <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">{c.label}</span>
                             <span className="text-xs font-black text-white">{count} Analiz</span>
                           </div>
                         );
                       })}
                     </div>
                   </div>
-                ) : <div className="py-10 text-center text-gray-600 text-xs italic">RCA verisi bekleniyor...</div>}
+                ) : <div className="py-10 text-center text-gray-600 text-[10px] italic font-bold">Veri girişi bekleniyor...</div>}
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
@@ -838,25 +842,51 @@ const globalMTTR = kpiToplamIs > 0 ? (kpiToplamSure / kpiToplamIs).toFixed(1) : 
 
         </div>
       </div>
+
+          {/* HİBRİT STOK SORGU PANELİ (SES + YAZI) */}
+          <div className="fixed bottom-6 right-6 z-[900] flex flex-col items-end gap-3 no-print">
+            <div className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-3 rounded-full shadow-[0_0_20px_rgba(79,70,229,0.4)] flex items-center gap-3 transition-all border border-indigo-400/30 w-auto">
+              <span className="text-xs font-black uppercase tracking-widest hidden sm:inline">Stok Sorgula</span>
+              
+              <div className="flex items-center bg-black/20 rounded-lg px-2 border border-white/10">
+                <input 
+                  type="text" 
+                  value={manualStockSearch} 
+                  onChange={(e) => setManualStockSearch(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleManualStockSearch()}
+                  placeholder="Parça adı/kod..." 
+                  className="bg-transparent text-[10px] text-white w-24 sm:w-32 py-1 outline-none placeholder-indigo-200"
+                />
+                <button onClick={handleManualStockSearch} className="ml-1 text-indigo-200 hover:text-white transition">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </button>
+              </div>
+
+              <Link href="/admin/yedek-parca/sesli" className="p-1 hover:bg-indigo-400 rounded-full transition relative group">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+                <div className="absolute bottom-8 right-0 bg-black text-[8px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">Sesli Sorgu Başlat</div>
+              </Link>
+            </div>
+          </div>
+
       
       {/* RCA MODAL */}
       {showRcaModal && (
         <div className="fixed inset-0 bg-black/95 backdrop-blur-sm flex justify-center items-center z-[999] p-4">
           <div className="bg-gray-900 border border-indigo-500/30 p-8 rounded-[30px] w-full max-w-lg shadow-2xl">
-            <h2 className="text-xl font-bold text-white mb-1">Kök Neden Analizi</h2>
-            <p className="text-[10px] text-gray-500 mb-6 uppercase tracking-widest">{selectedLogForRca?.ekipmanAdi} Analizi</p>
+            <h2 className="text-xl font-bold text-white mb-4 uppercase tracking-tighter">Kök Neden Analizi</h2>
             <div className="space-y-5">
               <div className="grid grid-cols-3 gap-2">
                 {RCA_CATEGORIES.map(c => (
-                  <button key={c.id} onClick={() => setRcaForm({...rcaForm, category: c.id})} className={`p-2.5 rounded-xl text-[10px] font-bold border transition ${rcaForm.category === c.id ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-gray-800 border-gray-700 text-gray-500'}`}>
+                  <button key={c.id} onClick={() => setRcaForm({...rcaForm, category: c.id})} className={`p-2.5 rounded-xl text-[9px] font-bold border transition ${rcaForm.category === c.id ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-gray-800 border-gray-700 text-gray-500'}`}>
                     {c.label}
                   </button>
                 ))}
               </div>
-              <textarea value={rcaForm.why} onChange={e => setRcaForm({...rcaForm, why: e.target.value})} placeholder="Analiz sonuçlarını girin (5 Why)..." className="w-full bg-gray-800 border-gray-700 rounded-2xl p-4 text-sm h-40 text-white outline-none focus:ring-1 ring-indigo-500" />
+              <textarea value={rcaForm.why} onChange={e => setRcaForm({...rcaForm, why: e.target.value})} placeholder="Duruşun nedenini ve alınan aksiyonu girin..." className="w-full bg-gray-800 border-gray-700 rounded-2xl p-4 text-xs h-32 text-white outline-none focus:ring-1 ring-indigo-500" />
               <div className="flex gap-4">
-                <button onClick={() => setShowRcaModal(false)} className="flex-1 bg-gray-800 py-3.5 rounded-2xl font-bold text-gray-400">Vazgeç</button>
-                <button onClick={handleSaveRca} className="flex-1 bg-indigo-600 py-3.5 rounded-2xl font-bold text-white shadow-lg shadow-indigo-600/20">Kaydet</button>
+                <button onClick={() => setShowRcaModal(false)} className="flex-1 bg-gray-800 py-4 rounded-2xl font-bold text-xs text-gray-400">Vazgeç</button>
+                <button onClick={handleSaveRca} className="flex-1 bg-indigo-600 py-4 rounded-2xl font-bold text-xs text-white">Kaydet</button>
               </div>
             </div>
           </div>

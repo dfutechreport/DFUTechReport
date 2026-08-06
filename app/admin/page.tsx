@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, writeBatch } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, writeBatch, setDoc, serverTimestamp } from "firebase/firestore";;
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../../lib/firebase"; 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid, LabelList, PieChart, Pie, Cell } from 'recharts';;
@@ -49,28 +49,44 @@ export default function AdminDashboard() {
   const [personelHavuzu, setPersonelHavuzu] = useState<string[]>([]); 
 
   
-  // --- CANLI SAĞLIK HARİTASI CONFIG ---
+  // --- CANLI SAĞLIK HARİTASI VE RCA STATE'LERİ ---
+  const [rcaLogs, setRcaLogs] = useState<any[]>([]);
   const [activeFloor, setActiveFloor] = useState(0);
-  const EQUIPMENT_LOCATIONS = [
-    // Kat 1: Kek ve Baget
-    { id: "kek-hatti", name: "KEK HATTI", floor: 1, x: "65%", y: "48%" },
-    { id: "baget-hatti", name: "BAGET HATTI", floor: 1, x: "78%", y: "35%" },
-    // Kat 0: Silolar ve Hamurhane
-    { id: "silo-grubu", name: "SILO GRUBU", floor: 0, x: "85%", y: "22%" },
-    { id: "hamurhane", name: "HAMURHANE", floor: 0, x: "55%", y: "40%" },
-    // Kat -1: Su ve Arıtma
-    { id: "su-deposu", name: "SU DEPOSU", floor: -1, x: "20%", y: "60%" },
-    // Kat 2: Pastry
-    { id: "pogaca-hatti", name: "PASTRY POĞAÇA HATTI", floor: 2, x: "70%", y: "28%" }
+  const [showRcaModal, setShowRcaModal] = useState(false);
+  const [selectedLogForRca, setSelectedLogForRca] = useState<any>(null);
+  const [rcaForm, setRcaForm] = useState({ category: "", why: "" });
+
+  const RCA_CATEGORIES = [
+    { id: "insan", label: "İnsan", color: "#3B82F6" },
+    { id: "makine", label: "Makine", color: "#EF4444" },
+    { id: "malzeme", label: "Malzeme", color: "#10B981" },
+    { id: "metot", label: "Metot", color: "#F59E0B" },
+    { id: "ortam", label: "Ortam", color: "#8B5CF6" }
   ];
+
+  const fetchRcaData = async () => {
+    try {
+      const snap = await getDocs(collection(db, "root_cause_analysis"));
+      setRcaLogs(snap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
+    } catch (e) { console.error(e); }
+  };
 
   const getHealthStatus = (ekipmanAdi: string) => {
     const isArıza = aktifIsler.some((is: any) => is.ekipmanAdi === ekipmanAdi && is.isDuruslu);
     if (isArıza) return "bg-red-500 animate-ping";
-    const isRca = rcaLogs.some((r: any) => r.ekipmanAdi === ekipmanAdi && !r.category);
-    if (isRca) return "bg-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.6)]";
+    const hasRca = rcaLogs.find((r: any) => r.ekipmanAdi === ekipmanAdi);
+    if (hasRca && !hasRca.category) return "bg-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.6)]";
     return "bg-green-500";
   };
+
+  const EQUIPMENT_LOCATIONS = [
+    { id: "kek-hatti", name: "KEK HATTI", floor: 1, x: "65%", y: "48%" },
+    { id: "baget-hatti", name: "BAGET HATTI", floor: 1, x: "78%", y: "35%" },
+    { id: "silo-grubu", name: "SILO GRUBU", floor: 0, x: "85%", y: "22%" },
+    { id: "hamurhane", name: "HAMURHANE", floor: 0, x: "55%", y: "40%" },
+    { id: "su-deposu", name: "SU DEPOSU", floor: -1, x: "20%", y: "60%" },
+    { id: "pogaca-hatti", name: "PASTRY POĞAÇA HATTI", floor: 2, x: "70%", y: "28%" }
+  ];
 
   const [kpiToplamIs, setKpiToplamIs] = useState(0);
   const [kpiToplamSure, setKpiToplamSure] = useState(0);
@@ -106,7 +122,7 @@ export default function AdminDashboard() {
           // Tüm admin ekranlarını sadece bu 4 rol görebilir
           if (role === "admin" || role === "operator" || role === "uretim" || role === "isg") {
             setIsAdmin(true); 
-            fetchIlkVeriler(); 
+            fetchIlkVeriler(); fetchRcaData(); 
           } else {
             window.location.href = "/dashboard";
           }
@@ -140,8 +156,8 @@ export default function AdminDashboard() {
       const eSnap = await getDocs(eQ);
       setAktifEked(eSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
-      const logs = (await getDocs(collection(db, "maintenance_logs"))).docs.map(doc => doc.data());
-      setRawLogs(logs);
+      const logs = (await getDocs(collection(db, "maintenance_logs"))).docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+      setRawLogs(logs); fetchRcaData();
 
       const qMeter = query(collection(db, "meter_logs"), orderBy("tarih", "asc"));
       const meterSnap = await getDocs(qMeter);
@@ -502,7 +518,7 @@ const globalMTTR = kpiToplamIs > 0 ? (kpiToplamSure / kpiToplamIs).toFixed(1) : 
           </div>
 
 
-          {/* CANLI TESİS SAĞLIK HARİTASI - ADMIN, OPERATOR, TEKNISYEN ÖZEL */}
+          {/* CANLI TESİS SAĞLIK HARİTASI */}
           {(userRole === "admin" || userRole === "operator" || userRole === "teknisyen") && (
             <div className="bg-gray-900 border border-gray-800 rounded-[40px] p-6 md:p-8 mb-8 shadow-2xl relative overflow-hidden no-print">
               <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-6">
@@ -516,8 +532,7 @@ const globalMTTR = kpiToplamIs > 0 ? (kpiToplamSure / kpiToplamIs).toFixed(1) : 
                   </h2>
                   <p className="text-[10px] text-gray-500 mt-1 uppercase tracking-[0.2em]">İzometrik AutoCAD Yerleşim Planı</p>
                 </div>
-
-                <div className="flex bg-gray-800/50 p-1.5 rounded-2xl border border-gray-700/50 backdrop-blur-md">
+                <div className="flex bg-gray-800/50 p-1.5 rounded-2xl border border-gray-700/50">
                   {[-1, 0, 1, 2].map((f) => (
                     <button key={f} onClick={() => setActiveFloor(f)} className={`px-5 py-2 rounded-xl text-[10px] font-black transition-all ${activeFloor === f ? 'bg-indigo-600 text-white shadow-xl' : 'text-gray-500 hover:text-white'}`}>
                       KAT {f === 0 ? "ZEMİN" : f}
@@ -525,24 +540,17 @@ const globalMTTR = kpiToplamIs > 0 ? (kpiToplamSure / kpiToplamIs).toFixed(1) : 
                   ))}
                 </div>
               </div>
-
               <div className="relative w-full aspect-[16/8] lg:aspect-[21/9] bg-black/40 rounded-[32px] border border-gray-800/50 overflow-hidden group">
-                <img 
-                  src={`/map/floor${activeFloor}.png`} 
-                  className="w-full h-full object-contain opacity-60 transition-opacity duration-700 group-hover:opacity-80"
-                  onError={(e) => {(e.target as HTMLImageElement).src = 'https://placehold.co/1200x500/111827/4F46E5?text=Kat+Plani+Yuklenemedi';}}
-                />
-                
+                <img src={`/map/floor${activeFloor}.png`} className="w-full h-full object-contain opacity-60 transition-opacity duration-700 group-hover:opacity-80" onError={(e) => {(e.target as HTMLImageElement).src = 'https://placehold.co/1200x500/111827/4F46E5?text=Kat+Plani+Yuklenemedi';}} />
                 {EQUIPMENT_LOCATIONS.filter(eq => eq.floor === activeFloor).map((makine) => (
                   <div key={makine.id} className="absolute group/pin cursor-pointer transition-transform hover:scale-125" style={{ top: makine.y, left: makine.x }}>
                     <div className={`w-4 h-4 rounded-full border-2 border-white/40 ${getHealthStatus(makine.name)}`}></div>
                     <div className="absolute bottom-6 left-1/2 -translate-x-1/2 scale-0 group-hover/pin:scale-100 transition-transform origin-bottom bg-gray-900 border border-indigo-500/50 p-3 rounded-2xl z-50 shadow-2xl min-w-[120px]">
                       <p className="text-[10px] font-black text-indigo-400 mb-1">{makine.name}</p>
-                      <p className="text-[9px] text-gray-400">Durum: <span className={getHealthStatus(makine.name).includes("red") ? "text-red-400" : "text-green-400"}>{getHealthStatus(makine.name).includes("red") ? "ARIZALI" : "SAĞLIKLI"}</span></p>
+                      <p className="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">Durum: <span className={getHealthStatus(makine.name).includes("red") ? "text-red-400" : "text-green-400"}>{getHealthStatus(makine.name).includes("red") ? "ARIZALI" : "NORMAL"}</span></p>
                     </div>
                   </div>
                 ))}
-
                 <div className="absolute bottom-6 right-8 flex gap-4 bg-black/60 p-4 rounded-2xl backdrop-blur-2xl border border-gray-800/50">
                   <div className="flex items-center gap-2 text-[9px] text-gray-400 font-bold uppercase"><span className="w-2 h-2 bg-green-500 rounded-full"></span> Operasyonel</div>
                   <div className="flex items-center gap-2 text-[9px] text-gray-400 font-bold uppercase"><span className="w-2 h-2 bg-orange-500 rounded-full"></span> RCA Analizi</div>

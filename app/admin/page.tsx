@@ -97,12 +97,12 @@ export default function AdminDashboard() {
   };
 
   const EQUIPMENT_LOCATIONS = [
-    { id: "kek-hatti", name: "KEK HATTI", floor: 1, x: "48%", y: "55%" },
+    { id: "kek-hatti", name: "KEK HATTI", floor: 1, x: "48%", y: "50%" },
     { id: "baget-hatti", name: "BAGET HATTI", floor: 1, x: "70%", y: "18%" },
     { id: "silo-grubu", name: "SILO GRUBU", floor: 0, x: "85%", y: "5%" },
-    { id: "hamurhane", name: "HAMURHANE", floor: 0, x: "50%", y: "35%" },
+    { id: "hamurhane", name: "HAMURHANE", floor: 0, x: "55%", y: "28%" },
     { id: "su-deposu", name: "SU DEPOSU", floor: -1, x: "20%", y: "75%" },
-    { id: "pogaca-hatti", name: "PASTRY POĞAÇA HATTI", floor: 2, x: "70%", y: "20%" }
+    { id: "pogaca-hatti", name: "PASTRY POĞAÇA HATTI", floor: 2, x: "65%", y: "18%" }
   ];
 
   const [kpiToplamIs, setKpiToplamIs] = useState(0);

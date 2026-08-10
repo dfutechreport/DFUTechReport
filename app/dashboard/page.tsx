@@ -54,8 +54,9 @@ function DashboardIcerik() {
       if (u) {
         const userSnap = await getDoc(doc(db, "users", u.uid));
         if (userSnap.exists()) {
-          setUserName(userSnap.data().name || "");
-          setUserRole(userSnap.data().role || "");
+          const data = userSnap.data();
+          setUserName(data.name || "");
+          setUserRole(data.role || "");
         }
         await fetchData();
       } else { window.location.href = "/"; }
@@ -137,33 +138,35 @@ function DashboardIcerik() {
     } catch (e) { alert("Hata."); }
   };
 
-  if (loading) return <div className="min-h-screen bg-gray-950 flex justify-center items-center text-teal-400 font-black animate-pulse uppercase tracking-[0.2em]">DFU SİSTEM YÜKLENİYOR...</div>;
+  if (loading) return <div className="min-h-screen bg-gray-950 flex justify-center items-center text-teal-400 font-black animate-pulse uppercase">DFU TERMINAL YÜKLENİYOR...</div>;
 
   return (
     <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8 font-sans overflow-x-hidden">
       <div className="max-w-6xl mx-auto">
         
-        {/* HEADER */}
+        {/* HEADER - SECURE ROLE CHECK */}
         <div className="flex justify-between items-center mb-10 border-b border-gray-800 pb-5">
            <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-10 bg-white p-1 rounded" /><div><p className="text-sm font-black text-teal-400 uppercase">{userName}</p></div></div>
            <div className="flex gap-3">
-             {["admin", "operator", "teknisyen"].includes(userRole) && (<Link href="/admin" className="bg-gray-800 text-[10px] font-black px-5 py-2.5 rounded-xl border border-gray-700 hover:bg-gray-700 transition uppercase tracking-widest">Yönetici Paneli</Link>)}
+             {/* KRİTİK: TEKNİSYEN ARTIK YÖNETİCİ PANELİNİ GÖREMEZ */}
+             {(userRole === "admin" || userRole === "operator") && (
+               <Link href="/admin" className="bg-gray-800 text-[10px] font-black px-5 py-2.5 rounded-xl border border-gray-700 hover:bg-gray-700 transition uppercase tracking-widest">Yönetici Paneli</Link>
+             )}
              <button onClick={()=>auth.signOut()} className="bg-red-900/30 text-red-500 text-[10px] font-black px-5 py-2.5 rounded-xl border border-red-900/30 hover:bg-red-600 transition uppercase tracking-widest">Çıkış Yap</button>
            </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
           
-          {/* SOL KOLON: İZLEME VE EKSTRA İŞLEMLER */}
+          {/* SOL KOLON: İZLEME VE MESAİ */}
           <div className="lg:col-span-1 space-y-6">
             
-            {/* YENİ: MESAİ GİRİŞİ BUTONU */}
-            <Link href="/admin/mesai" className="flex items-center justify-center gap-3 bg-amber-600 hover:bg-amber-500 text-white p-5 rounded-[25px] transition-all shadow-xl shadow-amber-600/20 group">
+            {/* MESAİ GİRİŞİ - CORRECTED LINK */}
+            <Link href="/dashboard/mesai" className="flex items-center justify-center gap-3 bg-amber-600 hover:bg-amber-500 text-white p-5 rounded-[25px] transition-all shadow-xl group">
                <span className="text-xl group-hover:rotate-12 transition-transform">⏰</span>
                <span className="text-[11px] font-black uppercase tracking-widest">Mesai Girişi Yap</span>
             </Link>
 
-            {/* ISG ALARMLARI */}
             {isgAlarmlari.length > 0 && (
               <div className="bg-red-950/30 border-2 border-red-600 p-6 rounded-[35px] shadow-2xl animate-pulse">
                 <h3 className="text-red-500 font-black text-xs uppercase mb-5 tracking-widest">⚠️ KRİTİK İSG</h3>
@@ -176,7 +179,6 @@ function DashboardIcerik() {
               </div>
             )}
 
-            {/* AKTİF İŞ BİLDİRİMLERİ */}
             <div className="bg-gray-900 border border-gray-800 p-7 rounded-[40px] shadow-2xl">
               <h3 className="text-[11px] font-black text-gray-500 uppercase mb-5 tracking-widest">🔔 Aktif İş Emirleri</h3>
               {aktifIsler.length > 0 ? aktifIsler.map(is => (
@@ -190,7 +192,6 @@ function DashboardIcerik() {
               )) : <p className="text-center text-[11px] text-gray-600 italic py-6">Açık iş emri yok.</p>}
             </div>
 
-            {/* ARŞİV BUTONU */}
             <Link href="/admin/is-listesi" className="flex items-center justify-center gap-3 bg-indigo-900/40 hover:bg-indigo-600 text-indigo-400 hover:text-white border border-indigo-500/30 p-5 rounded-[25px] transition-all shadow-xl">
                <span className="text-[11px] font-black uppercase tracking-widest">📋 Tüm İşleri Filtrele</span>
             </Link>
@@ -202,14 +203,12 @@ function DashboardIcerik() {
               <h2 className="text-2xl font-black mb-8 text-white uppercase tracking-tighter border-b border-gray-800 pb-5">Bakım İş Bitirme Raporu</h2>
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-7">
                 <input type="hidden" {...register("linkedOrderId")} />
-                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div><label className="text-[10px] font-black text-gray-500 uppercase mb-2 block ml-2">Hattı Seçin</label>
                   <select {...register("hatAdi")} className="w-full bg-gray-800 border-gray-700 rounded-2xl p-4 text-sm font-bold outline-none focus:ring-2 ring-teal-500"><option value="">Seçiniz...</option>{hatlar.map(h=><option key={h} value={h}>{h}</option>)}</select></div>
                   <div><label className="text-[10px] font-black text-gray-500 uppercase mb-2 block ml-2">Makine / Ekipman</label>
                   <select {...register("ekipmanAdi")} className="w-full bg-gray-800 border-gray-700 rounded-2xl p-4 text-sm font-bold outline-none focus:ring-2 ring-teal-500"><option value="">{!selectedHat ? "Önce Hat Seçin" : "Seçiniz..."}</option>{filteredEkipmanlar.map(e=><option key={e} value={e}>{e}</option>)}</select></div>
                 </div>
-
                 <div className="grid grid-cols-2 gap-6">
                   <div><label className="text-[10px] font-black text-gray-500 uppercase mb-2 block ml-2">Vardiya</label>
                   <select {...register("vardiya")} className="w-full bg-gray-800 border-gray-700 rounded-2xl p-4 text-sm font-bold outline-none"><option value="08:00 - 16:00">08:00 - 16:00</option><option value="16:00 - 24:00">16:00 - 24:00</option><option value="24:00 - 08:00">24:00 - 08:00</option></select></div>
@@ -218,10 +217,9 @@ function DashboardIcerik() {
                     <label className="text-[10px] font-black text-red-400 uppercase tracking-widest">Duruş Var</label>
                   </div>
                 </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                   <div className="flex gap-2"><input type="date" {...register("baslangicTarihi")} className="bg-gray-800 border-gray-700 rounded-xl p-3 text-xs font-bold w-full" /><input type="time" {...register("baslangicSaati")} className="bg-gray-800 border-gray-700 rounded-xl p-3 text-xs font-bold" /></div>
-                   <div className="flex gap-2"><input type="date" {...register("bitisTarihi")} className="bg-gray-800 border-gray-700 rounded-xl p-3 text-xs font-bold w-full" /><input type="time" {...register("bitisSaati")} className="bg-gray-800 border-gray-700 rounded-xl p-3 text-xs font-bold" /></div>
+                   <div className="flex gap-2"><input type="date" {...register("baslangicTarihi")} className="bg-gray-800 border-gray-700 rounded-xl p-3 text-xs font-bold w-full text-white" /><input type="time" {...register("baslangicSaati")} className="bg-gray-800 border-gray-700 rounded-xl p-3 text-xs font-bold text-white" /></div>
+                   <div className="flex gap-2"><input type="date" {...register("bitisTarihi")} className="bg-gray-800 border-gray-700 rounded-xl p-3 text-xs font-bold w-full text-white" /><input type="time" {...register("bitisSaati")} className="bg-gray-800 border-gray-700 rounded-xl p-3 text-xs font-bold text-white" /></div>
                 </div>
 
                 {/* MALZEME SARFİYATI */}
@@ -238,7 +236,7 @@ function DashboardIcerik() {
                   ))}
                 </div>
 
-                <div className="bg-teal-900/20 p-7 rounded-[35px] text-center border border-teal-500/20">
+                <div className="bg-teal-900/20 p-7 rounded-[35px] text-center border border-teal-500/20 shadow-inner">
                   <p className="text-[10px] font-black text-teal-500 mb-1 uppercase tracking-widest">Müdahale Süresi</p>
                   <h2 className="text-5xl font-black text-white">{hesaplananSure} <span className="text-xs font-normal text-gray-500 uppercase">Dakika</span></h2>
                 </div>
@@ -257,4 +255,4 @@ function DashboardIcerik() {
     </div>
   );
 }
-export default function Page() { return (<Suspense fallback={<div className="min-h-screen bg-gray-950 flex justify-center items-center font-bold text-white tracking-widest animate-pulse uppercase italic">Dfu Saha Terminali...</div>}><DashboardIcerik /></Suspense>); }
+export default function Page() { return (<Suspense fallback={<div>Yükleniyor...</div>}><DashboardIcerik /></Suspense>); }

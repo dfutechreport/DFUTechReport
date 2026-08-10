@@ -29,7 +29,7 @@ export default function AdminDashboard() {
   const [selectedVaka, setSelectedVaka] = useState<any>(null);
   const [showVakaModal, setShowVakaModal] = useState(false);
 
-  // GLOBAL FILTERS (For main charts and KPIs)
+  // FILTERS
   const [filterYil, setFilterYil] = useState(new Date().getFullYear().toString());
   const [filterAy, setFilterAy] = useState("");
   const [filterHat, setFilterHat] = useState("");
@@ -37,9 +37,9 @@ export default function AdminDashboard() {
   const [yilListesi, setYilListesi] = useState<string[]>([]);
 
   // ENERGY FILTERS
-  const [elektrikSayacListesi, setElektrikSayacListesi] = useState<string[]>([]);
-  const [dogalgazSayacListesi, setDogalgazSayacListesi] = useState<string[]>([]);
-  const [suSayacListesi, setSuSayacListesi] = useState<string[]>([]);
+  const [elekSayacList, setElekSayacList] = useState<string[]>([]);
+  const [gazSayacList, setGazSayacList] = useState<string[]>([]);
+  const [suSayacList, setSuSayacList] = useState<string[]>([]);
   const [filterElekSayac, setFilterElekSayac] = useState("");
   const [filterGazSayac, setFilterGazSayac] = useState("");
   const [filterSuSayac, setFilterSuSayac] = useState("");
@@ -75,10 +75,13 @@ export default function AdminDashboard() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUserEmail(user.email || "");
-        const userSnap = await getDoc(doc(db, "users", user.uid));
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
         if (userSnap.exists() && userSnap.data().isApproved) {
-          const role = userSnap.data().role;
-          setUserRole(role); setUserName(snap.data().name);
+          const userData = userSnap.data();
+          const role = userData.role;
+          setUserRole(role); 
+          setUserName(userData.name); // FIXED: userSnap used instead of snap
           if (["admin", "operator", "uretim", "isg", "teknisyen"].includes(role)) {
             setIsAdmin(true); fetchInitialData(); fetchRcaData();
           } else { window.location.href = "/dashboard"; }
@@ -123,7 +126,6 @@ export default function AdminDashboard() {
     } catch (e) { console.error(e); }
   };
 
-  // --- CALCULATION MOTOR (KPIs, Charts, Personnel, Energy) ---
   useEffect(() => {
     if (rawLogs.length === 0) return;
     let isC=0, suC=0, duC=0;
@@ -135,14 +137,12 @@ export default function AdminDashboard() {
       const a = (date?.getMonth() + 1).toString();
       const s = Number(l.toplamSureDakika) || 0;
 
-      // Filter main KPIs and Hat Chart
       if ((!filterYil || y === filterYil) && (!filterAy || a === filterAy) && (!filterHat || l.hatAdi === filterHat)) {
         isC++; suC += s;
         hD[l.hatAdi] = (hD[l.hatAdi] || 0) + 1;
         if(l.isDuruslu) duC += s;
       }
 
-      // Personnel Logic
       const crew = Array.isArray(l.isiYapanlar) ? l.isiYapanlar : [l.bildirenKisi];
       crew.forEach((p: string) => {
         if(p) pNames.add(p);
@@ -178,7 +178,7 @@ export default function AdminDashboard() {
       if(t==="Doğalgaz" && (!filterGazSayac || l.sayacAdi===filterGazSayac)) tGz[ay] = (tGz[ay]||0) + Number(l.deger || 0);
       if(t==="Su" && (!filterSuSayac || l.sayacAdi===filterSuSayac)) tSu[ay] = (tSu[ay]||0) + Number(l.deger || 0);
     });
-    setElektrikSayacListesi(Array.from(elS).sort()); setDogalgazSayacListesi(Array.from(gzS).sort()); setSuSayacListesi(Array.from(suS).sort());
+    setElekSayacList(Array.from(elS).sort()); setGazSayacList(Array.from(gzS).sort()); setSuSayacList(Array.from(suS).sort());
     setGrafikElek(Object.keys(tEl).map(ay=>({ ay, tuketim: tEl[ay] })));
     setGrafikGaz(Object.keys(tGz).map(ay=>({ ay, tuketim: tGz[ay] })));
     setGrafikSu(Object.keys(tSu).map(ay=>({ ay, tuketim: tSu[ay] })));
@@ -190,65 +190,62 @@ export default function AdminDashboard() {
     alert("Kaydedildi"); setShowRcaModal(false); fetchRcaData();
   };
 
-  if (loading) return <div className="min-h-screen bg-gray-950 flex justify-center items-center text-teal-400 font-black animate-pulse uppercase tracking-[0.3em]">DFU SİSTEM YÜKLENİYOR...</div>;
-  if (!isAdmin) return <div className="min-h-screen bg-gray-950 text-red-500 flex justify-center items-center font-bold text-xl uppercase italic">GİRİŞ YETKİNİZ YOK!</div>;
+  if (loading) return <div className="min-h-screen bg-gray-950 flex justify-center items-center text-teal-400 font-black animate-pulse">SİSTEM YÜKLENİYOR...</div>;
+  if (!isAdmin) return <div className="min-h-screen bg-gray-950 text-red-500 flex justify-center items-center font-bold text-xl uppercase">YETKİSİZ ERİŞİM!</div>;
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8 font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8 overflow-x-hidden font-sans">
       <div className="max-w-7xl mx-auto">
         
-        {/* NAV HEADER */}
+        {/* HEADER */}
         <div className="flex justify-between items-center mb-10 border-b border-gray-800 pb-5">
-          <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-12 bg-white rounded p-1" /><div><h1 className="text-2xl font-black uppercase tracking-tighter">Komuta Merkezi</h1><p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{userName}</p></div></div>
+          <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-10 bg-white rounded p-1" /><div><h1 className="text-xl font-black uppercase tracking-tighter">DFU Komuta Merkezi</h1><p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{userName}</p></div></div>
           <div className="flex gap-3 no-print">
-             <button onClick={()=>{if(window.confirm("RESET?")){/*reset*/}}} className="bg-red-950 text-red-500 px-4 py-2 rounded-xl text-[10px] font-black uppercase border border-red-900/30">Sistemi Sıfırla</button>
-             <button onClick={()=>window.print()} className="bg-gray-800 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase">PDF Çıktı</button>
-             <Link href="/dashboard" className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase">Vardiya Raporu</Link>
+             <Link href="/dashboard" className="bg-gray-800 text-[10px] font-black uppercase px-4 py-2 rounded-xl border border-gray-700">Vardiya Raporu</Link>
              <button onClick={()=>auth.signOut()} className="bg-red-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase">Çıkış</button>
           </div>
         </div>
 
-        {/* 22 BUTTON GRID (RESTORED) */}
+        {/* 22+ BUTTON GRID */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-12 no-print">
-          <Link href="/admin/is-emri-ac" className="bg-red-600 p-3 rounded-xl font-bold text-xs text-center shadow-lg hover:bg-red-500 transition">🚨 Yeni İş Emri</Link>
+          <Link href="/admin/is-emri-ac" className="bg-red-600 p-3 rounded-xl font-bold text-xs text-center shadow-lg">🚨 Yeni İş Emri</Link>
           <Link href="/admin/aktif-isler" className="bg-red-950 border border-red-500 p-3 rounded-xl font-bold text-xs text-center">Aktif Bildirimler</Link>
-          <Link href="/admin/eked" className="bg-yellow-600 text-black p-3 rounded-xl font-bold text-xs text-center">🔒 EKED Takip</Link>
+          <Link href="/admin/eked" className="bg-yellow-600 text-black p-3 rounded-xl font-bold text-xs text-center tracking-tighter">🔒 EKED Takip</Link>
           <Link href="/admin/personel" className="bg-purple-600 p-3 rounded-xl font-semibold text-xs text-center relative">👤 Personel Onay {kpiOnayBekleyen > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] px-1 rounded-full animate-bounce">{kpiOnayBekleyen}</span>}</Link>
           <Link href="/dashboard/pano-listesi" className="bg-indigo-600 p-3 rounded-xl font-semibold text-xs text-center">🔌 Pano Listesi</Link>
           <Link href="/dashboard/kontrol-formlari" className="bg-cyan-600 p-3 rounded-xl font-bold text-xs text-center">✅ Kontrol Formları</Link>
-          <Link href="/admin/yedek-parca" className="bg-fuchsia-700 p-3 rounded-xl font-semibold text-xs text-center uppercase tracking-tighter">⚙️ Yedek Parça</Link>
+          <Link href="/admin/yedek-parca" className="bg-fuchsia-700 p-3 rounded-xl font-semibold text-xs text-center">⚙️ Yedek Parça</Link>
           <Link href="/admin/is-listesi" className="bg-indigo-700 p-3 rounded-xl font-bold text-xs text-center border border-indigo-500/30">📋 Yapılan İşler</Link>
           <Link href="/admin/kar-takip" className="bg-red-800 p-3 rounded-xl font-bold text-xs text-center">⚡ KAR Arşivi</Link>
           <Link href="/admin/pm-takvim" className="bg-teal-700 p-3 rounded-xl font-bold text-xs text-center">📅 PM Takvimi</Link>
           <Link href="/dashboard/sayac" className="bg-emerald-600 p-3 rounded-xl font-semibold text-xs text-center">⚡ Sayaç Okuma</Link>
           <Link href="/admin/mesai" className="bg-teal-600 p-3 rounded-xl font-semibold text-xs text-center">⏰ Mesai Raporları</Link>
           <Link href="/admin/tamamlanan-isler" className="bg-gray-700 p-3 rounded-xl font-semibold text-xs text-center">🗄️ Tamamlanan İşler</Link>
-          <Link href="/admin/ekipmanlar" className="bg-blue-600 p-3 rounded-xl font-semibold text-xs text-center">⚙️ Hat/Ekipman Ayar</Link>
+          <Link href="/admin/ekipmanlar" className="bg-blue-600 p-3 rounded-xl font-semibold text-xs text-center">⚙️ Hat/Ekipman</Link>
+          <Link href="/dashboard/periyodik-bakim" className="bg-emerald-600 p-3 rounded-xl font-black text-xs text-center">🛠️ Manuel PM</Link>
           <Link href="/admin/duyurular" className="bg-orange-600 p-3 rounded-xl font-semibold text-xs text-center">📢 İSG Duyuru</Link>
-          <Link href="/admin/kar-takip" className="bg-red-800 p-3 rounded-xl font-bold text-xs text-center">⚡ KAR Arşivi</Link>
-          <Link href="/dashboard/periyodik-bakim" className="bg-emerald-600 p-3 rounded-xl font-black text-xs text-center shadow-lg">🛠️ Manuel PM</Link>
         </div>
 
-        {/* ALARMS & NOTIFICATIONS CARDS */}
+        {/* ALARM & NOTIFICATION CARDS */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
            <div className="bg-gray-900 border-2 border-red-900/40 p-7 rounded-[40px] shadow-2xl">
               <h2 className="text-lg font-black text-red-500 mb-6 flex items-center gap-3">🚒 İSG ALARMLARI</h2>
-              <div className="space-y-3 max-h-[350px] overflow-y-auto custom-scrollbar">
+              <div className="space-y-3 max-h-[350px] overflow-y-auto">
                 {aktifIsgAlarmlari.map(a => (
-                  <div key={a.id} className="bg-red-950/20 border border-red-900/30 p-5 rounded-[25px] flex justify-between items-center group">
+                  <div key={a.id} className="bg-red-950/20 border border-red-900/30 p-5 rounded-[25px] flex justify-between items-center group transition">
                     <div><p className="text-[10px] font-black text-red-400 uppercase">{a.hatAdi}</p><p className="text-sm font-bold text-gray-100">{a.ekipmanAdi}</p></div>
-                    <button onClick={()=> {setSelectedVaka(a); setShowVakaModal(true);}} className="bg-red-600 text-white text-[10px] font-black px-5 py-2 rounded-xl">İNCELE</button>
+                    <button onClick={()=> {setSelectedVaka(a); setShowVakaModal(true);}} className="bg-red-600 text-white text-[10px] font-black px-5 py-2 rounded-xl">Detay</button>
                   </div>
                 ))}
               </div>
            </div>
            <div className="bg-gray-900 border-2 border-indigo-900/40 p-7 rounded-[40px] shadow-2xl">
               <h2 className="text-lg font-black text-indigo-400 mb-6 flex items-center gap-3">📢 SAHA BİLDİRİMLERİ</h2>
-              <div className="space-y-3 max-h-[350px] overflow-y-auto custom-scrollbar">
+              <div className="space-y-3 max-h-[350px] overflow-y-auto">
                 {aktifIsler.map(is => (
-                  <div key={is.id} className="bg-indigo-950/20 border border-indigo-900/30 p-5 rounded-[25px] flex justify-between items-center group transition">
+                  <div key={is.id} className="bg-indigo-950/20 border border-indigo-900/30 p-5 rounded-[25px] flex justify-between items-center transition">
                     <div><p className="text-[10px] font-black text-indigo-400 uppercase">{is.hatAdi}</p><p className="text-sm font-bold text-gray-100">{is.ekipmanAdi}</p></div>
-                    <button onClick={()=> {setSelectedVaka(is); setShowVakaModal(true);}} className="bg-indigo-600 text-white text-[10px] font-black px-5 py-2 rounded-xl shadow-lg">İNCELE</button>
+                    <button onClick={()=> {setSelectedVaka(is); setShowVakaModal(true);}} className="bg-indigo-600 text-white text-[10px] font-black px-5 py-2 rounded-xl">Detay</button>
                   </div>
                 ))}
               </div>
@@ -257,71 +254,66 @@ export default function AdminDashboard() {
 
         {/* RCA TASK LIST */}
         <div className="bg-gray-900 border border-gray-800 p-8 rounded-[40px] mb-12 shadow-2xl">
-          <h2 className="text-xl font-black text-white mb-6 uppercase tracking-widest">🧠 RCA Analizi Bekleyen Duruşlar</h2>
+          <h2 className="text-xl font-black text-white mb-6 uppercase tracking-widest">🧠 RCA Analizi Bekleyenler</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {rawLogs.filter((l: any) => l.isDuruslu).slice(0, 6).map((log, idx) => {
               const hasRca = rcaLogs.find(r => r.logId === log.id);
               return (
                 <div key={idx} className="bg-gray-800/40 p-6 rounded-[30px] border border-gray-700/50 flex flex-col justify-between h-full hover:border-indigo-500/50 transition">
                   <div><p className="text-[10px] font-bold text-gray-500 uppercase">{log.hatAdi}</p><p className="font-bold text-gray-200">{log.ekipmanAdi}</p><p className="text-red-400 font-black text-xs mt-1 uppercase">{log.toplamSureDakika} dk Kayıp</p></div>
-                  <button onClick={() => { setSelectedLogForRca(log); setShowRcaModal(true); setRcaForm({ category: hasRca?.category || "", why: hasRca?.why || "" }); }} className={`w-full py-3 mt-4 rounded-2xl text-[10px] font-black transition-all ${hasRca ? 'bg-green-600/20 text-green-400 border border-green-500/30' : 'bg-indigo-600 text-white'}`}>{hasRca ? "Güncelle" : "Analiz Yap"}</button>
+                  <button onClick={() => { setSelectedLogForRca(log); setShowRcaModal(true); setRcaForm({ category: hasRca?.category || "", why: hasRca?.why || "" }); }} className={`w-full py-3 mt-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${hasRca ? 'bg-green-600/20 text-green-400 border border-green-500/30' : 'bg-indigo-600 text-white'}`}>Analiz Yap</button>
                 </div>
               );
             })}
           </div>
         </div>
 
-        {/* KPI CARDS */}
+        {/* KPI SECTION */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10 text-center uppercase">
-           <div className="bg-gray-900 p-6 rounded-[30px] border border-gray-800 shadow-xl"><p className="text-[10px] text-gray-500 font-black mb-1">Toplam İş</p><h3 className="text-4xl font-black text-green-400">{kpiTotals.is}</h3></div>
-           <div className="bg-gray-900 p-6 rounded-[30px] border border-gray-800 shadow-xl"><p className="text-[10px] text-gray-500 font-black mb-1">Müdahale</p><h3 className="text-4xl font-black text-white">{kpiTotals.sure} dk</h3></div>
-           <div className="bg-gray-900 p-6 rounded-[30px] border border-red-900/30 shadow-xl"><p className="text-[10px] text-red-500 font-black mb-1">Duruş</p><h3 className="text-4xl font-black text-red-400">{kpiTotals.durus} dk</h3></div>
-           <div className="bg-gray-900 p-6 rounded-[30px] border border-indigo-900/30 shadow-xl"><p className="text-[10px] text-indigo-400 font-black mb-1">MTTR</p><h3 className="text-4xl font-black text-indigo-400">{kpiTotals.mttr.toFixed(0)} dk</h3></div>
+           <div className="bg-gray-900 p-6 rounded-[30px] border border-gray-800 shadow-xl"><p className="text-[10px] text-gray-500 font-black mb-1">İş Sayısı</p><h3 className="text-3xl font-black text-green-400">{kpiTotals.is}</h3></div>
+           <div className="bg-gray-900 p-6 rounded-[30px] border border-gray-800 shadow-xl"><p className="text-[10px] text-gray-500 font-black mb-1">Müdahale</p><h3 className="text-3xl font-black text-white">{kpiTotals.sure} dk</h3></div>
+           <div className="bg-gray-900 p-6 rounded-[30px] border border-red-900/20 shadow-xl"><p className="text-[10px] text-red-500 font-black mb-1">Duruş</p><h3 className="text-3xl font-black text-red-400">{kpiTotals.durus} dk</h3></div>
+           <div className="bg-gray-900 p-6 rounded-[30px] border border-indigo-900/20 shadow-xl"><p className="text-[10px] text-indigo-400 font-black mb-1">MTTR</p><h3 className="text-3xl font-black text-indigo-400">{kpiTotals.mttr.toFixed(0)} dk</h3></div>
         </div>
 
-        {/* ENERGY CHARTS (FILTERED) */}
+        {/* ENERGY CHARTS */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
           <div className="bg-gray-900 border border-gray-800 p-6 rounded-[30px] shadow-xl">
              <h2 className="text-xs font-bold text-yellow-400 mb-4 uppercase">⚡ Elektrik (kWh)</h2>
-             <select value={filterElekSayac} onChange={e=>setFilterElekSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-xl p-2 text-[10px] mb-4 text-white"><option value="">Tüm Sayaçlar</option>{elektrikSayacListesi.map(s=><option key={s} value={s}>{s}</option>)}</select>
+             <select value={filterElekSayac} onChange={e=>setFilterElekSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-xl p-2 text-[10px] mb-4 text-white"><option value="">Tüm Sayaçlar</option>{elekSayacList.map(s=><option key={s} value={s}>{s}</option>)}</select>
              <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikElek}><XAxis dataKey="ay" tick={{fontSize:10}}/><Tooltip/><Bar dataKey="tuketim" fill="#EAB308" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div>
           </div>
           <div className="bg-gray-900 border border-gray-800 p-6 rounded-[30px] shadow-xl">
              <h2 className="text-xs font-bold text-red-400 mb-4 uppercase">🔥 Doğalgaz (m³)</h2>
-             <select value={filterGazSayac} onChange={e=>setFilterGazSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-xl p-2 text-[10px] mb-4 text-white"><option value="">Tüm Sayaçlar</option>{dogalgazSayacListesi.map(s=><option key={s} value={s}>{s}</option>)}</select>
+             <select value={filterGazSayac} onChange={e=>setFilterGazSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-xl p-2 text-[10px] mb-4 text-white"><option value="">Tüm Sayaçlar</option>{gazSayacList.map(s=><option key={s} value={s}>{s}</option>)}</select>
              <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikGaz}><XAxis dataKey="ay" tick={{fontSize:10}}/><Tooltip/><Bar dataKey="tuketim" fill="#EF4444" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div>
           </div>
           <div className="bg-gray-900 border border-gray-800 p-6 rounded-[30px] shadow-xl">
              <h2 className="text-xs font-bold text-blue-400 mb-4 uppercase">💧 Su (Ton)</h2>
-             <select value={filterSuSayac} onChange={e=>setFilterSuSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-xl p-2 text-[10px] mb-4 text-white"><option value="">Tüm Sayaçlar</option>{suSayacListesi.map(s=><option key={s} value={s}>{s}</option>)}</select>
+             <select value={filterSuSayac} onChange={e=>setFilterSuSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-xl p-2 text-[10px] mb-4 text-white"><option value="">Tüm Sayaçlar</option>{suSayacList.map(s=><option key={s} value={s}>{s}</option>)}</select>
              <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikSu}><XAxis dataKey="ay" tick={{fontSize:10}}/><Tooltip/><Bar dataKey="tuketim" fill="#3B82F6" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div>
           </div>
         </div>
 
-        {/* PERSONNEL PERFORMANCE MATRIX (FULL FILTER) */}
-        <div className="bg-gray-900 border border-gray-800 p-8 rounded-[45px] mb-12 shadow-2xl relative overflow-hidden">
+        {/* PERSONNEL PERFORMANCE MATRIX */}
+        <div className="bg-gray-900 border border-gray-800 p-8 rounded-[45px] mb-12 shadow-2xl">
            <h2 className="text-xl font-black text-blue-400 mb-8 uppercase tracking-widest flex items-center gap-3">👤 PERSONEL PERFORMANS MATRİSİ</h2>
-           <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8 bg-gray-800/40 p-6 rounded-[25px] border border-gray-700/50">
+           <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8 bg-gray-800/40 p-6 rounded-[25px] border border-gray-700/50 no-print">
               <div><label className="text-[9px] text-gray-500 uppercase font-black mb-1 block">Yıl</label><select value={filterYil} onChange={e=>setFilterYil(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-xl p-2 text-xs text-white"><option value="">Tümü</option>{yilListesi.map(y=><option key={y} value={y}>{y}</option>)}</select></div>
               <div><label className="text-[9px] text-gray-500 uppercase font-black mb-1 block">Vardiya</label><select value={filterPerfVardiya} onChange={e=>setFilterPerfVardiya(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-xl p-2 text-xs text-white"><option value="">Tümü</option><option value="08:00 - 16:00">08:00 - 16:00</option><option value="16:00 - 24:00">16:00 - 24:00</option><option value="24:00 - 08:00">24:00 - 08:00</option></select></div>
               <div><label className="text-[9px] text-gray-500 uppercase font-black mb-1 block">Teknisyen</label><select value={filterPerfPersonel} onChange={e=>setFilterPerfPersonel(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-xl p-2 text-xs text-white"><option value="">Tüm Ekip</option>{personelHavuzu.map(p=><option key={p} value={p}>{p}</option>)}</select></div>
-              <div><label className="text-[9px] text-gray-500 uppercase font-black mb-1 block">Duruş Tipi</label><select value={filterPerfDurus} onChange={e=>setFilterPerfDurus(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-xl p-2 text-xs text-white"><option value="">Hepsi</option><option value="durus">Duruşlu</option><option value="normal">Normal</option></select></div>
-              <div><label className="text-[9px] text-blue-400 uppercase font-black mb-1 block">Sıralama</label><select value={filterPerfSiralama} onChange={e=>setFilterPerfSiralama(e.target.value)} className="w-full bg-indigo-950 border border-indigo-500/30 rounded-xl p-2 text-xs text-white font-black"><option value="is">İş Sayısı</option><option value="efor">En Çok Efor</option></select></div>
+              <div><label className="text-[9px] text-gray-500 uppercase font-black mb-1 block">Tip</label><select value={filterPerfDurus} onChange={e=>setFilterPerfDurus(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-xl p-2 text-xs text-white"><option value="">Hepsi</option><option value="durus">Duruşlu</option><option value="normal">Normal</option></select></div>
+              <div><label className="text-[9px] text-blue-400 uppercase font-black mb-1 block">Sıra</label><select value={filterPerfSiralama} onChange={e=>setFilterPerfSiralama(e.target.value)} className="w-full bg-indigo-950 border border-indigo-500/30 rounded-xl p-2 text-xs text-white font-black"><option value="is">İş Sayısı</option><option value="efor">En Çok Efor</option></select></div>
            </div>
-           <div className="overflow-x-auto"><table className="w-full text-left"><thead className="text-gray-500 border-b border-gray-800 text-[10px] uppercase font-black tracking-widest"><tr><th className="pb-4">İsim</th><th className="pb-4">Top. İş</th><th className="pb-4">Top. Efor</th><th className="pb-4 text-blue-400">MTTR (Ort)</th></tr></thead><tbody className="text-sm">{personelPerformans.slice(0,10).map((p,i)=>(<tr key={i} className="border-b border-gray-800/40 hover:bg-white/5 transition"><td className="py-4 font-bold text-gray-200">{i<3?"⭐ ":" "}{p.isim}</td><td className="py-4 text-green-400 font-black">{p.isSayisi} Adet</td><td className="py-4 font-bold">{p.eforDk} dk</td><td className="py-4 text-indigo-400 font-black">{(p.eforDk/p.isSayisi || 0).toFixed(1)} dk</td></tr>))}</tbody></table></div>
+           <div className="overflow-x-auto"><table className="w-full text-left"><thead className="text-gray-500 border-b border-gray-800 text-[10px] uppercase font-black tracking-widest"><tr><th className="pb-4">İsim</th><th className="pb-4">Top. İş</th><th className="pb-4">Top. Efor</th><th className="pb-4 text-blue-400">MTTR (Ort)</th></tr></thead><tbody className="text-sm">{personelPerformans.slice(0,10).map((p,i)=>(<tr key={i} className="border-b border-gray-800/40 hover:bg-white/5 transition"><td className="py-4 font-bold text-gray-200">{p.isim}</td><td className="py-4 text-green-400 font-black">{p.isSayisi}</td><td className="py-4 font-bold">{p.eforDk} dk</td><td className="py-4 text-indigo-400 font-black">{(p.eforDk/p.isSayisi || 0).toFixed(1)} dk</td></tr>))}</tbody></table></div>
         </div>
 
-        {/* BOTTOM CHARTS */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
-          <div className="bg-gray-900 border border-gray-800 p-6 rounded-[35px] shadow-2xl"><h2 className="text-sm font-black text-indigo-400 mb-6 uppercase tracking-widest text-center">📈 RCA Pareto Analizi</h2><div className="h-64 w-full"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={RCA_CATEGORIES.map(c=>({ name: c.label, value: rcaLogs.filter(r=>r.category===c.id).length, color: c.color })).filter(d=>d.value>0)} cx="50%" cy="50%" innerRadius={60} outerRadius={80} dataKey="value">{RCA_CATEGORIES.map((e,i)=><Cell key={i} fill={e.color} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></div></div>
-          <div className="bg-gray-900 border border-gray-800 p-6 rounded-[35px] shadow-2xl"><h2 className="text-sm font-black text-teal-400 mb-6 uppercase tracking-widest">⚡ Hat Bazlı İş Dağılımı</h2><div className="h-64 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikIsHatti}><XAxis dataKey="isim" tick={{fontSize:10, fill:'#6B7280'}} /><YAxis tick={{fontSize:10}} /><Tooltip /><Bar dataKey="adet" fill="#10B981" radius={[6,6,0,0]} /></BarChart></ResponsiveContainer></div></div>
-        </div>
       </div>
 
       {/* INSPECTION MODAL */}
       {showVakaModal && selectedVaka && (
         <div className="fixed inset-0 bg-black/95 backdrop-blur-md flex justify-center items-center z-[1000] p-4">
-          <div className="bg-gray-900 border border-gray-800 p-8 md:p-12 rounded-[50px] w-full max-w-2xl shadow-3xl relative overflow-hidden">
+          <div className="bg-gray-900 border border-gray-800 p-8 rounded-[50px] w-full max-w-2xl shadow-3xl relative">
              <div className={`absolute top-0 left-0 w-full h-2 ${selectedVaka.ekipmanAdi === "KAR devreye alma" ? "bg-red-600 shadow-2xl" : "bg-indigo-600 shadow-2xl"}`}></div>
              <h2 className="text-2xl font-black text-white mb-8 uppercase tracking-widest">Vaka Detay Raporu</h2>
              <div className="grid grid-cols-2 gap-8 mb-8 border-b border-gray-800 pb-8 uppercase font-black">
@@ -330,11 +322,8 @@ export default function AdminDashboard() {
                 <div><p className="text-[9px] text-gray-500 mb-1">Zaman</p><p className="text-sm text-gray-200">{selectedVaka.kayitTarihi?.toDate().toLocaleString('tr-TR')}</p></div>
                 <div><p className="text-[9px] text-gray-500 mb-1">Etki</p><p className={selectedVaka.isDuruslu ? "text-red-500 text-sm" : "text-green-500 text-sm"}>{selectedVaka.isDuruslu ? "Duruşlu" : "Normal"}</p></div>
              </div>
-             <div className="bg-black/40 p-6 rounded-3xl border border-gray-800 mb-10 shadow-inner">
-                <p className="text-[10px] text-indigo-400 uppercase font-black mb-3 tracking-widest">Açıklama:</p>
-                <p className="text-gray-300 italic text-sm italic">"{selectedVaka.aciklama || "Not yok."}"</p>
-             </div>
-             <button onClick={()=>setShowVakaModal(false)} className="w-full bg-gray-800 py-4 rounded-2xl font-black uppercase text-xs tracking-widest">Pencereyi Kapat</button>
+             <div className="bg-black/40 p-6 rounded-3xl border border-gray-800 mb-10"><p className="text-[10px] text-indigo-400 uppercase font-black mb-3">Açıklama:</p><p className="text-gray-300 italic text-sm italic">"{selectedVaka.aciklama || "Not yok."}"</p></div>
+             <button onClick={()=>setShowVakaModal(false)} className="w-full bg-gray-800 py-4 rounded-2xl font-black uppercase text-xs">Pencereyi Kapat</button>
           </div>
         </div>
       )}
@@ -343,11 +332,10 @@ export default function AdminDashboard() {
       {showRcaModal && (
         <div className="fixed inset-0 bg-black/95 backdrop-blur-sm flex justify-center items-center z-[999] p-4">
           <div className="bg-gray-900 border border-indigo-500/30 p-10 rounded-[50px] w-full max-w-xl shadow-2xl relative">
-            <h2 className="text-xl font-black text-white mb-2 uppercase tracking-tighter text-center tracking-[0.2em]">Root Cause Analysis</h2>
-            <p className="text-[10px] text-center text-gray-500 mb-8 uppercase font-bold tracking-widest">{selectedLogForRca?.ekipmanAdi}</p>
+            <h2 className="text-xl font-black text-white mb-2 uppercase tracking-widest text-center">Root Cause Analysis</h2>
             <div className="space-y-6">
               <div className="grid grid-cols-3 gap-2">{RCA_CATEGORIES.map(c=>( <button key={c.id} onClick={()=>setRcaForm({...rcaForm, category:c.id})} className={`p-3 rounded-2xl text-[10px] font-black uppercase transition-all border ${rcaForm.category===c.id?'bg-indigo-600 border-indigo-400 text-white shadow-xl shadow-indigo-600/30':'bg-gray-800 border-gray-700 text-gray-500 hover:border-indigo-400'}`}>{c.label}</button> ))}</div>
-              <textarea value={rcaForm.why} onChange={e=>setRcaForm({...rcaForm, why:e.target.value})} placeholder="Arıza nedeni ve kalıcı aksiyon planı..." className="w-full bg-gray-800 border-gray-800 rounded-[30px] p-6 text-sm text-white outline-none focus:ring-2 ring-indigo-500 h-40 shadow-inner" />
+              <textarea value={rcaForm.why} onChange={e=>setRcaForm({...rcaForm, why:e.target.value})} placeholder="Duruşun nedenini ve aksiyon planını detaylandırın..." className="w-full bg-gray-800 border-gray-800 rounded-[30px] p-6 text-sm text-white outline-none focus:ring-2 ring-indigo-500 h-40" />
               <div className="flex gap-4"><button onClick={()=>setShowRcaModal(false)} className="flex-1 bg-gray-800 py-4 rounded-[20px] font-black text-gray-400 tracking-widest text-xs uppercase">Vazgeç</button><button onClick={handleSaveRca} className="flex-1 bg-indigo-600 py-4 rounded-[20px] font-black text-white shadow-xl shadow-indigo-600/30 tracking-widest text-xs uppercase">Kaydet</button></div>
             </div>
           </div>

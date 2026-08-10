@@ -6,18 +6,10 @@ import { auth, db } from "../../lib/firebase";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 
-// TYPESCRIPT FORM ŞEMASI
 interface MaintenanceFormData {
-  hatAdi: string;
-  ekipmanAdi: string;
-  vardiya: string;
-  isDuruslu: boolean;
-  baslangicTarihi: string;
-  baslangicSaati: string;
-  bitisTarihi: string;
-  bitisSaati: string;
-  aciklama: string;
-  linkedOrderId?: string;
+  hatAdi: string; ekipmanAdi: string; vardiya: string; isDuruslu: boolean;
+  baslangicTarihi: string; baslangicSaati: string; bitisTarihi: string; bitisSaati: string;
+  aciklama: string; linkedOrderId?: string;
 }
 
 function DashboardIcerik() {
@@ -25,12 +17,10 @@ function DashboardIcerik() {
     defaultValues: {
       baslangicTarihi: new Date().toISOString().split('T')[0],
       bitisTarihi: new Date().toISOString().split('T')[0],
-      isDuruslu: false,
-      vardiya: "08:00 - 16:00"
+      isDuruslu: false, vardiya: "08:00 - 16:00"
     }
   });
   
-  // Monitoring & List States
   const [aktifIsler, setAktifIsler] = useState<any[]>([]);
   const [isgAlarmlari, setIsgAlarmlari] = useState<any[]>([]);
   const [hatlar, setHatlar] = useState<string[]>([]);
@@ -38,7 +28,6 @@ function DashboardIcerik() {
   const [filteredEkipmanlar, setFilteredEkipmanlar] = useState<string[]>([]);
   const [allSpareParts, setAllSpareParts] = useState<any[]>([]);
   const [usedMaterials, setUsedMaterials] = useState([{ id: Date.now(), stockCode: "", name: "Kod Bekleniyor", quantity: 1, unit: "Adet" }]);
-  
   const [userName, setUserName] = useState("");
   const [userRole, setUserRole] = useState("");
   const [isDictating, setIsDictating] = useState(false);
@@ -51,7 +40,6 @@ function DashboardIcerik() {
   const basSaat = watch("baslangicSaati");
   const bitSaat = watch("bitisSaati");
 
-  // AUTH & DATA SYNC
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
       if (u) {
@@ -134,34 +122,22 @@ function DashboardIcerik() {
     try {
       const materials = usedMaterials.filter(m => m.stockCode !== "" && !["Hatalı Kod", "Kod Bekleniyor"].includes(m.name));
       await setDoc(doc(collection(db, "maintenance_logs")), { ...data, toplamSureDakika: hesaplananSure, bildirenKisi: userName, kayitTarihi: serverTimestamp(), kullanilanMalzemeler: materials });
-      if (data.linkedOrderId) {
-        await updateDoc(doc(db, "work_orders", data.linkedOrderId), { durum: "Kapalı", tamamlayan: userName, tamamlanmaTarihi: serverTimestamp() });
-      }
+      if (data.linkedOrderId) { await updateDoc(doc(db, "work_orders", data.linkedOrderId), { durum: "Kapalı", tamamlayan: userName, tamamlanmaTarihi: serverTimestamp() }); }
       alert("Başarıyla kaydedildi."); window.location.reload();
     } catch (e) { alert("Hata."); }
   };
 
-  if (loading) return <div className="min-h-screen bg-gray-950 flex justify-center items-center text-teal-400 font-black animate-pulse uppercase tracking-[0.2em]">DFU SİSTEM YÜKLENİYOR...</div>;
+  if (loading) return <div className="min-h-screen bg-gray-950 flex justify-center items-center text-teal-400 font-black animate-pulse uppercase tracking-[0.2em]">DFU TERMINAL YÜKLENİYOR...</div>;
 
   return (
     <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8 font-sans overflow-x-hidden">
       <div className="max-w-6xl mx-auto">
-        
-        {/* HEADER - MESAİ BUTONLARI EKLENDİ */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 border-b border-gray-800 pb-6 gap-4">
-           <div className="flex items-center gap-4">
-             <img src="/dfulogo.png" className="h-10 bg-white p-1 rounded" />
-             <div><p className="text-sm font-black text-teal-400 uppercase tracking-tighter">{userName}</p></div>
-           </div>
+           <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-10 bg-white p-1 rounded" /><div><p className="text-sm font-black text-teal-400 uppercase">{userName}</p></div></div>
            <div className="flex flex-wrap gap-2 md:gap-3">
-             {(userRole === "admin" || userRole === "operator") && (
-               <Link href="/admin" className="bg-gray-800 text-[10px] font-black px-4 py-2 rounded-xl border border-gray-700 hover:bg-gray-700 transition uppercase tracking-widest">Yönetici Paneli</Link>
-             )}
-             
-             {/* MESAİ BUTON GRUBU */}
+             {(userRole === "admin" || userRole === "operator") && (<Link href="/admin" className="bg-gray-800 text-[10px] font-black px-4 py-2 rounded-xl border border-gray-700 hover:bg-gray-700 transition uppercase tracking-widest">Yönetici Paneli</Link>)}
              <Link href="/dashboard/mesai" className="bg-amber-600 text-white text-[10px] font-black px-4 py-2 rounded-xl shadow-lg hover:bg-amber-500 transition uppercase tracking-widest">Mesai Yaz</Link>
              <Link href="/admin/mesai" className="bg-gray-800 text-white text-[10px] font-black px-4 py-2 rounded-xl border border-gray-700 hover:bg-gray-700 transition uppercase tracking-widest">Mesailerim</Link>
-             
              <button onClick={()=>auth.signOut()} className="bg-red-900/30 text-red-500 text-[10px] font-black px-4 py-2 rounded-xl border border-red-900/30 hover:bg-red-600 hover:text-white transition uppercase">Çıkış Yap</button>
            </div>
         </div>
@@ -188,7 +164,7 @@ function DashboardIcerik() {
                 </div>
               )) : <p className="text-center text-[11px] text-gray-600 py-6 italic font-bold">Bekleyen bildirim yok.</p>}
             </div>
-            <Link href="/admin/is-listesi" className="flex items-center justify-center bg-indigo-900/40 hover:bg-indigo-600 text-indigo-400 hover:text-white border border-indigo-500/30 p-5 rounded-[25px] transition shadow-xl text-[11px] font-black uppercase tracking-widest">📋 Tüm İşleri Filtrele</Link>
+            <Link href="/admin/is-listesi" className="flex items-center justify-center bg-indigo-900/40 hover:bg-indigo-600 text-indigo-400 hover:text-white border border-indigo-500/30 p-5 rounded-[25px] transition shadow-xl text-[11px] font-black uppercase tracking-widest font-sans">📋 Tüm İşleri Filtrele</Link>
           </div>
 
           <div className="lg:col-span-2">
@@ -202,14 +178,14 @@ function DashboardIcerik() {
                 </div>
                 <div className="grid grid-cols-2 gap-6">
                   <div><label className="text-[10px] font-black text-gray-500 uppercase mb-2 block ml-2">Vardiya</label><select {...register("vardiya")} className="w-full bg-gray-800 border-gray-700 rounded-2xl p-4 text-sm font-bold text-white outline-none"><option value="08:00 - 16:00">08:00 - 16:00</option><option value="16:00 - 24:00">16:00 - 24:00</option><option value="24:00 - 08:00">24:00 - 08:00</option></select></div>
-                  <div className="flex items-center gap-4 bg-gray-800/40 p-4 rounded-2xl border border-gray-700"><input type="checkbox" {...register("isDuruslu")} className="w-6 h-6 rounded accent-red-600" /><label className="text-[10px] font-black text-red-400 uppercase tracking-widest">Duruş Var</label></div>
+                  <div className="flex items-center gap-4 bg-gray-800/40 p-4 rounded-2xl border border-gray-700"><input type="checkbox" {...register("isDuruslu")} className="w-6 h-6 rounded accent-red-600 cursor-pointer" /><label className="text-[10px] font-black text-red-400 uppercase tracking-widest">Duruş Var</label></div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 font-bold">
                    <div className="flex gap-2"><input type="date" {...register("baslangicTarihi")} className="bg-gray-800 border-gray-700 rounded-xl p-3 text-xs w-full text-white" /><input type="time" {...register("baslangicSaati")} className="bg-gray-800 border-gray-700 rounded-xl p-3 text-xs text-white" /></div>
                    <div className="flex gap-2"><input type="date" {...register("bitisTarihi")} className="bg-gray-800 border-gray-700 rounded-xl p-3 text-xs w-full text-white" /><input type="time" {...register("bitisSaati")} className="bg-gray-800 border-gray-700 rounded-xl p-3 text-xs text-white" /></div>
                 </div>
-                <div className="bg-gray-800/20 border border-gray-800 p-6 rounded-[35px] space-y-4">
-                  <div className="flex justify-between items-center mb-2"><h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">⚙️ Malzeme Sarfiyatı</h3><button type="button" onClick={()=>setUsedMaterials([...usedMaterials, { id: Date.now(), stockCode: "", name: "Kod Bekleniyor", quantity: 1, unit: "Adet" }])} className="bg-teal-600 text-[10px] font-black px-4 py-2 rounded-xl transition shadow-lg">+ EKLE</button></div>
+                <div className="bg-gray-800/20 border border-gray-800 p-6 rounded-[35px] space-y-4 shadow-inner">
+                  <div className="flex justify-between items-center mb-2"><h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">⚙️ Malzeme Sarfiyatı</h3><button type="button" onClick={()=>setUsedMaterials([...usedMaterials, { id: Date.now(), stockCode: "", name: "Kod Bekleniyor", quantity: 1, unit: "Adet" }])} className="bg-teal-600 hover:bg-teal-500 text-[10px] font-black px-4 py-2 rounded-xl shadow-lg shadow-teal-600/20">+ EKLE</button></div>
                   {usedMaterials.map(m => (
                     <div key={m.id} className="grid grid-cols-12 gap-2 items-center">
                       <input type="text" placeholder="Kod..." value={m.stockCode} onChange={e=>handleMaterialCode(m.id, e.target.value)} className="col-span-3 bg-gray-800 border-gray-700 rounded-xl p-3 text-[10px] uppercase font-bold text-white outline-none focus:border-teal-500" />
@@ -220,8 +196,8 @@ function DashboardIcerik() {
                     </div>
                   ))}
                 </div>
-                <div className="bg-teal-900/20 p-7 rounded-[35px] text-center border border-teal-500/20"><p className="text-[10px] font-black text-teal-500 mb-1 uppercase tracking-widest">Müdahale Süresi</p><h2 className="text-5xl font-black text-white">{hesaplananSure} <span className="text-xs font-normal text-gray-500 uppercase">Dakika</span></h2></div>
-                <div><div className="flex justify-between items-center mb-3"><label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">İşlem Detayları</label><button type="button" onClick={sesliYazimBaslat} className={`px-5 py-2 rounded-2xl text-[10px] font-black transition-all ${isDictating?'bg-red-600 animate-pulse shadow-lg':'bg-gray-800 text-teal-400'}`}>🎙️ SESLE YAZDIR</button></div><textarea {...register("aciklama")} rows={4} className="w-full bg-gray-800 border-gray-700 rounded-[30px] p-6 text-sm text-white outline-none focus:ring-1 ring-teal-500" placeholder="İşlemi detaylandırın..." /></div>
+                <div className="bg-teal-900/20 p-7 rounded-[35px] text-center border border-teal-500/20 shadow-inner"><p className="text-[10px] font-black text-teal-500 mb-1 uppercase tracking-widest">Müdahale Süresi</p><h2 className="text-5xl font-black text-white">{hesaplananSure} <span className="text-xs font-normal text-gray-500 uppercase">Dakika</span></h2></div>
+                <div><div className="flex justify-between items-center mb-3"><label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">İşlem Detayları</label><button type="button" onClick={sesliYazimBaslat} className={`px-5 py-2 rounded-2xl text-[10px] font-black transition-all ${isDictating?'bg-red-600 animate-pulse shadow-lg':'bg-gray-800 text-teal-400'}`}>🎙️ SESLE YAZDIR</button></div><textarea {...register("aciklama")} rows={4} className="w-full bg-gray-800 border-gray-700 rounded-[30px] p-6 text-sm text-white outline-none focus:ring-1 ring-teal-500" placeholder="Açıklamanızı buraya ekleyin..." /></div>
                 <button type="submit" disabled={isSubmitting} className="w-full bg-orange-600 hover:bg-orange-500 text-white font-black py-5 rounded-[45px] shadow-2xl transition-all uppercase tracking-widest text-sm">Raporu Kaydet</button>
               </form>
             </div>
@@ -231,4 +207,4 @@ function DashboardIcerik() {
     </div>
   );
 }
-export default function Page() { return (<Suspense fallback={<div className="min-h-screen bg-gray-950 flex justify-center items-center font-bold text-white uppercase animate-pulse">DFU Terminal Başlatılıyor...</div>}><DashboardIcerik /></Suspense>); }
+export default function Page() { return (<Suspense fallback={<div className="min-h-screen bg-gray-950 flex justify-center items-center font-bold text-white uppercase animate-pulse tracking-widest">Dfu Terminal Başlatılıyor...</div>}><DashboardIcerik /></Suspense>); }

@@ -35,7 +35,7 @@ export default function AdminDashboard() {
   const [kpiDurusluIsSayisi, setKpiDurusluIsSayisi] = useState(0);
   const [grafikTumIslerVerisi, setGrafikTumIslerVerisi] = useState<any[]>([]);
 
-  const [activeFloor, setActiveFloor] = useState(1);
+  // RCA States
   const [showRcaModal, setShowRcaModal] = useState(false);
   const [selectedLogForRca, setSelectedLogForRca] = useState<any>(null);
   const [rcaForm, setRcaForm] = useState({ category: "", why: "" });
@@ -46,20 +46,15 @@ export default function AdminDashboard() {
     { id: "ortam", label: "Ortam", color: "#8B5CF6" }
   ];
 
-  const EQUIPMENT_LOCATIONS = [
-    { id: "k1", name: "KEK HATTI", floor: 1, x: "65%", y: "48%" }, { id: "k2", name: "BAGET HATTI", floor: 1, x: "78%", y: "35%" },
-    { id: "z1", name: "SILO GRUBU", floor: 0, x: "85%", y: "22%" }, { id: "z2", name: "HAMURHANE", floor: 0, x: "55%", y: "40%" },
-    { id: "b1", name: "SU DEPOSU", floor: -1, x: "20%", y: "60%" }, { id: "p1", name: "PASTRY POĞAÇA HATTI", floor: 2, x: "70%", y: "28%" }
-  ];
-
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUserEmail(user.email || "");
-        const userSnap = await getDoc(doc(db, "users", user.uid));
-        if (userSnap.exists() && userSnap.data().isApproved) {
-          const role = userSnap.data().role;
-          setUserRole(role); setUserName(userSnap.data().name);
+        const userRef = doc(db, "users", user.uid);
+        const snap = await getDoc(userRef);
+        if (snap.exists() && snap.data().isApproved) {
+          const role = snap.data().role;
+          setUserRole(role); setUserName(snap.data().name);
           if (["admin", "operator", "uretim", "isg", "teknisyen"].includes(role)) {
             setIsAdmin(true); fetchIlkVeriler(); fetchRcaData();
           } else { window.location.href = "/dashboard"; }
@@ -115,15 +110,15 @@ export default function AdminDashboard() {
 
   const handleSaveRca = async () => {
     if (!rcaForm.category) return alert("Kategori Seçiniz");
-    await setDoc(doc(db, "root_cause_analysis", selectedLogForRca.id), { logId: selectedLogForRca.id, ekipman: selectedLogForRca.ekipmanAdi, category: rcaForm.category, why: rcaForm.why, analizEden: userName, tarih: serverTimestamp() }, { merge: true });
+    await setDoc(doc(db, "root_cause_analysis", String(selectedLogForRca.id)), { 
+      logId: selectedLogForRca.id, 
+      ekipman: selectedLogForRca.ekipmanAdi, 
+      category: rcaForm.category, 
+      why: rcaForm.why, 
+      analizEden: userName, 
+      tarih: serverTimestamp() 
+    }, { merge: true });
     alert("Analiz Kaydedildi"); setShowRcaModal(false); fetchRcaData();
-  };
-
-  const getHealthStatus = (name: string) => {
-    if (aktifIsler.some(i => i.ekipmanAdi === name && i.isDuruslu)) return "bg-red-500 animate-ping";
-    const rca = rcaLogs.find(r => r.ekipman === name);
-    if (rca && !rca.category) return "bg-orange-500 shadow-xl";
-    return "bg-green-500";
   };
 
   if (loading) return <div className="min-h-screen bg-gray-950 flex justify-center items-center text-white font-black uppercase tracking-tighter">DFU Sistem Yükleniyor...</div>;
@@ -144,14 +139,14 @@ export default function AdminDashboard() {
           </div>
           <div className="flex gap-3">
              <Link href="/dashboard" className="bg-gray-800 text-[10px] font-black uppercase px-4 py-2 rounded-xl border border-gray-700 hover:bg-gray-700 transition">Vardiya Raporuna Dön</Link>
-             <button onClick={()=>auth.signOut()} className="bg-red-900/30 text-red-500 text-[10px] font-black uppercase px-4 py-2 rounded-xl border border-red-900/30 hover:bg-red-600 hover:text-white transition">Güvenli Çıkış</button>
+             <button onClick={()=>auth.signOut()} className="bg-red-900/30 text-red-500 text-[10px] font-black uppercase px-4 py-2 rounded-xl border border-red-900/30 hover:bg-red-600 hover:text-white transition">Çıkış Yap</button>
           </div>
         </div>
 
-        {/* FULL BUTTON GRID (20+ BUTTONS) */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-8 no-print">
+        {/* FULL BUTTON GRID */}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-12 no-print">
           {(userRole === "admin" || userRole === "uretim") && (<Link href="/admin/is-emri-ac" className="bg-red-600 p-3 rounded-xl font-bold text-xs text-center shadow-lg hover:bg-red-500 transition">🚨 Yeni İş Emri</Link>)}
-          {userRole !== "isg" && (<Link href="/admin/aktif-isler" className="bg-red-900/60 border border-red-500/50 p-3 rounded-xl font-bold text-xs text-center hover:bg-red-600 transition">Aktif İşler</Link>)}
+          {userRole !== "isg" && (<Link href="/admin/aktif-isler" className="bg-red-950 border border-red-500 p-3 rounded-xl font-bold text-xs text-center hover:bg-red-600 transition">Aktif İşler</Link>)}
           {userRole !== "isg" && (<Link href="/admin/tamamlanan-isler" className="bg-gray-700 p-3 rounded-xl font-semibold text-xs text-center hover:bg-gray-600 transition">🗄️ Tamamlanan İşler</Link>)}
           {(userRole === "admin" || userRole === "isg") && (
             <>
@@ -184,32 +179,10 @@ export default function AdminDashboard() {
           )}
         </div>
 
-        {/* HARİTA */}
-        <div className="bg-gray-900 border border-gray-800 rounded-[40px] p-6 mb-8 shadow-2xl relative overflow-hidden">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-black text-white flex items-center gap-2 tracking-tighter">📍 Canlı Tesis Haritası</h2>
-            <div className="flex bg-gray-800 p-1.5 rounded-2xl border border-gray-700">
-              {[-1, 0, 1, 2].map(f => (
-                <button key={f} onClick={() => setActiveFloor(f)} className={`px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all ${activeFloor === f ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}>KAT {f===0?"ZEMİN":f}</button>
-              ))}
-            </div>
-          </div>
-          <div className="relative w-full aspect-[21/9] bg-black/40 rounded-3xl overflow-hidden border border-gray-800/50">
-            <img src={`/map/floor${activeFloor}.png`} className="w-full h-full object-contain opacity-60" />
-            {EQUIPMENT_LOCATIONS.filter(eq => eq.floor === activeFloor).map(m => (
-              <div key={m.id} className="absolute group cursor-pointer p-2 -m-2 z-10" style={{ top: m.y, left: m.x }}>
-                <div className={`w-3.5 h-3.5 rounded-full border border-white/40 ${getHealthStatus(m.name)}`}></div>
-                <div className="block md:hidden absolute top-5 left-1/2 -translate-x-1/2 bg-black/80 px-2 py-0.5 rounded text-[8px] font-bold border border-white/10 text-white whitespace-nowrap shadow-2xl">{m.name}</div>
-                <div className="hidden md:block absolute bottom-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-black border border-gray-800 p-2 rounded-xl text-[9px] z-50 whitespace-nowrap shadow-2xl text-white font-bold">{m.name}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* RCA TABLE */}
         {userRole === "admin" && (
-          <div className="bg-gray-900 border-2 border-indigo-500/20 p-6 rounded-3xl mb-8 shadow-xl">
-            <h2 className="text-lg font-bold text-indigo-400 mb-4 flex items-center gap-2 uppercase tracking-tighter">🧠 Analiz Bekleyen Duruşlar</h2>
+          <div className="bg-gray-900 border-2 border-indigo-500/20 p-6 rounded-3xl mb-12 shadow-xl">
+            <h2 className="text-lg font-bold text-indigo-400 mb-6 flex items-center gap-2 uppercase tracking-tighter">🧠 Analiz Bekleyen Duruşlar</h2>
             <div className="space-y-3">
               {rawLogs.filter((l: any) => l.isDuruslu).slice(0, 5).map((log, idx) => {
                 const hasRca = rcaLogs.find(r => r.logId === log.id);
@@ -219,7 +192,7 @@ export default function AdminDashboard() {
                       <p className="text-[10px] text-gray-500 uppercase">{log.hatAdi} | {log.id}</p>
                       <p className="font-bold text-sm text-white">{log.ekipmanAdi} <span className="text-red-400 ml-2">{log.toplamSureDakika} dk</span></p>
                     </div>
-                    <button onClick={() => { setSelectedLogForRca(log); setShowRcaModal(true); setRcaForm({ category: hasRca?.category || "", why: hasRca?.why || "" }); }} className={`px-5 py-2 rounded-xl text-[10px] font-bold transition-all ${hasRca ? 'bg-green-600/20 text-green-400 border border-green-500/30' : 'bg-indigo-600 text-white shadow-lg'}`}>{hasRca ? "Analiz Güncelle" : "Analiz Yap"}</button>
+                    <button onClick={() => { setSelectedLogForRca(log); setShowRcaModal(true); setRcaForm({ category: hasRca?.category || "", why: hasRca?.why || "" }); }} className={`px-5 py-2 rounded-xl text-[10px] font-bold transition-all ${hasRca ? 'bg-green-600/20 text-green-400 border border-green-500/30' : 'bg-indigo-600 text-white shadow-lg'}`}>{hasRca ? "Güncelle" : "Analiz Et"}</button>
                   </div>
                 );
               })}
@@ -232,7 +205,7 @@ export default function AdminDashboard() {
            <div className="bg-gray-900 p-5 rounded-3xl border border-gray-800"><p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Toplam İş</p><h3 className="text-3xl font-black text-green-400">{kpiToplamIs}</h3></div>
            <div className="bg-gray-900 p-5 rounded-3xl border border-gray-800"><p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Duruş Sayısı</p><h3 className="text-3xl font-black text-red-400">{kpiDurusluIsSayisi}</h3></div>
            <div className="bg-gray-900 p-5 rounded-3xl border border-indigo-900/30"><p className="text-[10px] text-indigo-400 uppercase font-bold mb-1">Kayıp Süre</p><h3 className="text-3xl font-black text-indigo-400">{kpiAylikDurus} dk</h3></div>
-           <div className="bg-gray-900 p-5 rounded-3xl border border-purple-900/30"><p className="text-[10px] text-purple-400 uppercase font-bold mb-1">MTTR (Ort)</p><h3 className="text-3xl font-black text-purple-400">{(kpiToplamSure/kpiToplamIs).toFixed(0)} dk</h3></div>
+           <div className="bg-gray-900 p-5 rounded-3xl border border-purple-900/30"><p className="text-[10px] text-purple-400 uppercase font-bold mb-1">MTTR (Ort)</p><h3 className="text-3xl font-black text-purple-400">{(kpiToplamSure/kpiToplamIs || 0).toFixed(0)} dk</h3></div>
         </div>
 
         {/* CHARTS */}
@@ -260,7 +233,7 @@ export default function AdminDashboard() {
             <div className="space-y-5">
               <div className="grid grid-cols-3 gap-2">{RCA_CATEGORIES.map(c=>(<button key={c.id} onClick={()=>setRcaForm({...rcaForm, category:c.id})} className={`p-2.5 rounded-xl text-[10px] font-bold border transition ${rcaForm.category === c.id ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-gray-800 border-gray-700 text-gray-500 hover:border-indigo-400'}`}>{c.label}</button>))}</div>
               <textarea value={rcaForm.why} onChange={e=>setRcaForm({...rcaForm, why:e.target.value})} placeholder="Arıza nedenini ve kalıcı aksiyonu buraya yazın..." className="w-full bg-gray-800 border-gray-700 rounded-2xl p-4 text-sm h-40 text-white outline-none focus:ring-1 ring-indigo-500" />
-              <div className="flex gap-4"><button onClick={()=>setShowRcaModal(false)} className="flex-1 bg-gray-800 py-3.5 rounded-2xl font-bold text-xs text-gray-400 transition hover:bg-gray-700">Vazgeç</button><button onClick={handleSaveRca} className="flex-1 bg-indigo-600 py-3.5 rounded-2xl font-bold text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-500">Analizi Kaydet</button></div>
+              <div className="flex gap-4"><button onClick={()=>setShowRcaModal(false)} className="flex-1 bg-gray-800 py-3.5 rounded-2xl font-bold text-xs text-gray-400 transition hover:bg-gray-700">Vazgeç</button><button onClick={handleSaveRca} className="flex-1 bg-indigo-600 py-4 rounded-2xl font-bold text-xs text-white shadow-lg shadow-indigo-600/20 transition hover:bg-indigo-500">Analizi Kaydet</button></div>
             </div>
           </div>
         </div>

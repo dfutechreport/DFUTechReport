@@ -22,7 +22,6 @@ function DashboardIcerik() {
     }
   });
   
-  // States
   const [aktifIsler, setAktifIsler] = useState<any[]>([]);
   const [isgAlarmlari, setIsgAlarmlari] = useState<any[]>([]);
   const [hatlar, setHatlar] = useState<string[]>([]);
@@ -38,7 +37,6 @@ function DashboardIcerik() {
   const [selectedVaka, setSelectedVaka] = useState<any>(null);
   const [showVakaModal, setShowVakaModal] = useState(false);
 
-  // --- WATCH HOOKS (FIXED: selectedHat added) ---
   const selectedHat = watch("hatAdi");
   const basTarih = watch("baslangicTarihi");
   const bitTarih = watch("bitisTarihi");
@@ -50,40 +48,59 @@ function DashboardIcerik() {
       if (u) {
         const userSnap = await getDoc(doc(db, "users", u.uid));
         if (userSnap.exists()) { setUserName(userSnap.data().name || ""); setUserRole(userSnap.data().role || ""); }
-        fetchAllSystemData();
+        await fetchMasterStockAndAssets();
       } else { window.location.href = "/"; }
       setLoading(false);
     });
   }, []);
 
-  const fetchAllSystemData = async () => {
+  // --- MASTER VERİ ÇEKME (Sadece Yetkili Belgelerden) ---
+  const fetchMasterStockAndAssets = async () => {
     try {
-      const wSnap = await getDocs(query(collection(db, "work_orders"), where("durum", "==", "Açık")));
-      const wData = wSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-      setIsgAlarmlari(wData.filter(d => d.ekipmanAdi === "KAR devreye alma"));
-      setAktifIsler(wData.filter(d => d.ekipmanAdi !== "KAR devreye alma"));
+      // 1. MASTER STOK LİSTESİ (spare_parts)
+      const pSnap = await getDocs(collection(db, "spare_parts"));
+      setAllSpareParts(pSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+
+      // 2. ASSETS (Makineler)
       const aSnap = await getDocs(collection(db, "assets"));
       const aData = aSnap.docs.map(d => ({ id: d.id, ...d.data() }));
       setAllAssets(aData);
       const hSet = new Set<string>();
       aData.forEach((item: any) => { if (item.hatAdi) hSet.add(item.hatAdi); });
       setHatlar(Array.from(hSet).sort());
-      const pSnap = await getDocs(collection(db, "spare_parts"));
-      setAllSpareParts(pSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-    } catch (e) { console.error(e); }
+
+      // 3. AKTİF BİLDİRİMLER
+      const wSnap = await getDocs(query(collection(db, "work_orders"), where("durum", "==", "Açık")));
+      const wData = wSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+      setIsgAlarmlari(wData.filter(d => d.ekipmanAdi === "KAR devreye alma"));
+      setAktifIsler(wData.filter(d => d.ekipmanAdi !== "KAR devreye alma"));
+    } catch (e) { console.error("Master veri hatası:", e); }
   };
 
-  const findStockItem = (id: number) => {
+  // --- KRİTİK: MASTER STOK SORGULAMA ---
+  const findInMasterStock = (id: number) => {
     const row = usedMaterials.find(m => m.id === id);
     if (!row || !row.stockCode) return;
     const searchStr = row.stockCode.trim().toUpperCase();
-    const part = allSpareParts.find(p => (p.stockCode && String(p.stockCode).toUpperCase() === searchStr) || (p.id && String(p.id).toUpperCase() === searchStr) || (p.kod && String(p.kod).toUpperCase() === searchStr));
+    
+    // SADECE Master Stok Listesinde (spare_parts) arar
+    const part = allSpareParts.find(p => 
+      (p.stockCode && String(p.stockCode).toUpperCase() === searchStr) || 
+      (p.id && String(p.id).toUpperCase() === searchStr) ||
+      (p.kod && String(p.kod).toUpperCase() === searchStr)
+    );
+
     setUsedMaterials(prev => prev.map(m => {
       if (m.id === id) {
-        if (!part) return { ...m, name: "Hatalı Kod", stock: "0" };
-        const deepName = part.name || part.malzemeAdi || part.stok_adi || part.urun_adi || Object.values(part).find(v => typeof v === 'string' && v.length > 5 && v !== part.id);
-        const deepStock = part.stock ?? part.stok ?? part.miktar ?? part.adet ?? 0;
-        return { ...m, name: String(deepName || "İsim Saptanamadı"), stock: String(deepStock) };
+        if (!part) return { ...m, name: "Master Listede Yok (Hatalı Kod)", stock: "0" };
+
+        // İsim tespiti (Master belge içindeki en mantıklı alanlar)
+        const masterName = part.name || part.malzemeAdi || part.urun_adi || part.stokAdi || part.tanim;
+        
+        // Stok tespiti (Master belge içindeki sayısal veriler)
+        const masterStock = part.stock ?? part.stok ?? part.miktar ?? part.adet ?? 0;
+
+        return { ...m, name: String(masterName || "İsim Tanımlanmamış"), stock: String(masterStock) };
       }
       return m;
     }));
@@ -117,6 +134,7 @@ function DashboardIcerik() {
 
   const sesliYazimBaslat = () => {
     const Rec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if(!Rec) return alert("Ses desteği yok");
     const recognition = new Rec(); recognition.lang = "tr-TR";
     recognition.onstart = () => setIsDictating(true); recognition.onend = () => setIsDictating(false);
     recognition.onresult = (e: any) => {
@@ -128,7 +146,7 @@ function DashboardIcerik() {
 
   const onSubmit = async (formData: MaintenanceFormData) => {
     try {
-      const materials = usedMaterials.filter(m => m.stockCode !== "" && !["Hatalı Kod", "Kod Bekleniyor"].includes(m.name));
+      const materials = usedMaterials.filter(m => m.stockCode !== "" && !["Hatalı Kod", "Kod Bekleniyor", "Master Listede Yok (Hatalı Kod)"].includes(m.name));
       const cleanData = {
         hatAdi: formData.hatAdi || "-", ekipmanAdi: formData.ekipmanAdi || "-", vardiya: formData.vardiya || "08:00 - 16:00",
         isDuruslu: Boolean(formData.isDuruslu), baslangicTarihi: formData.baslangicTarihi || "", baslangicSaati: formData.baslangicSaati || "",
@@ -145,7 +163,7 @@ function DashboardIcerik() {
     } catch (e: any) { alert("Hata: " + e.message); }
   };
 
-  if (loading) return <div className="min-h-screen bg-gray-950 flex justify-center items-center text-teal-400 font-black animate-pulse">SİSTEM YÜKLENİYOR...</div>;
+  if (loading) return <div className="min-h-screen bg-gray-950 flex justify-center items-center text-teal-400 font-black animate-pulse uppercase tracking-[0.3em]">BAĞLANTI KURULUYOR...</div>;
 
   return (
     <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8 font-sans overflow-x-hidden">
@@ -158,7 +176,7 @@ function DashboardIcerik() {
              {(userRole === "admin" || userRole === "operator") && (<Link href="/admin" className="bg-gray-800 text-[10px] font-black px-4 py-2.5 rounded-xl border border-gray-700 uppercase transition">Admin Panel</Link>)}
              <Link href="/dashboard/mesai" className="bg-amber-600 text-white text-[10px] font-black px-4 py-2.5 rounded-xl shadow-lg uppercase transition tracking-widest">Mesai Yaz</Link>
              <Link href="/admin/mesai" className="bg-gray-800 text-white text-[10px] font-black px-4 py-2.5 rounded-xl border border-gray-700 uppercase transition tracking-widest">Mesailerim</Link>
-             <button onClick={()=>auth.signOut()} className="bg-red-900/30 text-red-500 text-[10px] font-black px-4 py-2.5 rounded-xl border border-red-900/30 transition">Çıkış</button>
+             <button onClick={()=>auth.signOut()} className="bg-red-900/30 text-red-500 text-[10px] font-black px-4 py-2.5 rounded-xl border border-red-900/30 transition">ÇIKIŞ</button>
            </div>
         </div>
 
@@ -166,21 +184,21 @@ function DashboardIcerik() {
           <div className="lg:col-span-1 space-y-8">
             {isgAlarmlari.length > 0 && (
               <div className="bg-red-950/40 border-2 border-red-600 p-6 rounded-[35px] shadow-2xl animate-pulse">
-                <h3 className="text-red-500 font-black text-xs uppercase mb-5 tracking-widest flex items-center gap-2">⚠️ İSG ALARMLARI</h3>
+                <h3 className="text-red-500 font-black text-xs uppercase mb-5 tracking-widest flex items-center gap-2 tracking-tighter">⚠️ KRİTİK İSG</h3>
                 {isgAlarmlari.map(a => (
                   <div key={a.id} className="bg-black/40 p-4 rounded-2xl mb-3 border border-red-900/50 flex justify-between items-center group transition">
                     <p className="text-[10px] font-black uppercase text-white truncate mr-2">{a.hatAdi}</p>
-                    <button onClick={()=> {setSelectedVaka(a); setShowVakaModal(true);}} className="bg-red-600 text-[9px] font-black px-3 py-1.5 rounded-lg uppercase transition">İncele</button>
+                    <button onClick={()=> {setSelectedVaka(a); setShowVakaModal(true);}} className="bg-red-600 text-[9px] font-black px-3 py-1.5 rounded-lg uppercase">İncele</button>
                   </div>
                 ))}
               </div>
             )}
             <div className="bg-gray-900 border border-gray-800 p-7 rounded-[40px] shadow-2xl">
-              <h3 className="text-[11px] font-black text-gray-500 uppercase mb-5 tracking-widest tracking-[0.1em]">🔔 Aktif Bildirimler</h3>
+              <h3 className="text-[11px] font-black text-gray-500 uppercase mb-5 tracking-widest">🔔 Aktif Bildirimler</h3>
               {aktifIsler.map(is => (
                 <div key={is.id} className="bg-gray-800/40 border border-gray-700/50 p-4 rounded-[20px] mb-3 flex justify-between items-center hover:border-teal-500/50 transition">
                   <div className="flex-1 min-w-0 mr-3"><p className="text-[10px] font-black text-teal-400 uppercase truncate">{is.hatAdi}</p><p className="text-xs font-bold text-gray-200 truncate">{is.ekipmanAdi}</p></div>
-                  <button onClick={()=> {setSelectedVaka(is); setShowVakaModal(true);}} className="bg-teal-600 text-[9px] font-black px-3 py-1.5 rounded-lg uppercase transition">İncele</button>
+                  <button onClick={()=> {setSelectedVaka(is); setShowVakaModal(true);}} className="bg-teal-600 text-[9px] font-black px-3 py-1.5 rounded-lg uppercase">İncele</button>
                 </div>
               ))}
             </div>
@@ -197,7 +215,7 @@ function DashboardIcerik() {
                   <div><label className="text-[10px] font-black text-gray-500 uppercase mb-2 block ml-2 tracking-widest">Ekipman</label><select {...register("ekipmanAdi")} className="w-full bg-gray-800 border-gray-700 rounded-2xl p-4 text-sm font-bold text-white outline-none focus:ring-2 ring-teal-500"><option value="">Seçiniz...</option>{filteredEkipmanlar.map(e=><option key={e} value={e}>{e}</option>)}</select></div>
                 </div>
                 <div className="grid grid-cols-2 gap-6 uppercase font-black tracking-tighter">
-                  <div><label className="text-[10px] font-black text-gray-500 uppercase mb-2 block ml-2 tracking-widest">Vardiya</label><select {...register("vardiya")} className="w-full bg-gray-800 border-gray-700 rounded-2xl p-4 text-sm font-bold text-white outline-none font-bold uppercase"><option value="08:00 - 16:00">08:00 - 16:00</option><option value="16:00 - 24:00">16:00 - 24:00</option><option value="24:00 - 08:00">24:00 - 08:00</option></select></div>
+                  <div><label className="text-[10px] font-black text-gray-500 uppercase mb-2 block ml-2 tracking-widest">Vardiya</label><select {...register("vardiya")} className="w-full bg-gray-800 border-gray-700 rounded-2xl p-4 text-sm font-bold text-white outline-none font-bold"><option value="08:00 - 16:00">08:00 - 16:00</option><option value="16:00 - 24:00">16:00 - 24:00</option><option value="24:00 - 08:00">24:00 - 08:00</option></select></div>
                   <div className="flex items-center gap-4 bg-gray-800/50 p-4 rounded-2xl border border-gray-700"><input type="checkbox" {...register("isDuruslu")} className="w-6 h-6 rounded accent-red-600 cursor-pointer" /><label className="text-[10px] font-black text-red-400 uppercase tracking-widest">Duruş Var</label></div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 font-black uppercase">
@@ -205,24 +223,31 @@ function DashboardIcerik() {
                    <div className="flex gap-2"><input type="date" {...register("bitisTarihi")} className="bg-gray-800 border-gray-700 rounded-xl p-3 text-xs w-full text-white" /><input type="time" {...register("bitisSaati")} className="bg-gray-800 border-gray-700 rounded-xl p-3 text-xs text-white font-black text-center" /></div>
                 </div>
 
+                {/* --- MALZEME SARFİYATI: MASTER STOK ODAKLI (V81) --- */}
                 <div className="bg-gray-800/20 border border-gray-800 p-6 rounded-[35px] space-y-8 shadow-inner">
-                  <div className="flex justify-between items-center mb-2"><h3 className="text-[11px] font-black text-gray-500 uppercase tracking-widest">⚙️ Malzeme Sarfiyat Listesi</h3><button type="button" onClick={()=>setUsedMaterials([...usedMaterials, { id: Date.now(), stockCode: "", name: "Kod Bekleniyor", stock: "-", quantity: 1, unit: "Adet" }])} className="bg-teal-600 hover:bg-teal-500 text-[10px] font-black px-4 py-2 rounded-xl transition shadow-lg">+ EKLE</button></div>
+                  <div className="flex justify-between items-center mb-2"><h3 className="text-[11px] font-black text-gray-500 uppercase tracking-widest">⚙️ Malzeme Sarfiyat Listesi</h3><button type="button" onClick={()=>setUsedMaterials([...usedMaterials, { id: Date.now(), stockCode: "", name: "Kod Bekleniyor", stock: "-", quantity: 1, unit: "Adet" }])} className="bg-teal-600 hover:bg-teal-500 text-[10px] font-black px-4 py-2 rounded-xl shadow-lg shadow-teal-600/20">+ EKLE</button></div>
+                  
                   {usedMaterials.map(m => (
                     <div key={m.id} className="bg-black/30 p-6 rounded-[30px] border border-gray-700/50 space-y-5 animate-fadeIn shadow-xl">
                       <div className="flex flex-col sm:flex-row gap-2">
-                        <input type="text" placeholder="Stok Kodu..." value={m.stockCode} onChange={e=>setUsedMaterials(usedMaterials.map(x=>x.id===m.id?{...x, stockCode:e.target.value}:x))} className="flex-1 bg-gray-800 border border-gray-700 rounded-2xl p-4 text-sm font-black text-white outline-none focus:border-indigo-500 shadow-inner" />
+                        <input type="text" placeholder="Master Stok Kodu..." value={m.stockCode} onChange={e=>setUsedMaterials(usedMaterials.map(x=>x.id===m.id?{...x, stockCode:e.target.value}:x))} className="flex-1 bg-gray-800 border border-gray-700 rounded-2xl p-4 text-sm font-black text-white outline-none focus:border-indigo-500" />
                         <div className="flex gap-2 w-full sm:w-auto">
-                           <button type="button" onClick={()=>findStockItem(m.id)} className="flex-1 sm:px-8 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black py-4 rounded-2xl uppercase shadow-lg transition">GÖSTER</button>
-                           <button type="button" onClick={()=>setUsedMaterials(usedMaterials.filter(x=>x.id!==m.id))} className="bg-gray-800 text-red-500 px-5 rounded-2xl border border-gray-700 hover:bg-red-900 transition">✕</button>
+                           <button type="button" onClick={()=>findInMasterStock(m.id)} className="flex-1 sm:px-8 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black py-4 rounded-2xl uppercase shadow-lg transition">GÖSTER</button>
+                           <button type="button" onClick={()=>setUsedMaterials(usedMaterials.filter(x=>x.id!==m.id))} className="bg-gray-800 text-red-500 px-5 rounded-2xl border border-gray-700 hover:bg-red-900 transition font-bold">✕</button>
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <div className="bg-gray-900/90 p-4 rounded-2xl border border-gray-800 min-h-[50px] flex items-center"><p className={`text-xs font-black uppercase leading-tight ${m.name === "Hatalı Kod" ? "text-red-500" : "text-teal-400"}`}>{m.name}</p></div>
-                        {m.stock !== "-" && (<div className="bg-amber-600 text-white p-3 rounded-2xl flex justify-between items-center shadow-lg border border-amber-400/30 font-black uppercase"><span className="text-[10px] tracking-widest uppercase">Mevcut Stok:</span><span className="text-lg tracking-tighter">{m.stock}</span></div>)}
+                        <div className="bg-gray-900/90 p-4 rounded-2xl border border-gray-800 min-h-[50px] flex items-center"><p className={`text-xs font-black uppercase leading-tight ${m.name.includes("Yok") ? "text-red-500" : "text-teal-400"}`}>{m.name}</p></div>
+                        {m.stock !== "-" && (
+                           <div className="bg-amber-600 text-white p-3 rounded-2xl flex justify-between items-center shadow-lg border border-amber-400/30 font-black uppercase">
+                              <span className="text-[10px] tracking-widest">Sistemdeki Güncel Stok (Master):</span>
+                              <span className="text-lg tracking-tighter">{m.stock} ADET</span>
+                           </div>
+                        )}
                       </div>
                       <div className="flex items-center gap-4">
-                        <div className="flex-1 flex flex-col gap-1"><label className="text-[9px] font-black text-gray-500 uppercase ml-2">Miktar</label><input type="number" value={m.quantity} onChange={e=>setUsedMaterials(usedMaterials.map(x=>x.id===m.id?{...x, quantity:Number(e.target.value)}:x))} className="w-full bg-gray-800 p-4 rounded-2xl text-lg font-black text-white outline-none border border-gray-700 focus:border-teal-500 text-center" min="1" /></div>
-                        <div className="flex-1 flex flex-col gap-1"><label className="text-[9px] font-black text-gray-500 uppercase ml-2">Birim</label><select value={m.unit} onChange={e=>setUsedMaterials(usedMaterials.map(x=>x.id===m.id?{...x, unit:e.target.value}:x))} className="w-full bg-gray-800 p-4 rounded-2xl text-sm font-black text-white outline-none border border-gray-700 uppercase"><option value="Adet">Adet</option><option value="Litre">Litre</option><option value="Kg">Kg</option><option value="Metre">Metre</option></select></div>
+                        <div className="flex-1 flex flex-col gap-1"><label className="text-[9px] font-black text-gray-500 uppercase ml-2">Miktar</label><input type="number" value={m.quantity} onChange={e=>setUsedMaterials(usedMaterials.map(x=>x.id===m.id?{...x, quantity:Number(e.target.value)}:x))} className="w-full bg-gray-800 p-4 rounded-2xl text-lg font-black text-white border border-gray-700 text-center" min="1" /></div>
+                        <div className="flex-1 flex flex-col gap-1"><label className="text-[9px] font-black text-gray-500 uppercase ml-2">Birim</label><select value={m.unit} onChange={e=>setUsedMaterials(usedMaterials.map(x=>x.id===m.id?{...x, unit:e.target.value}:x))} className="w-full bg-gray-800 p-4 rounded-2xl text-sm font-black text-white border border-gray-700 uppercase"><option value="Adet">Adet</option><option value="Litre">Litre</option><option value="Kg">Kg</option><option value="Metre">Metre</option></select></div>
                       </div>
                     </div>
                   ))}
@@ -231,7 +256,7 @@ function DashboardIcerik() {
                 <div className="bg-teal-900/20 p-7 rounded-[35px] text-center border border-teal-500/20 shadow-inner font-black uppercase tracking-widest"><p className="text-[10px] font-black text-teal-500 mb-1">Müdahale Süresi</p><h2 className="text-4xl">{hesaplananSure} DK</h2></div>
                 <div>
                   <div className="flex justify-between items-center mb-3"><label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">İşlem Detayları</label><button type="button" onClick={sesliYazimBaslat} className={`px-5 py-2 rounded-2xl text-[10px] font-black transition-all ${isDictating?'bg-red-600 animate-pulse shadow-lg shadow-red-600/20':'bg-gray-800 text-teal-400 hover:bg-gray-700'}`}>🎙️ SESLE YAZDIR</button></div>
-                  <textarea {...register("aciklama")} rows={4} className="w-full bg-gray-800 border-gray-700 rounded-[30px] p-6 text-sm text-white outline-none focus:ring-1 ring-teal-500" placeholder="Açıklama..." />
+                  <textarea {...register("aciklama")} rows={4} className="w-full bg-gray-800 border-gray-700 rounded-[30px] p-6 text-sm text-white focus:ring-1 ring-teal-500 outline-none" placeholder="Çözümü yazın..." />
                 </div>
                 <button type="submit" disabled={isSubmitting} className="w-full bg-orange-600 hover:bg-orange-500 text-white font-black py-5 rounded-[45px] shadow-2xl transition-all uppercase tracking-widest text-sm">Raporu Kaydet</button>
               </form>
@@ -240,15 +265,15 @@ function DashboardIcerik() {
         </div>
       </div>
 
-      {/* VAKA DETAY MODALI */}
+      {/* VAKA MODAL */}
       {showVakaModal && selectedVaka && (
         <div className="fixed inset-0 bg-black/95 backdrop-blur-md flex justify-center items-center z-[1000] p-4 font-sans">
           <div className="bg-gray-900 border border-gray-800 p-8 md:p-12 rounded-[50px] w-full max-w-2xl shadow-3xl relative overflow-hidden">
              <div className={`absolute top-0 left-0 w-full h-2 ${selectedVaka.ekipmanAdi === "KAR devreye alma" ? "bg-red-600 shadow-2xl" : "bg-indigo-600 shadow-2xl"}`}></div>
-             <h2 className="text-2xl font-black text-white mb-8 uppercase tracking-widest tracking-[0.2em]">Bildirim Detay Raporu</h2>
+             <h2 className="text-2xl font-black text-white mb-8 uppercase tracking-widest tracking-[0.2em]">Vaka Detay Raporu</h2>
              <div className="grid grid-cols-2 gap-8 mb-8 border-b border-gray-800 pb-8 uppercase font-black">
-                <div><p className="text-[9px] text-gray-500 mb-1 tracking-widest">Konum</p><p className="text-sm text-gray-200">{selectedVaka.hatAdi} / {selectedVaka.ekipmanAdi}</p></div>
-                <div><p className="text-[9px] text-gray-500 mb-1 tracking-widest">Zaman</p><p className="text-sm text-gray-200">{selectedVaka.kayitTarihi?.toDate().toLocaleString('tr-TR')}</p></div>
+                <div><p className="text-[9px] text-gray-500 mb-1 tracking-widest">Konum</p><p className="text-sm text-gray-200 uppercase">{selectedVaka.hatAdi} / {selectedVaka.ekipmanAdi}</p></div>
+                <div><p className="text-[9px] text-gray-500 mb-1 tracking-widest">Zaman</p><p className="text-sm text-gray-200 tracking-widest">{selectedVaka.kayitTarihi?.toDate().toLocaleString('tr-TR')}</p></div>
              </div>
              <div className="bg-black/40 p-6 rounded-3xl border border-gray-800 mb-10 shadow-inner">
                 <p className="text-[10px] text-indigo-400 uppercase font-black mb-3 underline underline-offset-8">Açıklama Notu:</p>

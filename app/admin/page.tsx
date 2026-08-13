@@ -321,7 +321,7 @@ export default function AdminDashboard() {
            <div className="bg-gray-900 p-6 rounded-[30px] border border-red-900/30 shadow-xl"><p className="text-[10px] text-red-500 font-black mb-1">Duruş Süresi</p><h3 className="text-4xl font-black text-red-400">{kpiTotals.durus} dk</h3></div>
            <div className="bg-gray-900 p-6 rounded-[30px] border border-indigo-900/30 shadow-xl"><p className="text-[10px] text-indigo-400 font-black mb-1">MTTR</p><h3 className="text-4xl font-black text-indigo-400">{kpiTotals.mttr.toFixed(0)} dk</h3></div>
            <div onClick={() => setShowIsgModal(true)} className="bg-gray-900 p-6 rounded-[30px] border border-red-900/30 shadow-xl cursor-pointer hover:bg-gray-800 transition"><p className="text-[10px] text-red-500 font-black mb-1">İSG Alarmları</p><h3 className="text-4xl font-black text-red-400">{aktifIsgAlarmlari.length}</h3></div>
-           <div onClick={() => { setSelectedEked(e); setShowEkedModal(true); }} className="bg-gray-900 p-6 rounded-[30px] border border-yellow-900/30 shadow-xl cursor-pointer hover:bg-gray-800 transition"><p className="text-[10px] text-yellow-500 font-black mb-1">Aktif EKED</p><h3 className="text-4xl font-black text-yellow-400">{aktifEked.length}</h3></div>
+           <div onClick={() => { setSelectedEked(null); setShowEkedModal(true); }} className="bg-gray-900 p-6 rounded-[30px] border border-yellow-900/30 shadow-xl cursor-pointer hover:bg-gray-800 transition"><p className="text-[10px] text-yellow-500 font-black mb-1">Aktif EKED</p><h3 className="text-4xl font-black text-yellow-400">{aktifEked.length}</h3></div>
         </div>
 
         {/* ENERGY CHARTS (FILTERED) */}

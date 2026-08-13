@@ -25,7 +25,8 @@ export default function AdminDashboard() {
     const [aktifPmAlarmlari, setAktifPmAlarmlari] = useState<any[]>([]);
   const [aktifEked, setAktifEked] = useState<any[]>([]); // YENİ EKED STATE
   const [showEkedModal, setShowEkedModal] = useState(false);
-  const [showIsgModal, setShowIsgModal] = useState(false); // YENİ EKED MODAL STATE
+  const [showIsgModal, setShowIsgModal] = useState(false);
+  const [selectedEked, setSelectedEked] = useState<any>(null); // YENİ EKED MODAL STATE
 
   // MODALS
   const [selectedVaka, setSelectedVaka] = useState<any>(null);
@@ -264,7 +265,7 @@ export default function AdminDashboard() {
                       <p className="text-sm font-bold text-gray-100">{e.personelName}</p>
                       <p className="text-[10px] text-gray-500 font-bold">{e.tarih}</p>
                     </div>
-                    <button onClick={() => setShowEkedModal(true)} className="bg-yellow-600 text-black text-[10px] font-black px-6 py-2.5 rounded-2xl shadow-lg transition uppercase tracking-widest hover:scale-105">Detay</button>
+                    <button onClick={() => { setSelectedEked(e); setShowEkedModal(true); }} className="bg-yellow-600 text-black text-[10px] font-black px-6 py-2.5 rounded-2xl shadow-lg transition uppercase tracking-widest hover:scale-105">Detay</button>
                   </div>
                 ))}
                 {aktifEked.length === 0 && <p className="text-center py-10 text-gray-600 text-xs italic font-bold">Aktif kilitli sistem yok.</p>}
@@ -320,7 +321,7 @@ export default function AdminDashboard() {
            <div className="bg-gray-900 p-6 rounded-[30px] border border-red-900/30 shadow-xl"><p className="text-[10px] text-red-500 font-black mb-1">Duruş Süresi</p><h3 className="text-4xl font-black text-red-400">{kpiTotals.durus} dk</h3></div>
            <div className="bg-gray-900 p-6 rounded-[30px] border border-indigo-900/30 shadow-xl"><p className="text-[10px] text-indigo-400 font-black mb-1">MTTR</p><h3 className="text-4xl font-black text-indigo-400">{kpiTotals.mttr.toFixed(0)} dk</h3></div>
            <div onClick={() => setShowIsgModal(true)} className="bg-gray-900 p-6 rounded-[30px] border border-red-900/30 shadow-xl cursor-pointer hover:bg-gray-800 transition"><p className="text-[10px] text-red-500 font-black mb-1">İSG Alarmları</p><h3 className="text-4xl font-black text-red-400">{aktifIsgAlarmlari.length}</h3></div>
-           <div onClick={() => setShowEkedModal(true)} className="bg-gray-900 p-6 rounded-[30px] border border-yellow-900/30 shadow-xl cursor-pointer hover:bg-gray-800 transition"><p className="text-[10px] text-yellow-500 font-black mb-1">Aktif EKED</p><h3 className="text-4xl font-black text-yellow-400">{aktifEked.length}</h3></div>
+           <div onClick={() => { setSelectedEked(e); setShowEkedModal(true); }} className="bg-gray-900 p-6 rounded-[30px] border border-yellow-900/30 shadow-xl cursor-pointer hover:bg-gray-800 transition"><p className="text-[10px] text-yellow-500 font-black mb-1">Aktif EKED</p><h3 className="text-4xl font-black text-yellow-400">{aktifEked.length}</h3></div>
         </div>
 
         {/* ENERGY CHARTS (FILTERED) */}

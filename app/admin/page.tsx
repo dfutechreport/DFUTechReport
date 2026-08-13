@@ -320,11 +320,7 @@ export default function AdminDashboard() {
            <div className="bg-gray-900 p-6 rounded-[30px] border border-gray-800 shadow-xl"><p className="text-[10px] text-gray-500 font-black mb-1">Müdahale</p><h3 className="text-4xl font-black text-white">{kpiTotals.sure} dk</h3></div>
            <div className="bg-gray-900 p-6 rounded-[30px] border border-red-900/30 shadow-xl"><p className="text-[10px] text-red-500 font-black mb-1">Duruş Süresi</p><h3 className="text-4xl font-black text-red-400">{kpiTotals.durus} dk</h3></div>
            <div className="bg-gray-900 p-6 rounded-[30px] border border-indigo-900/30 shadow-xl"><p className="text-[10px] text-indigo-400 font-black mb-1">MTTR</p><h3 className="text-4xl font-black text-indigo-400">{kpiTotals.mttr.toFixed(0)} dk</h3></div>
-           <div onClick={() => setShowIsgModal(true)} className="bg-gray-900 p-6 rounded-[30px] border border-red-900/30 shadow-xl cursor-pointer hover:bg-gray-800 transition"><p className="text-[10px] text-red-500 font-black mb-1">İSG Alarmları</p><h3 className="text-4xl font-black text-red-400">{aktifIsgAlarmlari.length}</h3></div>
-           <div onClick={() => { setSelectedEked(null); setShowEkedModal(true); }} className="bg-gray-900 p-6 rounded-[30px] border border-yellow-900/30 shadow-xl cursor-pointer hover:bg-gray-800 transition"><p className="text-[10px] text-yellow-500 font-black mb-1">Aktif EKED</p><h3 className="text-4xl font-black text-yellow-400">{aktifEked.length}</h3></div>
-        </div>
-
-        {/* ENERGY CHARTS (FILTERED) */}
+        </div>{/* ENERGY CHARTS (FILTERED) */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
           <div className="bg-gray-900 border border-gray-800 p-6 rounded-[30px] shadow-xl">
              <h2 className="text-xs font-bold text-yellow-400 mb-4 uppercase tracking-widest underline underline-offset-8">⚡ Elektrik (kWh)</h2>

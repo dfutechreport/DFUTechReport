@@ -88,7 +88,116 @@ export default function AdminDashboard() {
       } else { window.location.href = "/"; }
       setLoading(false);
     });
-    return (
+    return () => unsubscribe();
+  }, []);
+
+  const fetchRcaData = async () => {
+    const snap = await getDocs(collection(db, "root_cause_analysis"));
+    setRcaLogs(snap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
+  };
+
+  const fetchInitialData = async () => {
+    try {
+      const wSnap = await getDocs(query(collection(db, "work_orders"), where("durum", "==", "Açık")));
+      const wData = wSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+      setAktifIsgAlarmlari(wData.filter(d => d.ekipmanAdi === "KAR devreye alma"));
+      setAktifIsler(wData.filter(d => d.ekipmanAdi !== "KAR devreye alma"));
+      setAktifPmAlarmlari(wData.filter(d => d.sorunTipi === "Planlı Bakım"));
+      const ekedSnap = await getDocs(query(collection(db, "eked_logs"), where("durum", "==", "Açık")));
+      setAktifEked(ekedSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
+
+      const logsSnap = await getDocs(collection(db, "maintenance_logs"));
+      setRawLogs(logsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
+
+      const mSnap = await getDocs(query(collection(db, "meter_logs"), orderBy("tarih", "asc")));
+      setRawMeterLogs(mSnap.docs.map(d => d.data()));
+
+      // HYBRID DISCOVERY FOR DROPDOWNS
+      const hatSet = new Set<string>();
+      const aSnap = await getDocs(collection(db, "assets"));
+      aSnap.docs.forEach(d => { if(d.data().hatAdi) hatSet.add(d.data().hatAdi); });
+      const hSnap = await getDocs(collection(db, "hatlar"));
+      hSnap.docs.forEach(d => { if(d.data().ad || d.data().name) hatSet.add(d.data().ad || d.data().name); });
+      setHatListesi(Array.from(hatSet).sort());
+
+      const yilSet = new Set<string>();
+      logsSnap.docs.forEach(l => {
+        const d = l.data().kayitTarihi?.toDate ? l.data().kayitTarihi.toDate() : new Date(l.data().kayitTarihi);
+        if(d && !isNaN(d.getTime())) yilSet.add(d.getFullYear().toString());
+      });
+      setYilListesi(Array.from(yilSet).sort());
+
+      setKpiOnayBekleyen((await getDocs(query(collection(db, "users"), where("isApproved", "==", false)))).size);
+    } catch (e) { console.error(e); }
+  };
+
+  // --- CALCULATION ENGINE ---
+  useEffect(() => {
+    if (rawLogs.length === 0) return;
+    let isC=0, suC=0, duC=0;
+    const hD:any = {}, pD:any = {}, eD:any = {}, pNames = new Set<string>();
+
+    rawLogs.forEach(l => {
+      const d = l.kayitTarihi?.toDate ? l.kayitTarihi.toDate() : new Date(l.kayitTarihi);
+      const y = d?.getFullYear().toString();
+      const a = (d?.getMonth() + 1).toString();
+      const s = Number(l.toplamSureDakika) || 0;
+
+      if ((!filterYil || y === filterYil) && (!filterAy || a === filterAy) && (!filterHat || l.hatAdi === filterHat)) {
+        isC++; suC += s;
+        hD[l.hatAdi] = (hD[l.hatAdi] || 0) + 1;
+        if(l.isDuruslu) duC += s;
+      }
+
+      const crew = Array.isArray(l.isiYapanlar) ? l.isiYapanlar : [l.bildirenKisi];
+      crew.forEach((p: string) => {
+        if(p) pNames.add(p);
+        if ((!filterYil || y === filterYil) && (!filterAy || a === filterAy) && (!filterPerfVardiya || l.vardiya === filterPerfVardiya) && (!filterPerfPersonel || p === filterPerfPersonel)) {
+          if ((filterPerfDurus === "durus" && !l.isDuruslu) || (filterPerfDurus === "normal" && l.isDuruslu)) return;
+          if (!pD[p]) pD[p] = { isSayisi: 0, eforDk: 0 };
+          pD[p].isSayisi++; pD[p].eforDk += s;
+        }
+      });
+
+      if (l.isDuruslu) {
+        if (!eD[l.ekipmanAdi]) eD[l.ekipmanAdi] = { count: 0, sure: 0 };
+        eD[l.ekipmanAdi].count++; eD[l.ekipmanAdi].sure += s;
+      }
+    });
+
+    setPersonelHavuzu(Array.from(pNames).sort());
+    setKpiTotals({ is: isC, sure: suC, durus: duC, mttr: isC > 0 ? (suC/isC) : 0 });
+    setGrafikIsHatti(Object.keys(hD).map(k=>({ isim: k, adet: hD[k] })));
+    setPersonelPerformans(Object.keys(pD).map(k=>({ isim: k, ...pD[k] })).sort((a,b)=> filterPerfSiralama === "efor" ? b.eforDk - a.eforDk : b.isSayisi - a.isSayisi));
+    setEkipmanPerformans(Object.keys(eD).map(k=>({ ekipman: k, ...eD[k] })).sort((a,b)=>b.count-a.count).slice(0, 5));
+  }, [rawLogs, filterYil, filterAy, filterHat, filterPerfVardiya, filterPerfPersonel, filterPerfSiralama, filterPerfDurus]);
+
+  useEffect(() => {
+    if (rawMeterLogs.length === 0) return;
+    const elS = new Set<string>(), gzS = new Set<string>(), suS = new Set<string>();
+    const tEl:any = {}, tGz:any = {}, tSu:any = {};
+    rawMeterLogs.forEach(l => {
+      const t = l.tip || "Elektrik";
+      if(t==="Elektrik") elS.add(l.sayacAdi); if(t==="Doğalgaz") gzS.add(l.sayacAdi); if(t==="Su") suS.add(l.sayacAdi);
+      const ay = `${l.tarih.split("-")[1]}. Ay`;
+      if(t==="Elektrik" && (!filterElekSayac || l.sayacAdi===filterElekSayac)) tEl[ay] = (tEl[ay]||0) + Number(l.deger || 0);
+      if(t==="Doğalgaz" && (!filterGazSayac || l.sayacAdi===filterGazSayac)) tGz[ay] = (tGz[ay]||0) + Number(l.deger || 0);
+      if(t==="Su" && (!filterSuSayac || l.sayacAdi===filterSuSayac)) tSu[ay] = (tSu[ay]||0) + Number(l.deger || 0);
+    });
+    setElekSayacList(Array.from(elS).sort()); setGazSayacList(Array.from(gzS).sort()); setSuSayacList(Array.from(suS).sort());
+    setGrafikElek(Object.keys(tEl).map(ay=>({ ay, tuketim: tEl[ay] })));
+    setGrafikGaz(Object.keys(tGz).map(ay=>({ ay, tuketim: tGz[ay] })));
+    setGrafikSu(Object.keys(tSu).map(ay=>({ ay, tuketim: tSu[ay] })));
+  }, [rawMeterLogs, filterElekSayac, filterGazSayac, filterSuSayac]);
+
+  const handleSaveRca = async () => {
+    if (!rcaForm.category) return alert("Seçiniz");
+    await setDoc(doc(db, "root_cause_analysis", String(selectedLogForRca.id)), { logId: selectedLogForRca.id, ekipman: selectedLogForRca.ekipmanAdi, category: rcaForm.category, why: rcaForm.why, analizEden: userName, tarih: serverTimestamp() }, { merge: true });
+    alert("Analiz Kaydedildi"); setShowRcaModal(false); fetchRcaData();
+  };
+
+  if (loading) return <div className="min-h-screen bg-gray-950 flex justify-center items-center text-teal-400 font-black animate-pulse uppercase tracking-[0.2em]">DFU SİSTEM YÜKLENİYOR...</div>;
+  if (!isAdmin) return <div className="min-h-screen bg-gray-950 text-red-500 flex justify-center items-center font-bold text-xl uppercase italic tracking-tighter">YETKİSİZ ERİŞİM!</div>;return (
     <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8 font-sans overflow-x-hidden">
       <div className="max-w-7xl mx-auto">
         

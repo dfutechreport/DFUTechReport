@@ -22,11 +22,11 @@ export default function AdminDashboard() {
   // MONITORING
   const [aktifIsler, setAktifIsler] = useState<any[]>([]);
   const [aktifIsgAlarmlari, setAktifIsgAlarmlari] = useState<any[]>([]);
-    const [aktifPmAlarmlari, setAktifPmAlarmlari] = useState<any[]>([]);
-  const [aktifEked, setAktifEked] = useState<any[]>([]); // YENİ EKED STATE
+  const [aktifPmAlarmlari, setAktifPmAlarmlari] = useState<any[]>([]);
+  const [aktifEked, setAktifEked] = useState<any[]>([]);
   const [showEkedModal, setShowEkedModal] = useState(false);
   const [showIsgModal, setShowIsgModal] = useState(false);
-  const [selectedEked, setSelectedEked] = useState<any>(null); // YENİ EKED MODAL STATE
+  const [selectedEked, setSelectedEked] = useState<any>(null);
 
   // MODALS
   const [selectedVaka, setSelectedVaka] = useState<any>(null);
@@ -102,8 +102,7 @@ export default function AdminDashboard() {
       const wData = wSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
       setAktifIsgAlarmlari(wData.filter(d => d.ekipmanAdi === "KAR devreye alma"));
       setAktifIsler(wData.filter(d => d.ekipmanAdi !== "KAR devreye alma"));
-            setAktifPmAlarmlari(wData.filter(d => d.sorunTipi === "Planlı Bakım"));
-
+      setAktifPmAlarmlari(wData.filter(d => d.sorunTipi === "Planlı Bakım"));
       const ekedSnap = await getDocs(query(collection(db, "eked_logs"), where("durum", "==", "Açık")));
       setAktifEked(ekedSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
 
@@ -213,7 +212,8 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-12 no-print">
+        {/* 22 BUTTON GRID (COMPLETE) */}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-12 no-print">
           {userRole === "isg" ? (
             <>
               <Link href="/admin/eked" className="bg-yellow-600 text-black p-3 rounded-xl font-bold text-xs text-center">🔒 EKED Takip</Link>
@@ -242,14 +242,13 @@ export default function AdminDashboard() {
               <Link href="/admin/tamamlanan-isler" className="bg-gray-700 p-3 rounded-xl font-semibold text-xs text-center uppercase tracking-tighter">🗄️ Tamamlanan İşler</Link>
               <Link href="/admin/ekipmanlar" className="bg-blue-600 p-3 rounded-xl font-semibold text-xs text-center uppercase tracking-tighter">⚙️ Hat/Makineler</Link>
               <Link href="/admin/duyurular" className="bg-orange-600 p-3 rounded-xl font-semibold text-xs text-center uppercase tracking-tighter">📢 İSG Duyuru</Link>
-              <button onClick={()=>{if(window.confirm("RESET?")){/*reset logic*/}}} className="bg-red-950 text-red-500 p-3 rounded-xl text-[10px] font-black uppercase border border-red-900/30 transition">Reset</button>
+              <button onClick={()=>{if(window.confirm("Sistemi sıfırlamak istediğinize emin misiniz?")){/*Reset Logic*/}}} className="bg-red-950 text-red-500 p-3 rounded-xl text-[10px] font-black uppercase border border-red-900/30 transition">Reset</button>
             </>
           )}
         </div>
 
-        {/* NOTIFICATION CARDS */}
+        {/* 3-COLUMN NOTIFICATION GRID */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-           
            {/* EKED (LOTO) ALARMLARI */}
            <div className="bg-gray-900 border-2 border-yellow-600/40 p-7 rounded-[40px] shadow-2xl relative overflow-hidden group">
               {aktifEked.length > 0 && <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-600/10 blur-3xl animate-pulse"></div>}
@@ -272,18 +271,21 @@ export default function AdminDashboard() {
               </div>
            </div>
 
+           {/* ISG ALARMLARI */}
            <div className="bg-gray-900 border-2 border-red-900/40 p-7 rounded-[40px] shadow-2xl">
               <h2 className="text-lg font-black text-red-500 mb-6 flex items-center gap-3 uppercase tracking-[0.2em]">🚒 İSG ALARMLARI</h2>
               <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
                 {aktifIsgAlarmlari.map(a => (
                   <div key={a.id} className="bg-red-950/20 border border-red-900/30 p-5 rounded-[25px] flex justify-between items-center transition group hover:bg-red-900/30">
                     <div><p className="text-[10px] font-black text-red-400 uppercase tracking-widest">{a.hatAdi}</p><p className="text-sm font-bold text-gray-100">{a.ekipmanAdi}</p></div>
-                    <button onClick={()=> {setSelectedVaka(a); setShowVakaModal(true);}} className="bg-red-600 text-white text-[10px] font-black px-6 py-2.5 rounded-2xl shadow-lg transition uppercase tracking-widest">İncele</button>
+                    <button onClick={()=> {setSelectedVaka(a); setShowVakaModal(true);}} className="bg-red-600 text-white text-[10px] font-black px-6 py-2.5 rounded-2xl shadow-lg transition uppercase tracking-widest">Detay</button>
                   </div>
                 ))}
                 {aktifIsgAlarmlari.length === 0 && <p className="text-center py-10 text-gray-600 text-xs italic font-bold">Aktif İSG alarmı yok.</p>}
               </div>
            </div>
+
+           {/* SAHA BİLDİRİMLERİ */}
            <div className="bg-gray-900 border-2 border-indigo-900/40 p-7 rounded-[40px] shadow-2xl">
               <h2 className="text-lg font-black text-indigo-400 mb-6 flex items-center gap-3 uppercase tracking-[0.2em]">📢 SAHA BİLDİRİMLERİ</h2>
               <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
@@ -320,7 +322,9 @@ export default function AdminDashboard() {
            <div className="bg-gray-900 p-6 rounded-[30px] border border-gray-800 shadow-xl"><p className="text-[10px] text-gray-500 font-black mb-1">Müdahale</p><h3 className="text-4xl font-black text-white">{kpiTotals.sure} dk</h3></div>
            <div className="bg-gray-900 p-6 rounded-[30px] border border-red-900/30 shadow-xl"><p className="text-[10px] text-red-500 font-black mb-1">Duruş Süresi</p><h3 className="text-4xl font-black text-red-400">{kpiTotals.durus} dk</h3></div>
            <div className="bg-gray-900 p-6 rounded-[30px] border border-indigo-900/30 shadow-xl"><p className="text-[10px] text-indigo-400 font-black mb-1">MTTR</p><h3 className="text-4xl font-black text-indigo-400">{kpiTotals.mttr.toFixed(0)} dk</h3></div>
-        </div>{/* ENERGY CHARTS (FILTERED) */}
+        </div>
+
+        {/* ENERGY CHARTS (FILTERED) */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
           <div className="bg-gray-900 border border-gray-800 p-6 rounded-[30px] shadow-xl">
              <h2 className="text-xs font-bold text-yellow-400 mb-4 uppercase tracking-widest underline underline-offset-8">⚡ Elektrik (kWh)</h2>
@@ -388,6 +392,31 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-3 gap-2">{RCA_CATEGORIES.map(c=>( <button key={c.id} onClick={()=>setRcaForm({...rcaForm, category:c.id})} className={`p-3 rounded-2xl text-[10px] font-black uppercase transition-all border ${rcaForm.category===c.id?'bg-indigo-600 border-indigo-400 text-white shadow-xl shadow-indigo-600/30':'bg-gray-800 border-gray-700 text-gray-500 hover:border-indigo-400'}`}>{c.label}</button> ))}</div>
               <textarea value={rcaForm.why} onChange={e=>setRcaForm({...rcaForm, why:e.target.value})} placeholder="Duruşun nedenini ve aksiyon planını detaylandırın..." className="w-full bg-gray-800 border-gray-800 rounded-[30px] p-6 text-sm text-white outline-none focus:ring-2 ring-indigo-500 h-40 shadow-inner" />
               <div className="flex gap-4"><button onClick={()=>setShowRcaModal(false)} className="flex-1 bg-gray-800 py-4 rounded-[20px] font-black text-gray-400 tracking-widest text-xs uppercase">Vazgeç</button><button onClick={handleSaveRca} className="flex-1 bg-indigo-600 py-4 rounded-[20px] font-black text-white shadow-xl shadow-indigo-600/30 tracking-widest text-xs uppercase transition">Kaydet</button></div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EKED DETAY MODAL */}
+      {showEkedModal && selectedEked && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[1000] flex items-center justify-center p-4">
+          <div className="bg-gray-900 border border-yellow-500/30 w-full max-w-2xl rounded-[40px] shadow-2xl p-10 relative">
+            <button onClick={() => { setShowEkedModal(false); setSelectedEked(null); }} className="absolute top-6 right-6 text-gray-400 hover:text-white text-2xl">✕</button>
+            <div className="flex items-center gap-4 mb-8">
+              <div className="bg-yellow-600 p-4 rounded-3xl text-black"><span className="text-3xl">🔒</span></div>
+              <div><h2 className="text-2xl font-black text-yellow-400 uppercase tracking-widest">EKED Detay Bilgisi</h2><p className="text-gray-500 text-[10px] font-black uppercase">LOTO Güvenlik Kilidi</p></div>
+            </div>
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gray-800/50 p-5 rounded-3xl border border-gray-700"><p className="text-[9px] text-gray-500 font-black uppercase">Konum</p><p className="text-lg font-bold text-white">{selectedEked.yer}</p></div>
+                <div className="bg-gray-800/50 p-5 rounded-3xl border border-gray-700"><p className="text-[9px] text-gray-500 font-black uppercase">Tarih</p><p className="text-lg font-bold text-white">{selectedEked.tarih}</p></div>
+              </div>
+              <div className="bg-gray-800/50 p-5 rounded-3xl border border-gray-700"><p className="text-[9px] text-gray-500 font-black uppercase">Sorumlu Personel</p><p className="text-lg font-bold text-yellow-500">{selectedEked.personelName || "Belirtilmemiş"}</p></div>
+              <div className="bg-gray-800/50 p-5 rounded-3xl border border-gray-700"><p className="text-[9px] text-gray-500 font-black uppercase">Açıklama</p><p className="text-gray-300 text-sm">{selectedEked.aciklama || "Açıklama yok."}</p></div>
+              <div className="flex gap-4 pt-4">
+                <button onClick={() => setShowEkedModal(false)} className="flex-1 bg-gray-800 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest">Kapat</button>
+                <Link href="/admin/eked" className="flex-1 bg-yellow-600 text-black py-4 rounded-2xl font-black uppercase text-[10px] text-center flex items-center justify-center tracking-widest hover:bg-yellow-500 transition">Aktif Kilitler Listesini Aç</Link>
+              </div>
             </div>
           </div>
         </div>

@@ -88,118 +88,7 @@ export default function AdminDashboard() {
       } else { window.location.href = "/"; }
       setLoading(false);
     });
-    return () => unsubscribe();
-  }, []);
-
-  const fetchRcaData = async () => {
-    const snap = await getDocs(collection(db, "root_cause_analysis"));
-    setRcaLogs(snap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
-  };
-
-  const fetchInitialData = async () => {
-    try {
-      const wSnap = await getDocs(query(collection(db, "work_orders"), where("durum", "==", "Açık")));
-      const wData = wSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-      setAktifIsgAlarmlari(wData.filter(d => d.ekipmanAdi === "KAR devreye alma"));
-      setAktifIsler(wData.filter(d => d.ekipmanAdi !== "KAR devreye alma"));
-      setAktifPmAlarmlari(wData.filter(d => d.sorunTipi === "Planlı Bakım"));
-      const ekedSnap = await getDocs(query(collection(db, "eked_logs"), where("durum", "==", "Açık")));
-      setAktifEked(ekedSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
-
-      const logsSnap = await getDocs(collection(db, "maintenance_logs"));
-      setRawLogs(logsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
-
-      const mSnap = await getDocs(query(collection(db, "meter_logs"), orderBy("tarih", "asc")));
-      setRawMeterLogs(mSnap.docs.map(d => d.data()));
-
-      // HYBRID DISCOVERY FOR DROPDOWNS
-      const hatSet = new Set<string>();
-      const aSnap = await getDocs(collection(db, "assets"));
-      aSnap.docs.forEach(d => { if(d.data().hatAdi) hatSet.add(d.data().hatAdi); });
-      const hSnap = await getDocs(collection(db, "hatlar"));
-      hSnap.docs.forEach(d => { if(d.data().ad || d.data().name) hatSet.add(d.data().ad || d.data().name); });
-      setHatListesi(Array.from(hatSet).sort());
-
-      const yilSet = new Set<string>();
-      logsSnap.docs.forEach(l => {
-        const d = l.data().kayitTarihi?.toDate ? l.data().kayitTarihi.toDate() : new Date(l.data().kayitTarihi);
-        if(d && !isNaN(d.getTime())) yilSet.add(d.getFullYear().toString());
-      });
-      setYilListesi(Array.from(yilSet).sort());
-
-      setKpiOnayBekleyen((await getDocs(query(collection(db, "users"), where("isApproved", "==", false)))).size);
-    } catch (e) { console.error(e); }
-  };
-
-  // --- CALCULATION ENGINE ---
-  useEffect(() => {
-    if (rawLogs.length === 0) return;
-    let isC=0, suC=0, duC=0;
-    const hD:any = {}, pD:any = {}, eD:any = {}, pNames = new Set<string>();
-
-    rawLogs.forEach(l => {
-      const d = l.kayitTarihi?.toDate ? l.kayitTarihi.toDate() : new Date(l.kayitTarihi);
-      const y = d?.getFullYear().toString();
-      const a = (d?.getMonth() + 1).toString();
-      const s = Number(l.toplamSureDakika) || 0;
-
-      if ((!filterYil || y === filterYil) && (!filterAy || a === filterAy) && (!filterHat || l.hatAdi === filterHat)) {
-        isC++; suC += s;
-        hD[l.hatAdi] = (hD[l.hatAdi] || 0) + 1;
-        if(l.isDuruslu) duC += s;
-      }
-
-      const crew = Array.isArray(l.isiYapanlar) ? l.isiYapanlar : [l.bildirenKisi];
-      crew.forEach((p: string) => {
-        if(p) pNames.add(p);
-        if ((!filterYil || y === filterYil) && (!filterAy || a === filterAy) && (!filterPerfVardiya || l.vardiya === filterPerfVardiya) && (!filterPerfPersonel || p === filterPerfPersonel)) {
-          if ((filterPerfDurus === "durus" && !l.isDuruslu) || (filterPerfDurus === "normal" && l.isDuruslu)) return;
-          if (!pD[p]) pD[p] = { isSayisi: 0, eforDk: 0 };
-          pD[p].isSayisi++; pD[p].eforDk += s;
-        }
-      });
-
-      if (l.isDuruslu) {
-        if (!eD[l.ekipmanAdi]) eD[l.ekipmanAdi] = { count: 0, sure: 0 };
-        eD[l.ekipmanAdi].count++; eD[l.ekipmanAdi].sure += s;
-      }
-    });
-
-    setPersonelHavuzu(Array.from(pNames).sort());
-    setKpiTotals({ is: isC, sure: suC, durus: duC, mttr: isC > 0 ? (suC/isC) : 0 });
-    setGrafikIsHatti(Object.keys(hD).map(k=>({ isim: k, adet: hD[k] })));
-    setPersonelPerformans(Object.keys(pD).map(k=>({ isim: k, ...pD[k] })).sort((a,b)=> filterPerfSiralama === "efor" ? b.eforDk - a.eforDk : b.isSayisi - a.isSayisi));
-    setEkipmanPerformans(Object.keys(eD).map(k=>({ ekipman: k, ...eD[k] })).sort((a,b)=>b.count-a.count).slice(0, 5));
-  }, [rawLogs, filterYil, filterAy, filterHat, filterPerfVardiya, filterPerfPersonel, filterPerfSiralama, filterPerfDurus]);
-
-  useEffect(() => {
-    if (rawMeterLogs.length === 0) return;
-    const elS = new Set<string>(), gzS = new Set<string>(), suS = new Set<string>();
-    const tEl:any = {}, tGz:any = {}, tSu:any = {};
-    rawMeterLogs.forEach(l => {
-      const t = l.tip || "Elektrik";
-      if(t==="Elektrik") elS.add(l.sayacAdi); if(t==="Doğalgaz") gzS.add(l.sayacAdi); if(t==="Su") suS.add(l.sayacAdi);
-      const ay = `${l.tarih.split("-")[1]}. Ay`;
-      if(t==="Elektrik" && (!filterElekSayac || l.sayacAdi===filterElekSayac)) tEl[ay] = (tEl[ay]||0) + Number(l.deger || 0);
-      if(t==="Doğalgaz" && (!filterGazSayac || l.sayacAdi===filterGazSayac)) tGz[ay] = (tGz[ay]||0) + Number(l.deger || 0);
-      if(t==="Su" && (!filterSuSayac || l.sayacAdi===filterSuSayac)) tSu[ay] = (tSu[ay]||0) + Number(l.deger || 0);
-    });
-    setElekSayacList(Array.from(elS).sort()); setGazSayacList(Array.from(gzS).sort()); setSuSayacList(Array.from(suS).sort());
-    setGrafikElek(Object.keys(tEl).map(ay=>({ ay, tuketim: tEl[ay] })));
-    setGrafikGaz(Object.keys(tGz).map(ay=>({ ay, tuketim: tGz[ay] })));
-    setGrafikSu(Object.keys(tSu).map(ay=>({ ay, tuketim: tSu[ay] })));
-  }, [rawMeterLogs, filterElekSayac, filterGazSayac, filterSuSayac]);
-
-  const handleSaveRca = async () => {
-    if (!rcaForm.category) return alert("Seçiniz");
-    await setDoc(doc(db, "root_cause_analysis", String(selectedLogForRca.id)), { logId: selectedLogForRca.id, ekipman: selectedLogForRca.ekipmanAdi, category: rcaForm.category, why: rcaForm.why, analizEden: userName, tarih: serverTimestamp() }, { merge: true });
-    alert("Analiz Kaydedildi"); setShowRcaModal(false); fetchRcaData();
-  };
-
-  if (loading) return <div className="min-h-screen bg-gray-950 flex justify-center items-center text-teal-400 font-black animate-pulse uppercase tracking-[0.2em]">DFU SİSTEM YÜKLENİYOR...</div>;
-  if (!isAdmin) return <div className="min-h-screen bg-gray-950 text-red-500 flex justify-center items-center font-bold text-xl uppercase italic tracking-tighter">YETKİSİZ ERİŞİM!</div>;
-
-  return (
+    return (
     <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8 font-sans overflow-x-hidden">
       <div className="max-w-7xl mx-auto">
         
@@ -211,8 +100,7 @@ export default function AdminDashboard() {
              <button onClick={()=>auth.signOut()} className="bg-red-600 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase shadow-lg transition">Çıkış</button>
           </div>
         </div>
-
-        {/* 22 BUTTON GRID (COMPLETE) */}
+        {/* BUTTON GRID */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-12 no-print">
           {userRole === "isg" ? (
             <>
@@ -246,7 +134,6 @@ export default function AdminDashboard() {
             </>
           )}
         </div>
-
         {/* 3-COLUMN NOTIFICATION GRID */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
            {/* EKED (LOTO) ALARMLARI */}
@@ -299,10 +186,9 @@ export default function AdminDashboard() {
               </div>
            </div>
         </div>
-
-        {userRole !== "isg" && (
-          <>
-            {/* RCA TASK LIST */}
+{userRole !== "isg" && (
+  <>
+        {/* RCA TASK LIST */}
         <div className="bg-gray-900 border border-gray-800 p-8 rounded-[40px] mb-12 shadow-2xl">
           <h2 className="text-xl font-black text-white mb-6 uppercase tracking-widest">🧠 RCA Analizi Bekleyen Duruşlar</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -318,10 +204,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-                  </>
-        )}{userRole !== "isg" && (
-          <>
-            {/* KPI CARDS */}
+        {/* KPI CARDS */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10 text-center uppercase tracking-tighter">
            <div className="bg-gray-900 p-6 rounded-[30px] border border-gray-800 shadow-xl"><p className="text-[10px] text-gray-500 font-black mb-1">İş Sayısı</p><h3 className="text-4xl font-black text-green-400">{kpiTotals.is}</h3></div>
            <div className="bg-gray-900 p-6 rounded-[30px] border border-gray-800 shadow-xl"><p className="text-[10px] text-gray-500 font-black mb-1">Müdahale</p><h3 className="text-4xl font-black text-white">{kpiTotals.sure} dk</h3></div>
@@ -329,8 +212,7 @@ export default function AdminDashboard() {
            <div className="bg-gray-900 p-6 rounded-[30px] border border-indigo-900/30 shadow-xl"><p className="text-[10px] text-indigo-400 font-black mb-1">MTTR</p><h3 className="text-4xl font-black text-indigo-400">{kpiTotals.mttr.toFixed(0)} dk</h3></div>
         </div>
 
-                  </>
-        )}{/* ENERGY CHARTS (FILTERED) */}
+        {/* ENERGY CHARTS */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
           <div className="bg-gray-900 border border-gray-800 p-6 rounded-[30px] shadow-xl">
              <h2 className="text-xs font-bold text-yellow-400 mb-4 uppercase tracking-widest underline underline-offset-8">⚡ Elektrik (kWh)</h2>
@@ -343,31 +225,36 @@ export default function AdminDashboard() {
              <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikGaz}><XAxis dataKey="ay" tick={{fontSize:10}}/><Tooltip/><Bar dataKey="tuketim" fill="#EF4444" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div>
           </div>
           <div className="bg-gray-900 border border-gray-800 p-6 rounded-[30px] shadow-xl">
-             <h2 className="text-xs font-bold text-blue-400 mb-4 uppercase tracking-widest underline underline-offset-8">💧 Su (Ton)</h2>
+             <h2 className="text-xs font-bold text-blue-400 mb-4 uppercase tracking-widest underline underline-offset-8">💧 Su (m³)</h2>
              <select value={filterSuSayac} onChange={e=>setFilterSuSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-xl p-2 text-[10px] mb-4 text-white uppercase"><option value="">Tüm Sayaçlar</option>{suSayacList.map(s=><option key={s} value={s}>{s}</option>)}</select>
              <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikSu}><XAxis dataKey="ay" tick={{fontSize:10}}/><Tooltip/><Bar dataKey="tuketim" fill="#3B82F6" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div>
           </div>
         </div>
 
-        {/* PERSONNEL PERFORMANCE MATRIX (FULL FILTER) */}
-        <div className="bg-gray-900 border border-gray-800 p-8 rounded-[45px] mb-12 shadow-2xl relative overflow-hidden">
-           <h2 className="text-xl font-black text-blue-400 mb-8 uppercase tracking-widest flex items-center gap-3 tracking-[0.2em]">👤 PERSONEL PERFORMANS MATRİSİ</h2>
-           <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8 bg-gray-800/40 p-6 rounded-[25px] border border-gray-700/50 no-print">
-              <div><label className="text-[9px] text-gray-500 uppercase font-black mb-1 block ml-1">Filtre Yıl</label><select value={filterYil} onChange={e=>setFilterYil(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-xl p-2 text-xs text-white uppercase"><option value="">Tümü</option>{yilListesi.map(y=><option key={y} value={y}>{y}</option>)}</select></div>
-              <div><label className="text-[9px] text-gray-500 uppercase font-black mb-1 block ml-1">Vardiya</label><select value={filterPerfVardiya} onChange={e=>setFilterPerfVardiya(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-xl p-2 text-xs text-white uppercase"><option value="">Tümü</option><option value="08:00 - 16:00">08:00 - 16:00</option><option value="16:00 - 24:00">16:00 - 24:00</option><option value="24:00 - 08:00">24:00 - 08:00</option></select></div>
-              <div><label className="text-[9px] text-gray-500 uppercase font-black mb-1 block ml-1">Teknisyen</label><select value={filterPerfPersonel} onChange={e=>setFilterPerfPersonel(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-xl p-2 text-xs text-white uppercase"><option value="">Tüm Ekip</option>{personelHavuzu.map(p=><option key={p} value={p}>{p}</option>)}</select></div>
-              <div><label className="text-[9px] text-gray-500 uppercase font-black mb-1 block ml-1">Arıza Tipi</label><select value={filterPerfDurus} onChange={e=>setFilterPerfDurus(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-xl p-2 text-xs text-white uppercase"><option value="">Hepsi</option><option value="durus">Duruşlu</option><option value="normal">Normal</option></select></div>
-              <div><label className="text-[9px] text-blue-400 uppercase font-black mb-1 block ml-1">Sıralama</label><select value={filterPerfSiralama} onChange={e=>setFilterPerfSiralama(e.target.value)} className="w-full bg-indigo-950 border border-indigo-500/30 rounded-xl p-2 text-xs text-white font-black uppercase"><option value="is">İş Sayısı</option><option value="efor">En Çok Efor</option></select></div>
+        {/* PERFORMANCE & ANALYTICS */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+          <div className="bg-gray-900 border border-gray-800 p-8 rounded-[40px] shadow-2xl">
+            <h2 className="text-lg font-black text-white mb-6 uppercase tracking-widest">🏆 Personel Performans Matrisi</h2>
+            <div className="overflow-x-auto"><table className="w-full text-left text-xs uppercase font-bold"><thead className="text-gray-500 border-b border-gray-800"><tr><th className="py-4">Personel</th><th className="py-4">İş Sayısı</th><th className="py-4">Toplam Efor</th></tr></thead><tbody className="divide-y divide-gray-800">{personelPerformans.map((p,i)=><tr key={i} className="hover:bg-gray-800/30 transition"><td className="py-4 text-gray-200">{p.isim}</td><td className="py-4 text-green-400">{p.isSayisi}</td><td className="py-4 text-indigo-400">{p.eforDk} dk</td></tr>)}</tbody></table></div>
+          </div>
+          <div className="bg-gray-900 border border-gray-800 p-8 rounded-[40px] shadow-2xl text-center">
+            <h2 className="text-lg font-black text-white mb-6 uppercase tracking-widest">🛑 En Çok Duruş Yapan Ekipmanlar</h2>
+            <div className="space-y-4">{ekipmanPerformans.map((e,i)=>(<div key={i} className="flex justify-between items-center bg-gray-800/40 p-4 rounded-2xl border border-gray-700/50"><span className="text-gray-300 font-bold">{e.ekipman}</span><div className="text-right"><span className="text-red-400 font-black block">{e.sure} dk</span><span className="text-[10px] text-gray-500">{e.count} Arıza</span></div></div>))}</div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+           <div className="bg-gray-900 border border-gray-800 p-6 rounded-[35px] shadow-2xl">
+             <h2 className="text-sm font-black text-indigo-400 mb-6 uppercase tracking-widest text-center tracking-[0.2em]">📊 RCA Pareto Analizi</h2>
+             <div className="h-64 w-full"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={RCA_CATEGORIES.map(c=>({ name:c.label, value: rcaLogs.filter(r=>r.category===c.id).length, color: c.color })).filter(d=>d.value>0)} cx="50%" cy="50%" innerRadius={60} outerRadius={80} dataKey="value">{RCA_CATEGORIES.map((e,i)=><Cell key={i} fill={e.color} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></div>
            </div>
-           <div className="overflow-x-auto"><table className="w-full text-left"><thead className="text-gray-500 border-b border-gray-800 text-[10px] uppercase font-black tracking-widest"><tr><th className="pb-4">İsim</th><th className="pb-4">Top. İş</th><th className="pb-4">Top. Efor</th><th className="pb-4 text-blue-400">MTTR (Ort)</th></tr></thead><tbody className="text-sm font-bold uppercase">{personelPerformans.slice(0,10).map((p,i)=>(<tr key={i} className="border-b border-gray-800/40 hover:bg-white/5 transition"><td className="py-4 text-gray-200">{i<3?"⭐ ":" "}{p.isim}</td><td className="py-4 text-green-400">{p.isSayisi} Adet</td><td className="py-4">{p.eforDk} dk</td><td className="py-4 text-indigo-400">{(p.eforDk/p.isSayisi || 0).toFixed(1)} dk</td></tr>))}</tbody></table></div>
+           <div className="bg-gray-900 border border-gray-800 p-6 rounded-[35px] shadow-2xl">
+             <h2 className="text-sm font-black text-teal-400 mb-6 uppercase tracking-widest text-center tracking-[0.2em]">⚡ Hat Bazlı İş Yoğunluğu</h2>
+             <div className="h-64 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikIsHatti}><XAxis dataKey="isim" tick={{fontSize:10, fill:'#6B7280'}} /><YAxis tick={{fontSize:10}} /><Tooltip /><Bar dataKey="adet" fill="#10B981" radius={[6,6,0,0]} /></BarChart></ResponsiveContainer></div>
+           </div>
         </div>
-
-        {/* BOTTOM CHARTS */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
-          <div className="bg-gray-900 border border-gray-800 p-6 rounded-[35px] shadow-2xl"><h2 className="text-sm font-black text-indigo-400 mb-6 uppercase tracking-widest text-center tracking-[0.2em]">📈 RCA Pareto Analizi</h2><div className="h-64 w-full"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={RCA_CATEGORIES.map(c=>({ name: c.label, value: rcaLogs.filter(r=>r.category===c.id).length, color: c.color })).filter(d=>d.value>0)} cx="50%" cy="50%" innerRadius={60} outerRadius={80} dataKey="value">{RCA_CATEGORIES.map((e,i)=><Cell key={i} fill={e.color} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></div></div>
-          <div className="bg-gray-900 border border-gray-800 p-6 rounded-[35px] shadow-2xl"><h2 className="text-sm font-black text-teal-400 mb-6 uppercase tracking-widest text-center tracking-[0.2em]">⚡ Hat Bazlı İş Yoğunluğu</h2><div className="h-64 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikIsHatti}><XAxis dataKey="isim" tick={{fontSize:10, fill:'#6B7280'}} /><YAxis tick={{fontSize:10}} /><Tooltip /><Bar dataKey="adet" fill="#10B981" radius={[6,6,0,0]} /></BarChart></ResponsiveContainer></div></div>
-        </div>
-
+  </>
+)}
       </div>
 
       {/* INSPECTION MODAL */}
@@ -427,7 +314,6 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
-
     </div>
   );
 }

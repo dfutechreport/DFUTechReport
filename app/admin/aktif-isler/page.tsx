@@ -80,10 +80,20 @@ export default function AktifIslerListesi() {
             </h1>
             <p className="text-gray-400 mt-1">Üretimden veya yönetimden gelen, müdahale bekleyen tüm işlerin listesi.</p>
           </div>
-          {/* YENİ: Yönlendirme Düzeltildi */}
-          <Link href={userRole === "uretim" || userRole === "admin" || userRole === "operator" ? "/admin" : "/dashboard"} className="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm transition">
-            ← Ana Ekrana Dön
-          </Link>
+                    <div className="flex flex-wrap gap-2">
+            {(userRole === "teknisyen" || userRole === "operator") && (
+              <>
+                <Link href="/dashboard/kontrol-formlari" className="bg-cyan-700 hover:bg-cyan-600 px-4 py-2 rounded-lg text-xs font-bold transition">✅ Kontrol Formları</Link>
+                <Link href="/dashboard/periyodik-bakim" className="bg-emerald-700 hover:bg-emerald-600 px-4 py-2 rounded-lg text-xs font-bold transition">🛠️ Manuel PM</Link>
+                <Link href="/admin/eked" className="bg-yellow-600 hover:bg-yellow-500 text-black px-4 py-2 rounded-lg text-xs font-bold transition">🔒 EKED Uygula</Link>
+                <Link href="/dashboard/pano-listesi" className="bg-indigo-700 hover:bg-indigo-600 px-4 py-2 rounded-lg text-xs font-bold transition">🔌 Pano Temizliği</Link>
+                <Link href="/dashboard/sayac" className="bg-blue-700 hover:bg-blue-600 px-4 py-2 rounded-lg text-xs font-bold transition">⚡ Sayaç Okuma</Link>
+              </>
+            )}
+            <Link href={userRole === "uretim" || userRole === "admin" || userRole === "operator" ? "/admin" : "/dashboard"} className="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm transition">
+              ← Ana Ekrana Dön
+            </Link>
+          </div>
         </div>
 
         <div className="bg-gray-900 border-2 border-red-900/50 p-4 md:p-6 rounded-xl shadow-2xl overflow-x-auto">

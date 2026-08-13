@@ -22,7 +22,9 @@ export default function AdminDashboard() {
   // MONITORING
   const [aktifIsler, setAktifIsler] = useState<any[]>([]);
   const [aktifIsgAlarmlari, setAktifIsgAlarmlari] = useState<any[]>([]);
-  const [aktifPmAlarmlari, setAktifPmAlarmlari] = useState<any[]>([]);
+    const [aktifPmAlarmlari, setAktifPmAlarmlari] = useState<any[]>([]);
+  const [aktifEked, setAktifEked] = useState<any[]>([]); // YENİ EKED STATE
+  const [showEkedModal, setShowEkedModal] = useState(false); // YENİ EKED MODAL STATE
 
   // MODALS
   const [selectedVaka, setSelectedVaka] = useState<any>(null);
@@ -98,7 +100,10 @@ export default function AdminDashboard() {
       const wData = wSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
       setAktifIsgAlarmlari(wData.filter(d => d.ekipmanAdi === "KAR devreye alma"));
       setAktifIsler(wData.filter(d => d.ekipmanAdi !== "KAR devreye alma"));
-      setAktifPmAlarmlari(wData.filter(d => d.sorunTipi === "Planlı Bakım"));
+            setAktifPmAlarmlari(wData.filter(d => d.sorunTipi === "Planlı Bakım"));
+
+      const ekedSnap = await getDocs(query(collection(db, "eked_logs"), where("durum", "==", "Açık")));
+      setAktifEked(ekedSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
 
       const logsSnap = await getDocs(collection(db, "maintenance_logs"));
       setRawLogs(logsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
@@ -280,6 +285,7 @@ export default function AdminDashboard() {
            <div className="bg-gray-900 p-6 rounded-[30px] border border-gray-800 shadow-xl"><p className="text-[10px] text-gray-500 font-black mb-1">Müdahale</p><h3 className="text-4xl font-black text-white">{kpiTotals.sure} dk</h3></div>
            <div className="bg-gray-900 p-6 rounded-[30px] border border-red-900/30 shadow-xl"><p className="text-[10px] text-red-500 font-black mb-1">Duruş Süresi</p><h3 className="text-4xl font-black text-red-400">{kpiTotals.durus} dk</h3></div>
            <div className="bg-gray-900 p-6 rounded-[30px] border border-indigo-900/30 shadow-xl"><p className="text-[10px] text-indigo-400 font-black mb-1">MTTR</p><h3 className="text-4xl font-black text-indigo-400">{kpiTotals.mttr.toFixed(0)} dk</h3></div>
+           <div onClick={() => setShowEkedModal(true)} className="bg-gray-900 p-6 rounded-[30px] border border-yellow-900/30 shadow-xl cursor-pointer hover:bg-gray-800 transition"><p className="text-[10px] text-yellow-500 font-black mb-1">Aktif EKED</p><h3 className="text-4xl font-black text-yellow-400">{aktifEked.length}</h3></div>
         </div>
 
         {/* ENERGY CHARTS (FILTERED) */}

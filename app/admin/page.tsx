@@ -265,7 +265,7 @@ export default function AdminDashboard() {
                       <p className="text-sm font-bold text-gray-100">{e.personelName}</p>
                       <p className="text-[10px] text-gray-500 font-bold">{e.tarih}</p>
                     </div>
-                    <button onClick={() => { setSelectedEked(e); setShowEkedModal(true); }} className="bg-yellow-600 text-black text-[10px] font-black px-6 py-2.5 rounded-2xl shadow-lg transition uppercase tracking-widest hover:scale-105">Detay</button>
+                    <button onClick={() => { setSelectedEked(e); setShowEkedModal(true); }} className="bg-yellow-600 text-black text-[10px] font-black px-6 py-2.5 rounded-2xl shadow-lg transition uppercase tracking-widest hover:scale-105">İncele</button>
                   </div>
                 ))}
                 {aktifEked.length === 0 && <p className="text-center py-10 text-gray-600 text-xs italic font-bold">Aktif kilitli sistem yok.</p>}

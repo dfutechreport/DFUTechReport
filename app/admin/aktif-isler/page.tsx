@@ -33,10 +33,16 @@ export default function AktifIslerListesi() {
       if (user) {
         const userRef = doc(db, "users", user.uid);
         const userSnap = await getDoc(userRef);
-        if (userSnap.exists() && userSnap.data().isApproved) {
-          setUserRole(userSnap.data().role);
-          setUserName(userSnap.data().name);
-          fetchOrders();
+                if (userSnap.exists() && userSnap.data().isApproved) {
+          const role = userSnap.data().role;
+          // ERİŞİM KISITLAMASI: Sadece admin, teknisyen ve operator girebilir.
+          if (["admin", "teknisyen", "operator"].includes(role)) {
+            setUserRole(role);
+            setUserName(userSnap.data().name);
+            fetchOrders();
+          } else {
+            window.location.href = "/dashboard"; 
+          }
         } else window.location.href = "/";
       } else window.location.href = "/";
     });
@@ -80,18 +86,17 @@ export default function AktifIslerListesi() {
             </h1>
             <p className="text-gray-400 mt-1">Üretimden veya yönetimden gelen, müdahale bekleyen tüm işlerin listesi.</p>
           </div>
-                    <div className="flex flex-wrap gap-2">
-            {(userRole === "teknisyen" || userRole === "operator") && (
-              <>
-                <Link href="/dashboard/kontrol-formlari" className="bg-cyan-700 hover:bg-cyan-600 px-4 py-2 rounded-lg text-xs font-bold transition">✅ Kontrol Formları</Link>
-                <Link href="/dashboard/periyodik-bakim" className="bg-emerald-700 hover:bg-emerald-600 px-4 py-2 rounded-lg text-xs font-bold transition">🛠️ Manuel PM</Link>
-                <Link href="/admin/eked" className="bg-yellow-600 hover:bg-yellow-500 text-black px-4 py-2 rounded-lg text-xs font-bold transition">🔒 EKED Uygula</Link>
-                <Link href="/dashboard/pano-listesi" className="bg-indigo-700 hover:bg-indigo-600 px-4 py-2 rounded-lg text-xs font-bold transition">🔌 Pano Temizliği</Link>
-                <Link href="/dashboard/sayac" className="bg-blue-700 hover:bg-blue-600 px-4 py-2 rounded-lg text-xs font-bold transition">⚡ Sayaç Okuma</Link>
-              </>
-            )}
-            <Link href={userRole === "uretim" || userRole === "admin" || userRole === "operator" ? "/admin" : "/dashboard"} className="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm transition">
-              ← Ana Ekrana Dön
+          {/* YENİ: Yönlendirme Düzeltildi */}
+                    <div className="flex flex-wrap gap-2 items-center">
+            {/* TEKNİK NAVİGASYON BUTONLARI */}
+            <Link href="/dashboard/kontrol-formlari" className="bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-lg">✅ Kontrol Formları</Link>
+            <Link href="/dashboard/periyodik-bakim" className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-lg">🛠️ Manuel PM</Link>
+            <Link href="/admin/eked" className="bg-yellow-600 hover:bg-yellow-500 text-black px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-lg">🔒 EKED Uygula</Link>
+            <Link href="/dashboard/pano-listesi" className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-lg">🔌 Pano Temizliği</Link>
+            <Link href="/dashboard/sayac" className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-lg">⚡ Sayaç Okuma</Link>
+            
+            <Link href={userRole === "admin" || userRole === "operator" ? "/admin" : "/dashboard"} className="bg-gray-800 hover:bg-gray-700 text-gray-300 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition border border-gray-700 ml-2">
+              ← Geri
             </Link>
           </div>
         </div>

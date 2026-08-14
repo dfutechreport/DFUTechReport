@@ -159,7 +159,29 @@ function DashboardIcerik() {
       await setDoc(doc(collection(db, "maintenance_logs")), cleanData);
       for (const mat of materials) {
         const part = allSpareParts.find(p => String(p.id).toUpperCase() === mat.stockCode.toUpperCase() || (p.stokKodu && String(p.stokKodu).toUpperCase() === mat.stockCode.toUpperCase()));
-        if (part?.id) { await updateDoc(doc(db, "spare_parts", part.id), { mevcutMiktar: increment(-mat.quantity) }); }
+        if (part?.id) { 
+          const yeniMiktar = (Number(part.mevcutMiktar) || 0) - Number(mat.quantity);
+          await updateDoc(doc(db, "spare_parts", part.id), { mevcutMiktar: yeniMiktar }); 
+          
+          // KRİTİK STOK MAİL TETİKLEYİCİ
+          if (yeniMiktar <= 2) {
+            try {
+              await fetch('/api/send-mail', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  parcaAdi: part.parcaAdi,
+                  stokKodu: part.stokKodu || part.id,
+                  kalanStok: yeniMiktar,
+                  birim: part.birim || "Adet",
+                  teknisyen: userName || "Teknisyen",
+                  hat: formData.hatAdi || "Genel",
+                  ekipman: formData.ekipmanAdi || "Genel"
+                }),
+              });
+            } catch (mailErr) { console.error("Kritik stok maili gönderilemedi:", mailErr); }
+          }
+        }
       }
       if (formData.linkedOrderId) { await updateDoc(doc(db, "work_orders", formData.linkedOrderId), { durum: "Kapalı", tamamlayan: userName, tamamlanmaTarihi: serverTimestamp() }); }
       alert("Rapor Kaydedildi."); window.location.reload();

@@ -24,7 +24,8 @@ if (typeof window !== "undefined") {
   enableMultiTabIndexedDbPersistence(db).catch((err) => {
     console.warn("Firebase Persistence Error:", err.code);
   });
-}''',
+}
+''',
     "app/admin/page.tsx": r'''"use client";
 import { useEffect, useState } from "react";
 import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, writeBatch, setDoc, serverTimestamp } from "firebase/firestore";
@@ -820,26 +821,7 @@ export default function YedekParcaYonetimi() {
         await initialSync();
       } else { window.location.href = "/"; }
     });
-      const handleExcelIndir = () => {
-    try {
-      const dataToExport = yedekParcalar.map(p => ({
-        "Stok Kodu": p.stokKodu || p.id,
-        "Parça Adı": p.parcaAdi || "-",
-        "Mevcut Miktar": p.mevcutMiktar || 0,
-        "Birim": p.birim || "Adet",
-        "Durum": (Number(p.mevcutMiktar) <= 2) ? "KRİTİK" : "NORMAL"
-      }));
-
-      const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Güncel Stok");
-      XLSX.writeFile(workbook, `DFU_Guncel_Stok_Listesi_${new Date().toISOString().split('T')[0]}.xlsx`);
-    } catch (error) {
-      alert("Excel oluşturulurken hata oluştu.");
-    }
-  };
-
-  return () => unsubscribe();
+    return () => unsubscribe();
   }, []);
 
   const initialSync = async () => {
@@ -949,9 +931,39 @@ export default function YedekParcaYonetimi() {
 
   if (loading) return <div className="min-h-screen bg-gray-950 flex justify-center items-center text-teal-400 font-black animate-pulse">SİSTEM VERİLERİ SENKRONİZE EDİLİYOR...</div>;
 
-  return (
+  
+  const handleExcelIndir = () => {
+    try {
+      const dataToExport = yedekParcalar.map(p => ({
+        "Stok Kodu": p.stokKodu || p.id,
+        "Parça Adı": p.parcaAdi || "-",
+        "Mevcut Miktar": p.mevcutMiktar || 0,
+        "Birim": p.birim || "Adet",
+        "Durum": (Number(p.mevcutMiktar) <= 2) ? "KRİTİK" : "NORMAL"
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Güncel Stok");
+      XLSX.writeFile(workbook, `DFU_Master_Stok_Listesi_${new Date().toISOString().split('T')[0]}.xlsx`);
+    } catch (error) {
+      alert("Excel dökümü alınırken bir hata oluştu.");
+    }
+  };
+
+return (
     <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8 font-sans overflow-x-hidden">
       <div className="max-w-7xl mx-auto">
+        {/* EXCEL INDIRME BUTONU - SAYFA BASI KESIN KONUM */}
+        <div className="flex justify-end mb-6 no-print pt-4">
+          <button 
+            onClick={handleExcelIndir} 
+            className="bg-emerald-600 hover:bg-emerald-500 text-white px-10 py-5 rounded-[25px] text-xs font-black uppercase tracking-[0.2em] transition-all shadow-[0_20px_50px_rgba(16,185,129,0.3)] flex items-center gap-3 border-2 border-emerald-400/20 active:scale-95"
+          >
+            <span className="text-2xl">📊</span> GÜNCEL MASTER STOK LİSTESİNİ İNDİR (EXCEL)
+          </button>
+        </div>
+
         <div className="flex justify-between items-center mb-8 border-b border-gray-800 pb-6 no-print">
            <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-10 bg-white p-1 rounded" /><h1 className="text-xl font-black uppercase tracking-tighter">Yedek Parça & Depo Denetimi</h1></div>
            <Link href="/admin" className="bg-gray-800 text-[10px] font-black px-5 py-3 rounded-2xl border border-gray-700 hover:bg-gray-700 transition">Geri Dön</Link>
@@ -1175,7 +1187,7 @@ export default function AktifIslerListesi() {
 }'''
 }
 
-print("--- DFU TECH REPORT MASTER GÜNCELLEME (EXCEL KONUM DÜZELTİLDİ) ---")
+print("--- DFU TECH REPORT MASTER GÜNCELLEME (EXCEL BUTONU KESİN ÇÖZÜM) ---")
 for path, content in files_to_update.items():
     try:
         os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -1185,4 +1197,4 @@ for path, content in files_to_update.items():
     except Exception as e:
         print(f"[HATA] {path} güncellenemedi: {e}")
 
-print("\nİşlem tamamlandı. Excel butonu artık Yedek Parça sayfasının en üstünde görünür durumdadır.")
+print("\nİşlem başarıyla tamamlandı. Excel butonu sayfanın EN ÜSTÜNE (Header üstüne) yerleştirildi.")

@@ -24,8 +24,7 @@ if (typeof window !== "undefined") {
   enableMultiTabIndexedDbPersistence(db).catch((err) => {
     console.warn("Firebase Persistence Error:", err.code);
   });
-}
-''',
+}''',
     "app/admin/page.tsx": r'''"use client";
 import { useEffect, useState } from "react";
 import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, writeBatch, setDoc, serverTimestamp } from "firebase/firestore";
@@ -828,7 +827,6 @@ export default function YedekParcaYonetimi() {
         "Parça Adı": p.parcaAdi || "-",
         "Mevcut Miktar": p.mevcutMiktar || 0,
         "Birim": p.birim || "Adet",
-        "Kritik Seviye": 2,
         "Durum": (Number(p.mevcutMiktar) <= 2) ? "KRİTİK" : "NORMAL"
       }));
 
@@ -837,7 +835,6 @@ export default function YedekParcaYonetimi() {
       XLSX.utils.book_append_sheet(workbook, worksheet, "Güncel Stok");
       XLSX.writeFile(workbook, `DFU_Guncel_Stok_Listesi_${new Date().toISOString().split('T')[0]}.xlsx`);
     } catch (error) {
-      console.error(error);
       alert("Excel oluşturulurken hata oluştu.");
     }
   };
@@ -1178,7 +1175,7 @@ export default function AktifIslerListesi() {
 }'''
 }
 
-print("--- DFU TECH REPORT MASTER GÜNCELLEME SİSTEMİ (FIXED) ---")
+print("--- DFU TECH REPORT MASTER GÜNCELLEME (EXCEL KONUM DÜZELTİLDİ) ---")
 for path, content in files_to_update.items():
     try:
         os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -1188,4 +1185,4 @@ for path, content in files_to_update.items():
     except Exception as e:
         print(f"[HATA] {path} güncellenemedi: {e}")
 
-print("\nİşlem tamamlandı. Excel indirme hatası giderildi.")
+print("\nİşlem tamamlandı. Excel butonu artık Yedek Parça sayfasının en üstünde görünür durumdadır.")

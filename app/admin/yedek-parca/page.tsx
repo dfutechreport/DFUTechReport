@@ -36,7 +36,6 @@ export default function YedekParcaYonetimi() {
         "Parça Adı": p.parcaAdi || "-",
         "Mevcut Miktar": p.mevcutMiktar || 0,
         "Birim": p.birim || "Adet",
-        "Kritik Seviye": 2,
         "Durum": (Number(p.mevcutMiktar) <= 2) ? "KRİTİK" : "NORMAL"
       }));
 
@@ -45,7 +44,6 @@ export default function YedekParcaYonetimi() {
       XLSX.utils.book_append_sheet(workbook, worksheet, "Güncel Stok");
       XLSX.writeFile(workbook, `DFU_Guncel_Stok_Listesi_${new Date().toISOString().split('T')[0]}.xlsx`);
     } catch (error) {
-      console.error(error);
       alert("Excel oluşturulurken hata oluştu.");
     }
   };

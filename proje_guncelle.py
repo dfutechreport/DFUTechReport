@@ -821,7 +821,28 @@ export default function YedekParcaYonetimi() {
         await initialSync();
       } else { window.location.href = "/"; }
     });
-    return () => unsubscribe();
+      const handleExcelIndir = () => {
+    try {
+      const dataToExport = yedekParcalar.map(p => ({
+        "Stok Kodu": p.stokKodu || p.id,
+        "Parça Adı": p.parcaAdi || "-",
+        "Mevcut Miktar": p.mevcutMiktar || 0,
+        "Birim": p.birim || "Adet",
+        "Kritik Seviye": 2,
+        "Durum": (Number(p.mevcutMiktar) <= 2) ? "KRİTİK" : "NORMAL"
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Güncel Stok");
+      XLSX.writeFile(workbook, `DFU_Guncel_Stok_Listesi_${new Date().toISOString().split('T')[0]}.xlsx`);
+    } catch (error) {
+      console.error(error);
+      alert("Excel oluşturulurken hata oluştu.");
+    }
+  };
+
+  return () => unsubscribe();
   }, []);
 
   const initialSync = async () => {
@@ -1157,10 +1178,9 @@ export default function AktifIslerListesi() {
 }'''
 }
 
-print("--- DFU TECH REPORT GÜNCELLEME SİSTEMİ ---")
+print("--- DFU TECH REPORT MASTER GÜNCELLEME SİSTEMİ (FIXED) ---")
 for path, content in files_to_update.items():
     try:
-        # Klasör yolunu kontrol et
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "w", encoding="utf-8") as f:
             f.write(content.strip())
@@ -1168,4 +1188,4 @@ for path, content in files_to_update.items():
     except Exception as e:
         print(f"[HATA] {path} güncellenemedi: {e}")
 
-print("\nİşlem tamamlandı. Şimdi 'git add .' komutunu çalıştırabilirsiniz.")
+print("\nİşlem tamamlandı. Excel indirme hatası giderildi.")

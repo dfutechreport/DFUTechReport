@@ -31,7 +31,7 @@ export default function YedekParcaYonetimi() {
     });
       const handleExcelIndir = () => {
     try {
-      const dataToExport = spareParts.map(p => ({
+      const dataToExport = yedekParcalar.map(p => ({
         "Stok Kodu": p.stokKodu || p.id,
         "Parça Adı": p.parcaAdi || "-",
         "Mevcut Miktar": p.mevcutMiktar || 0,

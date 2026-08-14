@@ -934,13 +934,16 @@ export default function YedekParcaYonetimi() {
   
   const handleExcelIndir = () => {
     try {
-      const dataToExport = yedekParcalar.map(p => ({
-        "Stok Kodu": p.stokKodu || p.id,
-        "Parça Adı": p.parcaAdi || "-",
-        "Mevcut Miktar": p.mevcutMiktar || 0,
-        "Birim": p.birim || "Adet",
-        "Durum": (Number(p.mevcutMiktar) <= 2) ? "KRİTİK" : "NORMAL"
-      }));
+      // 'pasif' kelimesi içeren parçaları filtreleyerek listeyi oluşturuyoruz
+      const dataToExport = yedekParcalar
+        .filter(p => !p.parcaAdi?.toLowerCase().includes("pasif"))
+        .map(p => ({
+          "Stok Kodu": p.stokKodu || p.id,
+          "Parça Adı": p.parcaAdi || "-",
+          "Mevcut Miktar": p.mevcutMiktar || 0,
+          "Birim": p.birim || "Adet",
+          "Durum": (Number(p.mevcutMiktar) <= 2) ? "KRİTİK" : "NORMAL"
+        }));
 
       const worksheet = XLSX.utils.json_to_sheet(dataToExport);
       const workbook = XLSX.utils.book_new();
@@ -1187,7 +1190,7 @@ export default function AktifIslerListesi() {
 }'''
 }
 
-print("--- DFU TECH REPORT MASTER GÜNCELLEME (EXCEL BUTONU KESİN ÇÖZÜM) ---")
+print("--- DFU TECH REPORT MASTER GÜNCELLEME (PASİF FİLTRESİ EKLENDİ) ---")
 for path, content in files_to_update.items():
     try:
         os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -1197,4 +1200,4 @@ for path, content in files_to_update.items():
     except Exception as e:
         print(f"[HATA] {path} güncellenemedi: {e}")
 
-print("\nİşlem başarıyla tamamlandı. Excel butonu sayfanın EN ÜSTÜNE (Header üstüne) yerleştirildi.")
+print("\nİşlem tamamlandı. Artık Excel dökümünde 'pasif' malzemeler görünmeyecek.")

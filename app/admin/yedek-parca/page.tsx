@@ -142,13 +142,16 @@ export default function YedekParcaYonetimi() {
   
   const handleExcelIndir = () => {
     try {
-      const dataToExport = yedekParcalar.map(p => ({
-        "Stok Kodu": p.stokKodu || p.id,
-        "Parça Adı": p.parcaAdi || "-",
-        "Mevcut Miktar": p.mevcutMiktar || 0,
-        "Birim": p.birim || "Adet",
-        "Durum": (Number(p.mevcutMiktar) <= 2) ? "KRİTİK" : "NORMAL"
-      }));
+      // 'pasif' kelimesi içeren parçaları filtreleyerek listeyi oluşturuyoruz
+      const dataToExport = yedekParcalar
+        .filter(p => !p.parcaAdi?.toLowerCase().includes("pasif"))
+        .map(p => ({
+          "Stok Kodu": p.stokKodu || p.id,
+          "Parça Adı": p.parcaAdi || "-",
+          "Mevcut Miktar": p.mevcutMiktar || 0,
+          "Birim": p.birim || "Adet",
+          "Durum": (Number(p.mevcutMiktar) <= 2) ? "KRİTİK" : "NORMAL"
+        }));
 
       const worksheet = XLSX.utils.json_to_sheet(dataToExport);
       const workbook = XLSX.utils.book_new();

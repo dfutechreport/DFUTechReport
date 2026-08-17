@@ -159,7 +159,29 @@ function DashboardIcerik() {
       await setDoc(doc(collection(db, "maintenance_logs")), cleanData);
       for (const mat of materials) {
         const part = allSpareParts.find(p => String(p.id).toUpperCase() === mat.stockCode.toUpperCase() || (p.stokKodu && String(p.stokKodu).toUpperCase() === mat.stockCode.toUpperCase()));
-        if (part?.id) { await updateDoc(doc(db, "spare_parts", part.id), { mevcutMiktar: increment(-mat.quantity) }); }
+        if (part?.id) { 
+          const yeniMiktar = (Number(part.mevcutMiktar) || 0) - Number(mat.quantity);
+          await updateDoc(doc(db, "spare_parts", part.id), { mevcutMiktar: yeniMiktar }); 
+          
+          // KRİTİK STOK MAİL TETİKLEYİCİ
+          if (yeniMiktar <= 2) {
+            try {
+              await fetch('/api/send-mail', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  parcaAdi: part.parcaAdi,
+                  stokKodu: part.stokKodu || part.id,
+                  kalanStok: yeniMiktar,
+                  birim: part.birim || "Adet",
+                  teknisyen: userName || "Teknisyen",
+                  hat: formData.hatAdi || "Genel",
+                  ekipman: formData.ekipmanAdi || "Genel"
+                }),
+              });
+            } catch (mailErr) { console.error("Kritik stok maili gönderilemedi:", mailErr); }
+          }
+        }
       }
       if (formData.linkedOrderId) { await updateDoc(doc(db, "work_orders", formData.linkedOrderId), { durum: "Kapalı", tamamlayan: userName, tamamlanmaTarihi: serverTimestamp() }); }
       alert("Rapor Kaydedildi."); window.location.reload();
@@ -175,7 +197,7 @@ function DashboardIcerik() {
       <div className="w-64 h-1.5 bg-gray-800 rounded-full overflow-hidden mb-4 shadow-inner">
         <div className="h-full bg-gradient-to-r from-yellow-600 via-yellow-400 to-yellow-600 w-full animate-[loading_1.5s_infinite_ease-in-out] origin-left"></div>
       </div>
-      <p className="text-teal-400 font-black tracking-[0.3em] text-[10px] uppercase animate-pulse">SİSTEM VERİLERİ SENKRONİZE EDİLYOR...</p>
+      <p className="text-teal-400 font-black tracking-[0.3em] text-[10px] uppercase animate-pulse">{`SİSTEM VERİLERİ SENKRONİZE EDİLİYOR...`}</p>
       <style jsx>{`
         @keyframes loading {
           0% { transform: translateX(-100%); }
@@ -194,6 +216,12 @@ function DashboardIcerik() {
            <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-10 bg-white p-1 rounded" /><div><p className="text-sm font-black text-teal-400 uppercase tracking-tighter">{userName}</p></div></div>
            <div className="flex flex-wrap gap-2">
              {(userRole === "admin" || userRole === "operator") && (<Link href="/admin" className="bg-gray-800 text-[10px] font-black px-4 py-2.5 rounded-xl border border-gray-700 uppercase transition tracking-widest">Admin Panel</Link>)}
+             
+             <Link href="/dashboard/kontrol-formlari" className="bg-cyan-600 text-white text-[10px] font-black px-4 py-2.5 rounded-xl shadow-lg uppercase transition tracking-widest hover:bg-cyan-500">✅ Kontrol Formları</Link>
+             <Link href="/dashboard/periyodik-bakim" className="bg-emerald-600 text-white text-[10px] font-black px-4 py-2.5 rounded-xl shadow-lg uppercase transition tracking-widest hover:bg-emerald-500">🛠️ Manuel PM</Link>
+             <Link href="/admin/eked" className="bg-yellow-600 text-black text-[10px] font-black px-4 py-2.5 rounded-xl shadow-lg uppercase transition tracking-widest hover:bg-yellow-500">🔒 EKED Uygula</Link>
+             <Link href="/dashboard/pano-listesi" className="bg-indigo-600 text-white text-[10px] font-black px-4 py-2.5 rounded-xl shadow-lg uppercase transition tracking-widest hover:bg-indigo-500">🔌 Pano Temizliği</Link>
+             <Link href="/dashboard/sayac" className="bg-blue-600 text-white text-[10px] font-black px-4 py-2.5 rounded-xl shadow-lg uppercase transition tracking-widest hover:bg-blue-500">⚡ Sayaç Okuma</Link>
              <Link href="/dashboard/mesai" className="bg-amber-600 text-white text-[10px] font-black px-4 py-2.5 rounded-xl shadow-lg uppercase transition tracking-widest">Mesai Yaz</Link>
              <Link href="/admin/mesai" className="bg-gray-800 text-white text-[10px] font-black px-4 py-2.5 rounded-xl border border-gray-700 uppercase transition tracking-widest">Mesailerim</Link>
              <button onClick={()=>auth.signOut()} className="bg-red-900/30 text-red-500 text-[10px] font-black px-4 py-2.5 rounded-xl border border-red-900/30 transition">ÇIKIŞ</button>

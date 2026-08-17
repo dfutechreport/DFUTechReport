@@ -156,7 +156,7 @@ export default function LoginPage() {
       <div className="w-64 h-1.5 bg-gray-800 rounded-full overflow-hidden mb-4 shadow-inner">
         <div className="h-full bg-gradient-to-r from-yellow-600 via-yellow-400 to-yellow-600 w-full animate-[loading_1.5s_infinite_ease-in-out] origin-left"></div>
       </div>
-      <p className="text-teal-400 font-black tracking-[0.3em] text-[10px] uppercase animate-pulse">SİSTEM BAŞLATILIYOR...</p>
+      <p className="text-teal-400 font-black tracking-[0.3em] text-[10px] uppercase animate-pulse">{`SİSTEM BAŞLATILIYOR...`}</p>
       <style jsx>{`
         @keyframes loading {
           0% { transform: translateX(-100%); }

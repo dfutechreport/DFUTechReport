@@ -33,10 +33,16 @@ export default function AktifIslerListesi() {
       if (user) {
         const userRef = doc(db, "users", user.uid);
         const userSnap = await getDoc(userRef);
-        if (userSnap.exists() && userSnap.data().isApproved) {
-          setUserRole(userSnap.data().role);
-          setUserName(userSnap.data().name);
-          fetchOrders();
+                if (userSnap.exists() && userSnap.data().isApproved) {
+          const role = userSnap.data().role;
+          // ERİŞİM KISITLAMASI: Sadece admin, teknisyen ve operator girebilir.
+          if (["admin", "teknisyen", "operator"].includes(role)) {
+            setUserRole(role);
+            setUserName(userSnap.data().name);
+            fetchOrders();
+          } else {
+            window.location.href = "/dashboard"; 
+          }
         } else window.location.href = "/";
       } else window.location.href = "/";
     });
@@ -72,7 +78,7 @@ export default function AktifIslerListesi() {
       <div className="w-64 h-1.5 bg-gray-800 rounded-full overflow-hidden mb-4 shadow-inner">
         <div className="h-full bg-gradient-to-r from-yellow-600 via-yellow-400 to-yellow-600 w-full animate-[loading_1.5s_infinite_ease-in-out] origin-left"></div>
       </div>
-      <p className="text-teal-400 font-black tracking-[0.3em] text-[10px] uppercase animate-pulse">AKTİF İŞLER LİSTELENİYOR...</p>
+      <p className="text-teal-400 font-black tracking-[0.3em] text-[10px] uppercase animate-pulse">{`AKTİF İŞLER LİSTELENİYOR...`}</p>
       <style jsx>{`
         @keyframes loading {
           0% { transform: translateX(-100%); }
@@ -98,9 +104,18 @@ export default function AktifIslerListesi() {
             <p className="text-gray-400 mt-1">Üretimden veya yönetimden gelen, müdahale bekleyen tüm işlerin listesi.</p>
           </div>
           {/* YENİ: Yönlendirme Düzeltildi */}
-          <Link href={userRole === "uretim" || userRole === "admin" || userRole === "operator" ? "/admin" : "/dashboard"} className="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm transition">
-            ← Ana Ekrana Dön
-          </Link>
+                    <div className="flex flex-wrap gap-2 items-center">
+            {/* TEKNİK NAVİGASYON BUTONLARI */}
+            <Link href="/dashboard/kontrol-formlari" className="bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-lg">✅ Kontrol Formları</Link>
+            <Link href="/dashboard/periyodik-bakim" className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-lg">🛠️ Manuel PM</Link>
+            <Link href="/admin/eked" className="bg-yellow-600 hover:bg-yellow-500 text-black px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-lg">🔒 EKED Uygula</Link>
+            <Link href="/dashboard/pano-listesi" className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-lg">🔌 Pano Temizliği</Link>
+            <Link href="/dashboard/sayac" className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-lg">⚡ Sayaç Okuma</Link>
+            
+            <Link href={userRole === "admin" || userRole === "operator" ? "/admin" : "/dashboard"} className="bg-gray-800 hover:bg-gray-700 text-gray-300 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition border border-gray-700 ml-2">
+              ← Geri
+            </Link>
+          </div>
         </div>
 
         <div className="bg-gray-900 border-2 border-red-900/50 p-4 md:p-6 rounded-xl shadow-2xl overflow-x-auto">

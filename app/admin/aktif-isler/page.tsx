@@ -79,7 +79,7 @@ export default function AktifIslerListesi() {
       <div className="w-80 h-0.5 bg-slate-900 rounded-full overflow-hidden mb-6 relative">
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-400 to-transparent w-full animate-[scan_2s_infinite_ease-in-out]"></div>
       </div>
-      <p className="text-slate-500 font-black tracking-[0.5em] text-[10px] uppercase animate-pulse">{`SCANNING ALERT GRIDS...`}</p>
+      <p className="text-slate-500 font-black tracking-[0.5em] text-[10px] uppercase animate-pulse">{`SCANNING ACTIVE ALERT GRIDS...`}</p>
       <style jsx>{` @keyframes scan { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } } `}</style>
     </div>
   );

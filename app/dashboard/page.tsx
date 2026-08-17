@@ -198,7 +198,7 @@ function DashboardIcerik() {
       <div className="w-80 h-0.5 bg-slate-900 rounded-full overflow-hidden mb-6 relative">
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-400 to-transparent w-full animate-[scan_2s_infinite_ease-in-out]"></div>
       </div>
-      <p className="text-slate-500 font-black tracking-[0.5em] text-[10px] uppercase animate-pulse">{`SYNCING MISSION DATA...`}</p>
+      <p className="text-slate-500 font-black tracking-[0.5em] text-[10px] uppercase animate-pulse">{`SYNCHRONIZING GLOBAL MISSION DATA...`}</p>
       <style jsx>{` @keyframes scan { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } } `}</style>
     </div>
   );
@@ -213,12 +213,12 @@ function DashboardIcerik() {
            <div className="flex flex-wrap gap-2">
              {(userRole === "admin" || userRole === "operator") && (<Link href="/admin" className="bg-gray-800 text-[10px] font-black px-4 py-2.5 rounded-xl border border-gray-700 uppercase transition tracking-widest">Admin Panel</Link>)}
              
-             <Link href="/dashboard/kontrol-formlari" className="bg-cyan-600 text-white text-[10px] font-black px-4 py-2.5 rounded-xl shadow-lg uppercase transition tracking-widest hover:bg-cyan-500">✅ Kontrol Formları</Link>
-             <Link href="/dashboard/periyodik-bakim" className="bg-emerald-600 text-white text-[10px] font-black px-4 py-2.5 rounded-xl shadow-lg uppercase transition tracking-widest hover:bg-emerald-500">🛠️ Manuel PM</Link>
-             <Link href="/admin/eked" className="bg-yellow-600 text-black text-[10px] font-black px-4 py-2.5 rounded-xl shadow-lg uppercase transition tracking-widest hover:bg-yellow-500">🔒 EKED Uygula</Link>
-             <Link href="/dashboard/pano-listesi" className="bg-indigo-600 text-white text-[10px] font-black px-4 py-2.5 rounded-xl shadow-lg uppercase transition tracking-widest hover:bg-indigo-500">🔌 Pano Temizliği</Link>
-             <Link href="/dashboard/sayac" className="bg-blue-600 text-white text-[10px] font-black px-4 py-2.5 rounded-xl shadow-lg uppercase transition tracking-widest hover:bg-blue-500">⚡ Sayaç Okuma</Link>
-             <Link href="/dashboard/mesai" className="bg-amber-600 text-white text-[10px] font-black px-4 py-2.5 rounded-xl shadow-lg uppercase transition tracking-widest">Mesai Yaz</Link>
+             <Link href="/dashboard/kontrol-formlari" className="bg-cyan-600 text-white text-[10px] font-black px-4 py-2.5 rounded-3xl shadow-2xl transition-transform active:scale-95 uppercase transition tracking-widest hover:bg-cyan-500">✅ Kontrol Formları</Link>
+             <Link href="/dashboard/periyodik-bakim" className="bg-emerald-600 text-white text-[10px] font-black px-4 py-2.5 rounded-3xl shadow-2xl transition-transform active:scale-95 uppercase transition tracking-widest hover:bg-emerald-500">🛠️ Manuel PM</Link>
+             <Link href="/admin/eked" className="bg-yellow-600 text-black text-[10px] font-black px-4 py-2.5 rounded-3xl shadow-2xl transition-transform active:scale-95 uppercase transition tracking-widest hover:bg-yellow-500">🔒 EKED Uygula</Link>
+             <Link href="/dashboard/pano-listesi" className="bg-indigo-600 text-white text-[10px] font-black px-4 py-2.5 rounded-3xl shadow-2xl transition-transform active:scale-95 uppercase transition tracking-widest hover:bg-indigo-500">🔌 Pano Temizliği</Link>
+             <Link href="/dashboard/sayac" className="bg-blue-600 text-white text-[10px] font-black px-4 py-2.5 rounded-3xl shadow-2xl transition-transform active:scale-95 uppercase transition tracking-widest hover:bg-blue-500">⚡ Sayaç Okuma</Link>
+             <Link href="/dashboard/mesai" className="bg-amber-600 text-white text-[10px] font-black px-4 py-2.5 rounded-3xl shadow-2xl transition-transform active:scale-95 uppercase transition tracking-widest">Mesai Yaz</Link>
              <Link href="/admin/mesai" className="bg-gray-800 text-white text-[10px] font-black px-4 py-2.5 rounded-xl border border-gray-700 uppercase transition tracking-widest">Mesailerim</Link>
              <button onClick={()=>auth.signOut()} className="bg-red-900/30 text-red-500 text-[10px] font-black px-4 py-2.5 rounded-xl border border-red-900/30 transition">ÇIKIŞ</button>
            </div>
@@ -228,7 +228,7 @@ function DashboardIcerik() {
           {/* SOL PANEL (İZLEME) */}
           <div className="lg:col-span-1 space-y-8">
             {isgAlarmlari.length > 0 && (
-              <div className="bg-red-950/40 border-2 border-red-600 p-6 rounded-[3rem] shadow-2xl animate-pulse">
+              <div className="bg-red-950/40 border-2 border-red-600 p-6 rounded-[35px] shadow-2xl animate-pulse">
                 <h3 className="text-red-500 font-black text-xs uppercase mb-5 tracking-widest flex items-center gap-2 tracking-tighter">⚠️ KRİTİK İSG</h3>
                 {isgAlarmlari.map(a => (
                   <div key={a.id} className="bg-black/40 p-4 rounded-2xl mb-3 border border-red-900/50 flex justify-between items-center group">
@@ -270,8 +270,8 @@ function DashboardIcerik() {
                 </div>
 
                 {/* --- MALZEME SARFİYATI: V83 ZIRHLI TASARIM --- */}
-                <div className="bg-gray-800/20 border border-gray-800 p-6 rounded-[3rem] space-y-6 shadow-inner">
-                  <div className="flex justify-between items-center mb-2"><h3 className="text-[11px] font-black text-gray-500 uppercase tracking-widest">⚙️ Malzeme Sarfiyat Listesi</h3><button type="button" onClick={()=>setUsedMaterials([...usedMaterials, { id: Date.now(), stockCode: "", name: "Kod Bekleniyor", stock: "-", quantity: 1, unit: "Adet" }])} className="bg-teal-600 hover:bg-teal-500 text-[10px] font-black px-4 py-2 rounded-xl shadow-lg shadow-teal-600/20 transition">+ EKLE</button></div>
+                <div className="bg-gray-800/20 border border-gray-800 p-6 rounded-[35px] space-y-6 shadow-inner">
+                  <div className="flex justify-between items-center mb-2"><h3 className="text-[11px] font-black text-gray-500 uppercase tracking-widest">⚙️ Malzeme Sarfiyat Listesi</h3><button type="button" onClick={()=>setUsedMaterials([...usedMaterials, { id: Date.now(), stockCode: "", name: "Kod Bekleniyor", stock: "-", quantity: 1, unit: "Adet" }])} className="bg-teal-600 hover:bg-teal-500 text-[10px] font-black px-4 py-2 rounded-3xl shadow-2xl transition-transform active:scale-95 shadow-teal-600/20 transition">+ EKLE</button></div>
                   
                   {usedMaterials.map(m => (
                     <div key={m.id} className="bg-black/30 p-5 rounded-[30px] border border-gray-700/50 space-y-4 animate-fadeIn transition-all shadow-xl">
@@ -307,7 +307,7 @@ function DashboardIcerik() {
                   ))}
                 </div>
 
-                <div className="bg-teal-900/20 p-7 rounded-[3rem] text-center border border-teal-500/20 shadow-inner font-black uppercase"><p className="text-[10px] font-black text-teal-500 mb-1">Müdahale Süresi</p><h2 className="text-4xl text-white">{hesaplananSure} DK</h2></div>
+                <div className="bg-teal-900/20 p-7 rounded-[35px] text-center border border-teal-500/20 shadow-inner font-black uppercase"><p className="text-[10px] font-black text-teal-500 mb-1">Müdahale Süresi</p><h2 className="text-4xl text-white">{hesaplananSure} DK</h2></div>
                 
                 {/* --- AÇIKLAMA VE SESLE YAZDIR --- */}
                 <div>

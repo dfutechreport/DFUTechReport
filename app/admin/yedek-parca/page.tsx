@@ -29,7 +29,24 @@ export default function YedekParcaYonetimi() {
         await initialSync();
       } else { window.location.href = "/"; }
     });
-    return () => unsubscribe();
+      const handleExcelIndir = () => {
+    try {
+      const dataToExport = yedekParcalar
+        .filter(p => !p.parcaAdi?.toLowerCase().includes("pasif"))
+        .map(p => ({
+          "Stok Kodu": p.stokKodu || p.id,
+          "Parça Adı": p.parcaAdi || "-",
+          "Mevcut Miktar": p.mevcutMiktar || 0,
+          "Birim": p.birim || "Adet",
+          "Durum": (Number(p.mevcutMiktar) <= 2) ? "KRİTİK" : "NORMAL"
+        }));
+      const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Güncel Stok");
+      XLSX.writeFile(workbook, `DFU_Master_Stok_${new Date().toISOString().split('T')[0]}.xlsx`);
+    } catch (error) { alert("Excel Hatası"); }
+  };
+  return () => unsubscribe();
   }, []);
 
   const initialSync = async () => {
@@ -58,7 +75,24 @@ export default function YedekParcaYonetimi() {
         setKalanSure(`${h}s ${m}d ${s}sn`);
       }
     }, 1000);
-    return () => clearInterval(interval);
+      const handleExcelIndir = () => {
+    try {
+      const dataToExport = yedekParcalar
+        .filter(p => !p.parcaAdi?.toLowerCase().includes("pasif"))
+        .map(p => ({
+          "Stok Kodu": p.stokKodu || p.id,
+          "Parça Adı": p.parcaAdi || "-",
+          "Mevcut Miktar": p.mevcutMiktar || 0,
+          "Birim": p.birim || "Adet",
+          "Durum": (Number(p.mevcutMiktar) <= 2) ? "KRİTİK" : "NORMAL"
+        }));
+      const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Güncel Stok");
+      XLSX.writeFile(workbook, `DFU_Master_Stok_${new Date().toISOString().split('T')[0]}.xlsx`);
+    } catch (error) { alert("Excel Hatası"); }
+  };
+  return () => clearInterval(interval);
   }, [lastUploadTime]);
 
   const handleSmartLookup = () => {
@@ -156,8 +190,7 @@ export default function YedekParcaYonetimi() {
     </div>
   );
 
-  
-  const handleExcelIndir = () => {
+    const handleExcelIndir = () => {
     try {
       const dataToExport = yedekParcalar
         .filter(p => !p.parcaAdi?.toLowerCase().includes("pasif"))
@@ -168,29 +201,16 @@ export default function YedekParcaYonetimi() {
           "Birim": p.birim || "Adet",
           "Durum": (Number(p.mevcutMiktar) <= 2) ? "KRİTİK" : "NORMAL"
         }));
-
       const worksheet = XLSX.utils.json_to_sheet(dataToExport);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Güncel Stok");
-      XLSX.writeFile(workbook, `DFU_Master_Stok_Listesi_${new Date().toISOString().split('T')[0]}.xlsx`);
-    } catch (error) {
-      alert("Excel dökümü alınırken bir hata oluştu.");
-    }
+      XLSX.writeFile(workbook, `DFU_Master_Stok_${new Date().toISOString().split('T')[0]}.xlsx`);
+    } catch (error) { alert("Excel Hatası"); }
   };
-
-return (
+  return (
     <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8 font-sans overflow-x-hidden">
       <div className="max-w-7xl mx-auto">
-        {/* EXCEL INDIRME BUTONU - SAYFA BASI KESIN KONUM */}
-        <div className="flex justify-end mb-6 no-print pt-4">
-          <button 
-            onClick={handleExcelIndir} 
-            className="bg-emerald-600 hover:bg-emerald-500 text-white px-10 py-5 rounded-[25px] text-xs font-black uppercase tracking-[0.2em] transition-all shadow-[0_20px_50px_rgba(16,185,129,0.3)] flex items-center gap-3 border-2 border-emerald-400/20 active:scale-95"
-          >
-            <span className="text-2xl">📊</span> GÜNCEL MASTER STOK LİSTESİNİ İNDİR (EXCEL)
-          </button>
-        </div>
-
+        <div className="flex justify-end mb-6 no-print pt-4"><button onClick={handleExcelIndir} className="bg-emerald-600 hover:bg-emerald-500 text-white px-10 py-5 rounded-[25px] text-xs font-black uppercase tracking-[0.2em] transition-all shadow-[0_20px_50px_rgba(16,185,129,0.3)] flex items-center gap-3 border-2 border-emerald-400/20 active:scale-95"><span className="text-2xl">📊</span> GÜNCEL MASTER STOK LİSTESİNİ İNDİR (EXCEL)</button></div>
         <div className="flex justify-between items-center mb-8 border-b border-gray-800 pb-6 no-print">
            <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-10 bg-white p-1 rounded" /><h1 className="text-xl font-black uppercase tracking-tighter">Yedek Parça & Depo Denetimi</h1></div>
            <Link href="/admin" className="bg-gray-800 text-[10px] font-black px-5 py-3 rounded-2xl border border-gray-700 hover:bg-gray-700 transition">Geri Dön</Link>
@@ -244,7 +264,7 @@ return (
                     <tr key={i} className="border-b border-gray-800/40 hover:bg-white/5 transition">
                       <td className="py-4 px-2 text-gray-500">{m.tarih}</td>
                       <td className="py-4 text-teal-400">{m.makine}</td>
-                      <td className="py-4 text-gray-200">{m.name}</td>
+                      <td className="py-4 text-gray-200">{(!m.name || m.name.toUpperCase() === "ORIJINAL KAYIT") ? (yedekParcalar.find(p => (p.stokKodu && p.stokKodu === m.stockCode) || p.id === m.stockCode)?.parcaAdi || m.stockCode) : m.name}</td>
                       <td className="py-4 text-center text-white font-black tracking-widest">{m.quantity} {m.unit}</td>
                       <td className="py-4 text-right px-4 text-gray-500 font-normal italic">{m.personel}</td>
                     </tr>

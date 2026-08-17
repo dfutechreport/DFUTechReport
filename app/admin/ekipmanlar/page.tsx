@@ -126,7 +126,7 @@ export default function EkipmanYonetimi() {
         
         <div className="flex justify-between items-center mb-10 border-b border-gray-800 pb-5">
           <div>
-            <h1 className="text-3xl font-bold">Hat ve Ekipman Yönetimi</h1>
+            <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-10 md:h-12 bg-white p-1 rounded shadow-sm" alt="DFU" /><h1 className="text-3xl font-bold">Hat ve Ekipman Yönetimi</h1></div>
             <p className="text-gray-400 mt-1"><span className="font-bold text-gray-300">DFU Donuk Fırıncılık Ürünleri A.Ş.</span> | Varlık Tanımlama Merkezi</p>
           </div>
           <Link href="/admin" className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium transition">

@@ -46,7 +46,7 @@ export default function DuyuruYonetimi() {
     <div className="min-h-screen bg-gray-950 text-white p-8">
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-8 border-b border-gray-800 pb-4">
-          <h1 className="text-3xl font-bold text-yellow-500">Duyuru Yönetimi</h1>
+          <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-10 md:h-12 bg-white p-1 rounded shadow-sm" alt="DFU" /><h1 className="text-3xl font-bold text-yellow-500">Duyuru Yönetimi</h1></div>
           <Link href="/admin" className="bg-gray-800 px-4 py-2 rounded-lg hover:bg-gray-700 transition">← Dashboard</Link>
         </div>
 

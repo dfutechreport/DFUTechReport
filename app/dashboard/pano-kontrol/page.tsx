@@ -81,7 +81,24 @@ function PanoKontrolIcerik() {
     }
   };
 
-  if (loading) return <div className="min-h-screen bg-gray-950 text-white flex justify-center items-center">Yükleniyor...</div>;
+  if (loading) return (
+    <div className="min-h-screen bg-gray-950 flex flex-col justify-center items-center p-4">
+      <div className="relative mb-8">
+        <div className="absolute inset-0 bg-yellow-500/20 blur-3xl rounded-full animate-pulse"></div>
+        <img src="/dfulogo.png" className="h-24 w-auto relative z-10 animate-bounce" alt="DFU" />
+      </div>
+      <div className="w-64 h-1.5 bg-gray-800 rounded-full overflow-hidden mb-4 shadow-inner">
+        <div className="h-full bg-gradient-to-r from-yellow-600 via-yellow-400 to-yellow-600 w-full animate-[loading_1.5s_infinite_ease-in-out] origin-left"></div>
+      </div>
+      <p className="text-teal-400 font-black tracking-[0.3em] text-[10px] uppercase animate-pulse">{`YÜKLENİYOR...`}</p>
+      <style jsx>{`
+        @keyframes loading {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+      `}</style>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8">

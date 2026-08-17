@@ -142,7 +142,6 @@ export default function YedekParcaYonetimi() {
   
   const handleExcelIndir = () => {
     try {
-      // 'pasif' kelimesi içeren parçaları filtreleyerek listeyi oluşturuyoruz
       const dataToExport = yedekParcalar
         .filter(p => !p.parcaAdi?.toLowerCase().includes("pasif"))
         .map(p => ({

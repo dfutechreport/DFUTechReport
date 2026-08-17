@@ -171,7 +171,20 @@ export default function YedekParcaYonetimi() {
     document.body.removeChild(link);
   };
 
-  if (loading) return <div className="min-h-screen bg-gray-950 flex justify-center items-center text-teal-400 font-black animate-pulse">SİSTEM VERİLERİ SENKRONİZE EDİLİYOR...</div>;
+  if (loading) return (
+    <div className="min-h-screen bg-[#020617] flex flex-col justify-center items-center overflow-hidden">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_rgba(30,58,138,0.15),_transparent_70%)]"></div>
+      <div className="relative mb-12">
+        <div className="absolute inset-0 bg-yellow-500/10 blur-[100px] rounded-full animate-pulse"></div>
+        <img src="/dfulogo.png" className="h-32 w-auto relative z-10 animate-bounce" alt="DFU" />
+      </div>
+      <div className="w-80 h-0.5 bg-slate-900 rounded-full overflow-hidden mb-6 relative">
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-400 to-transparent w-full animate-[scan_2s_infinite_ease-in-out]"></div>
+      </div>
+      <p className="text-slate-500 font-black tracking-[0.5em] text-[10px] uppercase animate-pulse">CORE INVENTORY ONLINE...</p>
+      <style jsx>{` @keyframes scan { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } } `}</style>
+    </div>
+  );
 
     const handleExcelIndir = () => {
     try {
@@ -191,7 +204,7 @@ export default function YedekParcaYonetimi() {
     } catch (error) { alert("Excel Hatası"); }
   };
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8 font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-[#020617] text-white p-4 md:p-8 font-sans overflow-x-hidden">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-end mb-6 no-print pt-4"><button onClick={handleExcelIndir} className="bg-emerald-600 hover:bg-emerald-500 text-white px-10 py-5 rounded-[25px] text-xs font-black uppercase tracking-[0.2em] transition-all shadow-[0_20px_50px_rgba(16,185,129,0.3)] flex items-center gap-3 border-2 border-emerald-400/20 active:scale-95"><span className="text-2xl">📊</span> GÜNCEL MASTER STOK LİSTESİNİ İNDİR (EXCEL)</button></div>
         <div className="flex justify-between items-center mb-8 border-b border-gray-800 pb-6 no-print">
@@ -199,7 +212,7 @@ export default function YedekParcaYonetimi() {
            <Link href="/admin" className="bg-gray-800 text-[10px] font-black px-5 py-3 rounded-2xl border border-gray-700 hover:bg-gray-700 transition">Geri Dön</Link>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10 no-print">
-           <div className="bg-gray-900/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-all duration-500 hover:border-indigo-500/30 p-10 shadow-2xl relative overflow-hidden">
+           <div className="bg-gray-900 border-2 border-indigo-500/20 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-lg font-black text-indigo-400 uppercase tracking-widest">📥 Master Stok Excel Güncelleme</h2>
                 {timeLeft && <span className="bg-red-900/30 text-red-500 px-4 py-2 rounded-xl text-[10px] font-black border border-red-900/40 animate-pulse">Kilit: {timeLeft}</span>}
@@ -213,7 +226,7 @@ export default function YedekParcaYonetimi() {
                 <div className="py-10 text-center bg-black/20 rounded-3xl border border-dashed border-gray-800 text-gray-500 font-bold uppercase tracking-widest text-xs">Son Yüklemeden Sonra 24 Saat Beklenmelidir.</div>
               )}
            </div>
-           <div className="bg-gray-900 border-2 border-teal-500/20 p-8 rounded-[40px] shadow-2xl relative overflow-hidden">
+           <div className="bg-gray-900 border-2 border-teal-500/20 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden">
               <h2 className="text-lg font-black text-teal-400 mb-6 uppercase tracking-widest">🔍 Hızlı Stok Sorgulama</h2>
               <div className="flex gap-2 mb-8">
                 <input type="text" placeholder="Kod veya Malzeme Adı..." value={smartSearchQuery} onChange={e=>setSmartSearchQuery(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleSmartLookup()} className="flex-1 bg-gray-800 border border-gray-700 rounded-2xl p-5 text-sm font-bold" />

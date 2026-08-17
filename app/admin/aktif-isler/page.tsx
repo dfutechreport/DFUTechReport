@@ -69,10 +69,23 @@ export default function AktifIslerListesi() {
     try { await deleteDoc(doc(db, "work_orders", id)); fetchOrders(); } catch (error) { alert("Hata"); }
   };
 
-  if (loading) return <div className="min-h-screen bg-gray-950 flex justify-center items-center text-white">Yükleniyor...</div>;
+  if (loading) return (
+    <div className="min-h-screen bg-[#020617] flex flex-col justify-center items-center overflow-hidden">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_rgba(30,58,138,0.15),_transparent_70%)]"></div>
+      <div className="relative mb-12">
+        <div className="absolute inset-0 bg-yellow-500/10 blur-[100px] rounded-full animate-pulse"></div>
+        <img src="/dfulogo.png" className="h-32 w-auto relative z-10 animate-bounce" alt="DFU" />
+      </div>
+      <div className="w-80 h-0.5 bg-slate-900 rounded-full overflow-hidden mb-6 relative">
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-400 to-transparent w-full animate-[scan_2s_infinite_ease-in-out]"></div>
+      </div>
+      <p className="text-slate-500 font-black tracking-[0.5em] text-[10px] uppercase animate-pulse">SCANNING ALERT GRIDS...</p>
+      <style jsx>{` @keyframes scan { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } } `}</style>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8">
+    <div className="min-h-screen bg-[#020617] text-white p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         
         <div className="flex justify-between items-center mb-8 border-b border-gray-800 pb-5">
@@ -101,7 +114,7 @@ export default function AktifIslerListesi() {
           </div>
         </div>
 
-        <div className="bg-gray-900/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-all duration-500 hover:border-indigo-500/30 border-red-500/20 p-4 md:p-6 rounded-xl shadow-2xl overflow-x-auto">
+        <div className="bg-slate-900/40 backdrop-blur-xl border-2 border-red-900/50 p-4 md:p-6 rounded-xl shadow-2xl overflow-x-auto">
           {orders.length === 0 ? <div className="text-center py-10 text-gray-500 font-medium">Şu an tesiste bekleyen hiçbir aktif iş emri yok. Harika!</div> : (
             <table className="w-full text-left text-sm whitespace-nowrap md:whitespace-normal">
               <thead>

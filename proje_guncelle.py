@@ -909,8 +909,15 @@ export default function YedekParcaYonetimi() {
             usageList.push({ ...common, stockCode: m.stockCode || m.stokKodu || "-", name: m.name || m.parcaAdi || "-", quantity: m.quantity || m.miktar || 0, unit: m.unit || m.birim || "Adet" });
           });
         }
-        if (data.yedekParcaKodu && data.yedekParcaKodu !== "") {
-          usageList.push({ ...common, stockCode: data.yedekParcaKodu, name: data.parcaAdi || "Orijinal Kayıt", quantity: data.yedekParcaMiktar || 1, unit: data.birim || "Adet" });
+                if (data.yedekParcaKodu && data.yedekParcaKodu !== "") {
+          const foundPart = yedekParcalar.find(p => p.stokKodu === data.yedekParcaKodu || p.id === data.yedekParcaKodu);
+          usageList.push({ 
+            ...common, 
+            stockCode: data.yedekParcaKodu, 
+            name: foundPart?.parcaAdi || data.parcaAdi || "Tanımsız Malzeme", 
+            quantity: data.yedekParcaMiktar || 1, 
+            unit: foundPart?.birim || data.birim || "Adet" 
+          });
         }
       });
       setUsedMaterials(usageList);
@@ -934,7 +941,6 @@ export default function YedekParcaYonetimi() {
   
   const handleExcelIndir = () => {
     try {
-      // 'pasif' kelimesi içeren parçaları filtreleyerek listeyi oluşturuyoruz
       const dataToExport = yedekParcalar
         .filter(p => !p.parcaAdi?.toLowerCase().includes("pasif"))
         .map(p => ({
@@ -1190,7 +1196,7 @@ export default function AktifIslerListesi() {
 }'''
 }
 
-print("--- DFU TECH REPORT MASTER GÜNCELLEME (PASİF FİLTRESİ EKLENDİ) ---")
+print("--- DFU TECH REPORT MASTER GÜNCELLEME (SARFİYAT HATASI DÜZELTİLDİ) ---")
 for path, content in files_to_update.items():
     try:
         os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -1200,4 +1206,4 @@ for path, content in files_to_update.items():
     except Exception as e:
         print(f"[HATA] {path} güncellenemedi: {e}")
 
-print("\nİşlem tamamlandı. Artık Excel dökümünde 'pasif' malzemeler görünmeyecek.")
+print("\nİşlem başarıyla tamamlandı. Sarfiyat raporundaki malzeme adı sorunu çözüldü.")

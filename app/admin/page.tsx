@@ -197,31 +197,31 @@ export default function AdminDashboard() {
   };
 
   if (loading) return (
-    <div className="min-h-screen bg-[#010409] flex flex-col justify-center items-center overflow-hidden">
-      <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'linear-gradient(#1e293b 1px, transparent 1px), linear-gradient(90deg, #1e293b 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
-      <div className="relative mb-16 scale-125">
-        <div className="absolute inset-0 bg-yellow-500/20 blur-[120px] rounded-full animate-pulse"></div>
-        <img src="/dfulogo.png" className="h-40 w-auto relative z-10 animate-[bounce_3s_infinite_ease-in-out] drop-shadow-[0_0_30px_rgba(234,179,8,0.4)]" alt="DFU" />
+    <div className="min-h-screen bg-[#020617] flex flex-col justify-center items-center overflow-hidden font-sans">
+      <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(#4f46e5 0.5px, transparent 0.5px)', backgroundSize: '30px 30px' }}></div>
+      <div className="relative mb-20 scale-110">
+        <div className="absolute inset-0 bg-indigo-600/20 blur-[150px] rounded-full animate-pulse"></div>
+        <img src="/dfulogo.png" className="h-40 w-auto relative z-10 animate-[pulse_3s_infinite_ease-in-out] drop-shadow-[0_0_50px_rgba(79,70,229,0.4)]" alt="DFU" />
       </div>
-      <div className="w-96 h-0.5 bg-white/5 rounded-full overflow-hidden mb-8 relative">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-400 to-transparent w-full animate-[scan_2.5s_infinite_linear]"></div>
+      <div className="relative w-80 h-1 bg-white/5 rounded-full overflow-hidden mb-8">
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-indigo-400 to-transparent w-full animate-[ai_scan_2s_infinite_linear]"></div>
       </div>
-      <div className="flex flex-col items-center gap-2">
-        <p className="text-white/40 font-black tracking-[0.8em] text-[10px] uppercase animate-pulse mb-1">ESTABLISHING SECURE PROTOCOLS...</p>
-        <div className="flex gap-1">
-          {[1,2,3].map(i => <div key={i} className="w-1 h-1 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: `${i*0.2}s` }}></div>)}
+      <div className="flex flex-col items-center">
+        <p className="text-indigo-400/60 font-black tracking-[1em] text-[10px] uppercase animate-pulse mb-4">SYNCHRONIZING NEURAL LINKS...</p>
+        <div className="grid grid-cols-5 gap-2 opacity-20">
+          {[1,2,3,4,5].map(i => <div key={i} className="w-2 h-0.5 bg-indigo-500 animate-ping" style={{ animationDelay: `${i*0.3}s` }}></div>)}
         </div>
       </div>
-      <style jsx>{` @keyframes scan { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } } `}</style>
+      <style jsx>{` @keyframes ai_scan { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } } `}</style>
     </div>
   );
-  if (!isAdmin) return <div className="min-h-screen bg-[#010409] text-red-500 flex justify-center items-center font-bold text-xl uppercase italic tracking-tighter">YETKİSİZ ERİŞİM!</div>;return (
-    <div className="min-h-screen bg-[#010409] text-white p-4 md:p-8 font-sans overflow-x-hidden">
+  if (!isAdmin) return <div className="min-h-screen bg-[#020617] text-red-500 flex justify-center items-center font-bold text-xl uppercase italic tracking-tighter">YETKİSİZ ERİŞİM!</div>;return (
+    <div className="min-h-screen bg-[#020617] text-white p-4 md:p-8 font-sans overflow-x-hidden">
       <div className="max-w-7xl mx-auto">
         
         {/* HEADER */}
         <div className="flex justify-between items-center mb-10 border-b border-gray-800 pb-5 no-print">
-          <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-12 bg-white rounded p-1" /><div><h1 className="text-2xl font-black uppercase tracking-[0.2em] text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-300 to-gray-600">Komuta Merkezi</h1><p className="text-[10px] text-gray-500 font-bold uppercase">{userName} | {userRole}</p></div></div>
+          <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-12 bg-white rounded p-1" /><div><h1 className="text-2xl font-black uppercase tracking-[0.2em] text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-white to-indigo-300">Komuta Merkezi</h1><p className="text-[10px] text-gray-500 font-bold uppercase">{userName} | {userRole}</p></div></div>
           <div className="flex gap-3">
              <Link href="/dashboard" className="bg-indigo-600 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase">Vardiya Raporu</Link>
              <button onClick={()=>auth.signOut()} className="bg-red-600 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase shadow-lg transition">Çıkış</button>
@@ -231,40 +231,40 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-12 no-print">
           {userRole === "isg" ? (
             <>
-              <Link href="/admin/eked" className="bg-yellow-600 text-black p-3 rounded-xl font-bold text-xs text-center">🔒 EKED Takip</Link>
-              <Link href="/admin/eked/arsiv" className="bg-gray-700 p-3 rounded-xl font-bold text-xs text-center">🗄️ EKED Arşivi</Link>
-              <Link href="/admin/kar-takip" className="bg-red-800 p-3 rounded-xl font-bold text-xs text-center">⚡ KAR Arşivi</Link>
-              <Link href="/admin/duyurular" className="bg-orange-600 p-3 rounded-xl font-semibold text-xs text-center uppercase tracking-tighter">📢 İSG Duyuru</Link>
+              <Link href="/admin/eked" className="bg-yellow-600 text-black p-3 rounded-2xl font-bold text-xs text-center">🔒 EKED Takip</Link>
+              <Link href="/admin/eked/arsiv" className="bg-gray-700 p-3 rounded-2xl font-bold text-xs text-center">🗄️ EKED Arşivi</Link>
+              <Link href="/admin/kar-takip" className="bg-red-800 p-3 rounded-2xl font-bold text-xs text-center">⚡ KAR Arşivi</Link>
+              <Link href="/admin/duyurular" className="bg-orange-600 p-3 rounded-2xl font-semibold text-xs text-center uppercase tracking-tighter">📢 İSG Duyuru</Link>
             </>
           ) : (
             <>
-              <Link href="/admin/is-emri-ac" className="bg-red-600 p-3 rounded-xl font-bold text-xs text-center shadow-lg hover:bg-red-500 transition">🚨 Yeni İş Emri</Link>
-              <Link href="/admin/aktif-isler" className="bg-red-950 border border-red-500 p-3 rounded-xl font-bold text-xs text-center">Aktif Bildirimler</Link>
-              <Link href="/admin/eked" className="bg-yellow-600 text-black p-3 rounded-xl font-bold text-xs text-center">🔒 EKED Takip</Link>
-              <Link href="/admin/eked/arsiv" className="bg-gray-700 p-3 rounded-xl font-bold text-xs text-center">🗄️ EKED Arşivi</Link>
-              <Link href="/admin/personel" className="bg-purple-600 p-3 rounded-xl font-semibold text-xs text-center relative">👤 Personel Onay {kpiOnayBekleyen > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] px-1 rounded-full animate-bounce">{kpiOnayBekleyen}</span>}</Link>
-              <Link href="/dashboard/pano-listesi" className="bg-indigo-600 p-3 rounded-xl font-semibold text-xs text-center">🔌 Pano Listesi</Link>
-              <Link href="/admin/pano-takip" className="bg-gray-800 p-3 rounded-xl font-semibold text-xs text-center border border-gray-600">🗄️ Pano Arşivi</Link>
-              <Link href="/dashboard/kontrol-formlari" className="bg-cyan-600 p-3 rounded-xl font-bold text-xs text-center uppercase">✅ Kontrol Formları</Link>
-              <Link href="/admin/yedek-parca" className="bg-fuchsia-700 p-3 rounded-xl font-semibold text-xs text-center uppercase tracking-tighter">⚙️ Yedek Parça</Link>
-              <Link href="/admin/is-listesi" className="bg-indigo-700 p-3 rounded-xl font-bold text-xs text-center border border-indigo-500/30">📋 Yapılan İşler</Link>
-              <Link href="/admin/kar-takip" className="bg-red-800 p-3 rounded-xl font-bold text-xs text-center">⚡ KAR Arşivi</Link>
-              <Link href="/admin/pm-takvim" className="bg-teal-700 p-3 rounded-xl font-bold text-xs text-center uppercase tracking-tighter">📅 PM Takvimi</Link>
-              <Link href="/admin/periyodik-bakim-arsiv" className="bg-teal-800 p-3 rounded-xl font-bold text-xs text-center">🗄️ PM Arşivi</Link>
-              <Link href="/dashboard/periyodik-bakim" className="bg-emerald-600 p-3 rounded-xl font-black text-xs text-center shadow-lg">🛠️ Manuel PM</Link>
-              <Link href="/dashboard/sayac" className="bg-emerald-600 p-3 rounded-xl font-semibold text-xs text-center uppercase tracking-tighter tracking-widest">⚡ Sayaç Okuma</Link>
-              <Link href="/admin/mesai" className="bg-teal-600 p-3 rounded-xl font-semibold text-xs text-center uppercase tracking-tighter">⏰ Mesai Raporları</Link>
-              <Link href="/admin/tamamlanan-isler" className="bg-gray-700 p-3 rounded-xl font-semibold text-xs text-center uppercase tracking-tighter">🗄️ Tamamlanan İşler</Link>
-              <Link href="/admin/ekipmanlar" className="bg-blue-600 p-3 rounded-xl font-semibold text-xs text-center uppercase tracking-tighter">⚙️ Hat/Makineler</Link>
-              <Link href="/admin/duyurular" className="bg-orange-600 p-3 rounded-xl font-semibold text-xs text-center uppercase tracking-tighter">📢 İSG Duyuru</Link>
-              <button onClick={()=>{if(window.confirm("RESET?")){/*reset*/}}} className="bg-red-950 text-red-500 p-3 rounded-xl text-[10px] font-black uppercase border border-red-900/30 transition">Reset</button>
+              <Link href="/admin/is-emri-ac" className="bg-red-600 p-3 rounded-2xl font-bold text-xs text-center shadow-lg hover:bg-red-500 transition">🚨 Yeni İş Emri</Link>
+              <Link href="/admin/aktif-isler" className="bg-red-950 border border-red-500 p-3 rounded-2xl font-bold text-xs text-center">Aktif Bildirimler</Link>
+              <Link href="/admin/eked" className="bg-yellow-600 text-black p-3 rounded-2xl font-bold text-xs text-center">🔒 EKED Takip</Link>
+              <Link href="/admin/eked/arsiv" className="bg-gray-700 p-3 rounded-2xl font-bold text-xs text-center">🗄️ EKED Arşivi</Link>
+              <Link href="/admin/personel" className="bg-purple-600 p-3 rounded-2xl font-semibold text-xs text-center relative">👤 Personel Onay {kpiOnayBekleyen > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] px-1 rounded-full animate-bounce">{kpiOnayBekleyen}</span>}</Link>
+              <Link href="/dashboard/pano-listesi" className="bg-indigo-600 p-3 rounded-2xl font-semibold text-xs text-center">🔌 Pano Listesi</Link>
+              <Link href="/admin/pano-takip" className="bg-gray-800 p-3 rounded-2xl font-semibold text-xs text-center border border-gray-600">🗄️ Pano Arşivi</Link>
+              <Link href="/dashboard/kontrol-formlari" className="bg-cyan-600 p-3 rounded-2xl font-bold text-xs text-center uppercase">✅ Kontrol Formları</Link>
+              <Link href="/admin/yedek-parca" className="bg-fuchsia-700 p-3 rounded-2xl font-semibold text-xs text-center uppercase tracking-tighter">⚙️ Yedek Parça</Link>
+              <Link href="/admin/is-listesi" className="bg-indigo-700 p-3 rounded-2xl font-bold text-xs text-center border border-indigo-500/30">📋 Yapılan İşler</Link>
+              <Link href="/admin/kar-takip" className="bg-red-800 p-3 rounded-2xl font-bold text-xs text-center">⚡ KAR Arşivi</Link>
+              <Link href="/admin/pm-takvim" className="bg-teal-700 p-3 rounded-2xl font-bold text-xs text-center uppercase tracking-tighter">📅 PM Takvimi</Link>
+              <Link href="/admin/periyodik-bakim-arsiv" className="bg-teal-800 p-3 rounded-2xl font-bold text-xs text-center">🗄️ PM Arşivi</Link>
+              <Link href="/dashboard/periyodik-bakim" className="bg-emerald-600 p-3 rounded-2xl font-black text-xs text-center shadow-lg">🛠️ Manuel PM</Link>
+              <Link href="/dashboard/sayac" className="bg-emerald-600 p-3 rounded-2xl font-semibold text-xs text-center uppercase tracking-tighter tracking-widest">⚡ Sayaç Okuma</Link>
+              <Link href="/admin/mesai" className="bg-teal-600 p-3 rounded-2xl font-semibold text-xs text-center uppercase tracking-tighter">⏰ Mesai Raporları</Link>
+              <Link href="/admin/tamamlanan-isler" className="bg-gray-700 p-3 rounded-2xl font-semibold text-xs text-center uppercase tracking-tighter">🗄️ Tamamlanan İşler</Link>
+              <Link href="/admin/ekipmanlar" className="bg-blue-600 p-3 rounded-2xl font-semibold text-xs text-center uppercase tracking-tighter">⚙️ Hat/Makineler</Link>
+              <Link href="/admin/duyurular" className="bg-orange-600 p-3 rounded-2xl font-semibold text-xs text-center uppercase tracking-tighter">📢 İSG Duyuru</Link>
+              <button onClick={()=>{if(window.confirm("RESET?")){/*reset*/}}} className="bg-red-950 text-red-500 p-3 rounded-2xl text-[10px] font-black uppercase border border-red-900/30 transition">Reset</button>
             </>
           )}
         </div>
         {/* 3-COLUMN NOTIFICATION GRID */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
            {/* EKED (LOTO) ALARMLARI */}
-           <div className="bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-2xl border-2 border-yellow-600/40 p-7 rounded-[3.5rem] shadow-2xl relative overflow-hidden group">
+           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border-2 border-yellow-600/40 p-7 rounded-[3rem] shadow-2xl relative overflow-hidden group">
               {aktifEked.length > 0 && <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-600/10 blur-3xl animate-pulse"></div>}
               <h2 className="text-lg font-black text-yellow-500 mb-6 flex items-center gap-3 uppercase tracking-[0.2em]">
                 🔒 AKTİF EKED (LOTO) 
@@ -286,7 +286,7 @@ export default function AdminDashboard() {
            </div>
 
            {/* ISG ALARMLARI */}
-           <div className="bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-2xl border-2 border-red-900/40 p-7 rounded-[3.5rem] shadow-2xl">
+           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border-2 border-red-900/40 p-7 rounded-[3rem] shadow-2xl">
               <h2 className="text-lg font-black text-red-500 mb-6 flex items-center gap-3 uppercase tracking-[0.2em]">🚒 İSG ALARMLARI</h2>
               <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
                 {aktifIsgAlarmlari.map(a => (
@@ -300,7 +300,7 @@ export default function AdminDashboard() {
            </div>
 
            {/* SAHA BİLDİRİMLERİ */}
-           <div className="bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-2xl border-2 border-indigo-900/40 p-7 rounded-[3.5rem] shadow-2xl">
+           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border-2 border-indigo-900/40 p-7 rounded-[3rem] shadow-2xl">
               <h2 className="text-lg font-black text-indigo-400 mb-6 flex items-center gap-3 uppercase tracking-[0.2em]">📢 SAHA BİLDİRİMLERİ</h2>
               <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
                 {aktifIsler.map(is => (
@@ -316,7 +316,7 @@ export default function AdminDashboard() {
 {userRole !== "isg" && (
   <>
         {/* RCA TASK LIST */}
-        <div className="bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-2xl border border-gray-800 p-8 rounded-[3.5rem] mb-12 shadow-2xl">
+        <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border border-gray-800 p-8 rounded-[3rem] mb-12 shadow-2xl">
           <h2 className="text-xl font-black text-white mb-6 uppercase tracking-widest">🧠 RCA Analizi Bekleyen Duruşlar</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {rawLogs.filter((l: any) => l.isDuruslu).slice(0, 6).map((log, idx) => {
@@ -333,49 +333,49 @@ export default function AdminDashboard() {
 
         {/* KPI CARDS */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10 text-center uppercase tracking-tighter">
-           <div className="bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-2xl p-6 rounded-[30px] border border-gray-800 shadow-xl"><p className="text-[10px] text-gray-500 font-black mb-1">İş Sayısı</p><h3 className="text-4xl font-black text-green-400">{kpiTotals.is}</h3></div>
-           <div className="bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-2xl p-6 rounded-[30px] border border-gray-800 shadow-xl"><p className="text-[10px] text-gray-500 font-black mb-1">Müdahale</p><h3 className="text-4xl font-black text-white">{kpiTotals.sure} dk</h3></div>
-           <div className="bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-2xl p-6 rounded-[30px] border border-red-900/30 shadow-xl"><p className="text-[10px] text-red-500 font-black mb-1">Duruş Süresi</p><h3 className="text-4xl font-black text-red-400">{kpiTotals.durus} dk</h3></div>
-           <div className="bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-2xl p-6 rounded-[30px] border border-indigo-900/30 shadow-xl"><p className="text-[10px] text-indigo-400 font-black mb-1">MTTR</p><h3 className="text-4xl font-black text-indigo-400">{kpiTotals.mttr.toFixed(0)} dk</h3></div>
+           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] p-6 rounded-[30px] border border-gray-800 shadow-xl"><p className="text-[10px] text-gray-500 font-black mb-1">İş Sayısı</p><h3 className="text-4xl font-black text-green-400">{kpiTotals.is}</h3></div>
+           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] p-6 rounded-[30px] border border-gray-800 shadow-xl"><p className="text-[10px] text-gray-500 font-black mb-1">Müdahale</p><h3 className="text-4xl font-black text-white">{kpiTotals.sure} dk</h3></div>
+           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] p-6 rounded-[30px] border border-red-900/30 shadow-xl"><p className="text-[10px] text-red-500 font-black mb-1">Duruş Süresi</p><h3 className="text-4xl font-black text-red-400">{kpiTotals.durus} dk</h3></div>
+           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] p-6 rounded-[30px] border border-indigo-900/30 shadow-xl"><p className="text-[10px] text-indigo-400 font-black mb-1">MTTR</p><h3 className="text-4xl font-black text-indigo-400">{kpiTotals.mttr.toFixed(0)} dk</h3></div>
         </div>
 
         {/* ENERGY CHARTS */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
-          <div className="bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-2xl border border-gray-800 p-6 rounded-[30px] shadow-xl">
+          <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border border-gray-800 p-6 rounded-[30px] shadow-xl">
              <h2 className="text-xs font-bold text-yellow-400 mb-4 uppercase tracking-widest underline underline-offset-8">⚡ Elektrik (kWh)</h2>
-             <select value={filterElekSayac} onChange={e=>setFilterElekSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-xl p-2 text-[10px] mb-4 text-white uppercase"><option value="">Tüm Sayaçlar</option>{elekSayacList.map(s=><option key={s} value={s}>{s}</option>)}</select>
+             <select value={filterElekSayac} onChange={e=>setFilterElekSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-2xl p-2 text-[10px] mb-4 text-white uppercase"><option value="">Tüm Sayaçlar</option>{elekSayacList.map(s=><option key={s} value={s}>{s}</option>)}</select>
              <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikElek}><XAxis dataKey="ay" tick={{fontSize:10}}/><Tooltip/><Bar dataKey="tuketim" fill="#EAB308" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div>
           </div>
-          <div className="bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-2xl border border-gray-800 p-6 rounded-[30px] shadow-xl">
+          <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border border-gray-800 p-6 rounded-[30px] shadow-xl">
              <h2 className="text-xs font-bold text-red-400 mb-4 uppercase tracking-widest underline underline-offset-8">🔥 Doğalgaz (m³)</h2>
-             <select value={filterGazSayac} onChange={e=>setFilterGazSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-xl p-2 text-[10px] mb-4 text-white uppercase"><option value="">Tüm Sayaçlar</option>{gazSayacList.map(s=><option key={s} value={s}>{s}</option>)}</select>
+             <select value={filterGazSayac} onChange={e=>setFilterGazSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-2xl p-2 text-[10px] mb-4 text-white uppercase"><option value="">Tüm Sayaçlar</option>{gazSayacList.map(s=><option key={s} value={s}>{s}</option>)}</select>
              <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikGaz}><XAxis dataKey="ay" tick={{fontSize:10}}/><Tooltip/><Bar dataKey="tuketim" fill="#EF4444" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div>
           </div>
-          <div className="bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-2xl border border-gray-800 p-6 rounded-[30px] shadow-xl">
+          <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border border-gray-800 p-6 rounded-[30px] shadow-xl">
              <h2 className="text-xs font-bold text-blue-400 mb-4 uppercase tracking-widest underline underline-offset-8">💧 Su (m³)</h2>
-             <select value={filterSuSayac} onChange={e=>setFilterSuSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-xl p-2 text-[10px] mb-4 text-white uppercase"><option value="">Tüm Sayaçlar</option>{suSayacList.map(s=><option key={s} value={s}>{s}</option>)}</select>
+             <select value={filterSuSayac} onChange={e=>setFilterSuSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-2xl p-2 text-[10px] mb-4 text-white uppercase"><option value="">Tüm Sayaçlar</option>{suSayacList.map(s=><option key={s} value={s}>{s}</option>)}</select>
              <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikSu}><XAxis dataKey="ay" tick={{fontSize:10}}/><Tooltip/><Bar dataKey="tuketim" fill="#3B82F6" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div>
           </div>
         </div>
 
         {/* PERFORMANCE & ANALYTICS */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-          <div className="bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-2xl border border-gray-800 p-8 rounded-[3.5rem] shadow-2xl">
+          <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border border-gray-800 p-8 rounded-[3rem] shadow-2xl">
             <h2 className="text-lg font-black text-white mb-6 uppercase tracking-widest">🏆 Personel Performans Matrisi</h2>
             <div className="overflow-x-auto"><table className="w-full text-left text-xs uppercase font-bold"><thead className="text-gray-500 border-b border-gray-800"><tr><th className="py-4">Personel</th><th className="py-4">İş Sayısı</th><th className="py-4">Toplam Efor</th></tr></thead><tbody className="divide-y divide-gray-800">{personelPerformans.map((p,i)=><tr key={i} className="hover:bg-gray-800/30 transition"><td className="py-4 text-gray-200">{p.isim}</td><td className="py-4 text-green-400">{p.isSayisi}</td><td className="py-4 text-indigo-400">{p.eforDk} dk</td></tr>)}</tbody></table></div>
           </div>
-          <div className="bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-2xl border border-gray-800 p-8 rounded-[3.5rem] shadow-2xl text-center">
+          <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border border-gray-800 p-8 rounded-[3rem] shadow-2xl text-center">
             <h2 className="text-lg font-black text-white mb-6 uppercase tracking-widest">🛑 En Çok Duruş Yapan Ekipmanlar</h2>
             <div className="space-y-4">{ekipmanPerformans.map((e,i)=>(<div key={i} className="flex justify-between items-center bg-gray-800/40 p-4 rounded-2xl border border-gray-700/50"><span className="text-gray-300 font-bold">{e.ekipman}</span><div className="text-right"><span className="text-red-400 font-black block">{e.sure} dk</span><span className="text-[10px] text-gray-500">{e.count} Arıza</span></div></div>))}</div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-           <div className="bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-2xl border border-gray-800 p-6 rounded-[35px] shadow-2xl">
+           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border border-gray-800 p-6 rounded-[35px] shadow-2xl">
              <h2 className="text-sm font-black text-indigo-400 mb-6 uppercase tracking-widest text-center tracking-[0.2em]">📊 RCA Pareto Analizi</h2>
              <div className="h-64 w-full"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={RCA_CATEGORIES.map(c=>({ name:c.label, value: rcaLogs.filter(r=>r.category===c.id).length, color: c.color })).filter(d=>d.value>0)} cx="50%" cy="50%" innerRadius={60} outerRadius={80} dataKey="value">{RCA_CATEGORIES.map((e,i)=><Cell key={i} fill={e.color} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></div>
            </div>
-           <div className="bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-2xl border border-gray-800 p-6 rounded-[35px] shadow-2xl">
+           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border border-gray-800 p-6 rounded-[35px] shadow-2xl">
              <h2 className="text-sm font-black text-teal-400 mb-6 uppercase tracking-widest text-center tracking-[0.2em]">⚡ Hat Bazlı İş Yoğunluğu</h2>
              <div className="h-64 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikIsHatti}><XAxis dataKey="isim" tick={{fontSize:10, fill:'#6B7280'}} /><YAxis tick={{fontSize:10}} /><Tooltip /><Bar dataKey="adet" fill="#10B981" radius={[6,6,0,0]} /></BarChart></ResponsiveContainer></div>
            </div>
@@ -387,7 +387,7 @@ export default function AdminDashboard() {
       {/* INSPECTION MODAL */}
       {showVakaModal && selectedVaka && (
         <div className="fixed inset-0 bg-black/95 backdrop-blur-md flex justify-center items-center z-[1000] p-4 font-sans">
-          <div className="bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-2xl border border-gray-800 p-8 md:p-12 rounded-[50px] w-full max-w-2xl shadow-3xl relative overflow-hidden">
+          <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border border-gray-800 p-8 md:p-12 rounded-[50px] w-full max-w-2xl shadow-3xl relative overflow-hidden">
              <div className={`absolute top-0 left-0 w-full h-2 ${selectedVaka.ekipmanAdi === "KAR devreye alma" ? "bg-red-600 shadow-2xl" : "bg-indigo-600 shadow-2xl"}`}></div>
              <h2 className="text-2xl font-black text-white mb-8 uppercase tracking-widest">Bildirim Detay Raporu</h2>
              <div className="grid grid-cols-2 gap-8 mb-8 border-b border-gray-800 pb-8 uppercase font-black">
@@ -405,7 +405,7 @@ export default function AdminDashboard() {
       {/* RCA MODAL */}
       {showRcaModal && (
         <div className="fixed inset-0 bg-black/95 backdrop-blur-sm flex justify-center items-center z-[999] p-4">
-          <div className="bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-2xl border border-indigo-500/30 p-10 rounded-[50px] w-full max-w-xl shadow-2xl relative">
+          <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border border-indigo-500/30 p-10 rounded-[50px] w-full max-w-xl shadow-2xl relative">
             <h2 className="text-xl font-black text-white mb-2 uppercase tracking-tighter text-center tracking-[0.2em]">Root Cause Analysis</h2>
             <p className="text-[10px] text-center text-gray-500 mb-8 uppercase font-bold tracking-widest">{selectedLogForRca?.ekipmanAdi}</p>
             <div className="space-y-6">
@@ -420,7 +420,7 @@ export default function AdminDashboard() {
       {/* EKED DETAY MODAL */}
       {showEkedModal && selectedEked && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[1000] flex items-center justify-center p-4">
-          <div className="bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-2xl border border-yellow-500/30 w-full max-w-2xl rounded-[3.5rem] shadow-2xl p-10 relative">
+          <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border border-yellow-500/30 w-full max-w-2xl rounded-[3rem] shadow-2xl p-10 relative">
             <button onClick={() => { setShowEkedModal(false); setSelectedEked(null); }} className="absolute top-6 right-6 text-gray-400 hover:text-white text-2xl">✕</button>
             <div className="flex items-center gap-4 mb-8">
               <div className="bg-yellow-600 p-4 rounded-3xl text-black"><span className="text-3xl">🔒</span></div>

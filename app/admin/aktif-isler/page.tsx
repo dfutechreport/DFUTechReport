@@ -70,27 +70,27 @@ export default function AktifIslerListesi() {
   };
 
   if (loading) return (
-    <div className="min-h-screen bg-[#010409] flex flex-col justify-center items-center overflow-hidden">
-      <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'linear-gradient(#1e293b 1px, transparent 1px), linear-gradient(90deg, #1e293b 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
-      <div className="relative mb-16 scale-125">
-        <div className="absolute inset-0 bg-yellow-500/20 blur-[120px] rounded-full animate-pulse"></div>
-        <img src="/dfulogo.png" className="h-40 w-auto relative z-10 animate-[bounce_3s_infinite_ease-in-out] drop-shadow-[0_0_30px_rgba(234,179,8,0.4)]" alt="DFU" />
+    <div className="min-h-screen bg-[#020617] flex flex-col justify-center items-center overflow-hidden font-sans">
+      <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(#4f46e5 0.5px, transparent 0.5px)', backgroundSize: '30px 30px' }}></div>
+      <div className="relative mb-20 scale-110">
+        <div className="absolute inset-0 bg-indigo-600/20 blur-[150px] rounded-full animate-pulse"></div>
+        <img src="/dfulogo.png" className="h-40 w-auto relative z-10 animate-[pulse_3s_infinite_ease-in-out] drop-shadow-[0_0_50px_rgba(79,70,229,0.4)]" alt="DFU" />
       </div>
-      <div className="w-96 h-0.5 bg-white/5 rounded-full overflow-hidden mb-8 relative">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-400 to-transparent w-full animate-[scan_2.5s_infinite_linear]"></div>
+      <div className="relative w-80 h-1 bg-white/5 rounded-full overflow-hidden mb-8">
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-indigo-400 to-transparent w-full animate-[ai_scan_2s_infinite_linear]"></div>
       </div>
-      <div className="flex flex-col items-center gap-2">
-        <p className="text-white/40 font-black tracking-[0.8em] text-[10px] uppercase animate-pulse mb-1">SCANNING LIVE FEED...</p>
-        <div className="flex gap-1">
-          {[1,2,3].map(i => <div key={i} className="w-1 h-1 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: `${i*0.2}s` }}></div>)}
+      <div className="flex flex-col items-center">
+        <p className="text-indigo-400/60 font-black tracking-[1em] text-[10px] uppercase animate-pulse mb-4">SCANNING ALERT GRIDS...</p>
+        <div className="grid grid-cols-5 gap-2 opacity-20">
+          {[1,2,3,4,5].map(i => <div key={i} className="w-2 h-0.5 bg-indigo-500 animate-ping" style={{ animationDelay: `${i*0.3}s` }}></div>)}
         </div>
       </div>
-      <style jsx>{` @keyframes scan { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } } `}</style>
+      <style jsx>{` @keyframes ai_scan { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } } `}</style>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#010409] text-white p-4 md:p-8">
+    <div className="min-h-screen bg-[#020617] text-white p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         
         <div className="flex justify-between items-center mb-8 border-b border-gray-800 pb-5">
@@ -107,19 +107,19 @@ export default function AktifIslerListesi() {
           {/* YENİ: Yönlendirme Düzeltildi */}
                     <div className="flex flex-wrap gap-2 items-center">
             {/* TEKNİK NAVİGASYON BUTONLARI */}
-            <Link href="/dashboard/kontrol-formlari" className="bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-lg">✅ Kontrol Formları</Link>
-            <Link href="/dashboard/periyodik-bakim" className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-lg">🛠️ Manuel PM</Link>
-            <Link href="/admin/eked" className="bg-yellow-600 hover:bg-yellow-500 text-black px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-lg">🔒 EKED Uygula</Link>
-            <Link href="/dashboard/pano-listesi" className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-lg">🔌 Pano Temizliği</Link>
-            <Link href="/dashboard/sayac" className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-lg">⚡ Sayaç Okuma</Link>
+            <Link href="/dashboard/kontrol-formlari" className="bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest transition shadow-lg">✅ Kontrol Formları</Link>
+            <Link href="/dashboard/periyodik-bakim" className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest transition shadow-lg">🛠️ Manuel PM</Link>
+            <Link href="/admin/eked" className="bg-yellow-600 hover:bg-yellow-500 text-black px-3 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest transition shadow-lg">🔒 EKED Uygula</Link>
+            <Link href="/dashboard/pano-listesi" className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest transition shadow-lg">🔌 Pano Temizliği</Link>
+            <Link href="/dashboard/sayac" className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest transition shadow-lg">⚡ Sayaç Okuma</Link>
             
-            <Link href={userRole === "admin" || userRole === "operator" ? "/admin" : "/dashboard"} className="bg-gray-800 hover:bg-gray-700 text-gray-300 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition border border-gray-700 ml-2">
+            <Link href={userRole === "admin" || userRole === "operator" ? "/admin" : "/dashboard"} className="bg-gray-800 hover:bg-gray-700 text-gray-300 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest transition border border-gray-700 ml-2">
               ← Geri
             </Link>
           </div>
         </div>
 
-        <div className="bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-2xl border-2 border-red-900/50 p-4 md:p-6 rounded-xl shadow-2xl overflow-x-auto">
+        <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border-2 border-red-900/50 p-4 md:p-6 rounded-2xl shadow-2xl overflow-x-auto">
           {orders.length === 0 ? <div className="text-center py-10 text-gray-500 font-medium">Şu an tesiste bekleyen hiçbir aktif iş emri yok. Harika!</div> : (
             <table className="w-full text-left text-sm whitespace-nowrap md:whitespace-normal">
               <thead>

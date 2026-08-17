@@ -181,7 +181,7 @@ export default function YedekParcaYonetimi() {
       <div className="w-80 h-0.5 bg-slate-900 rounded-full overflow-hidden mb-6 relative">
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-400 to-transparent w-full animate-[scan_2s_infinite_ease-in-out]"></div>
       </div>
-      <p className="text-slate-500 font-black tracking-[0.5em] text-[10px] uppercase animate-pulse">CORE INVENTORY ONLINE...</p>
+      <p className="text-slate-500 font-black tracking-[0.5em] text-[10px] uppercase animate-pulse">{`INVENTORY STREAM ACTIVE...`}</p>
       <style jsx>{` @keyframes scan { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } } `}</style>
     </div>
   );
@@ -212,7 +212,7 @@ export default function YedekParcaYonetimi() {
            <Link href="/admin" className="bg-gray-800 text-[10px] font-black px-5 py-3 rounded-2xl border border-gray-700 hover:bg-gray-700 transition">Geri Dön</Link>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10 no-print">
-           <div className="bg-gray-900 border-2 border-indigo-500/20 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden">
+           <div className="bg-slate-900/40 backdrop-blur-3xl border border-white/5 border-2 border-indigo-500/20 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-lg font-black text-indigo-400 uppercase tracking-widest">📥 Master Stok Excel Güncelleme</h2>
                 {timeLeft && <span className="bg-red-900/30 text-red-500 px-4 py-2 rounded-xl text-[10px] font-black border border-red-900/40 animate-pulse">Kilit: {timeLeft}</span>}
@@ -226,7 +226,7 @@ export default function YedekParcaYonetimi() {
                 <div className="py-10 text-center bg-black/20 rounded-3xl border border-dashed border-gray-800 text-gray-500 font-bold uppercase tracking-widest text-xs">Son Yüklemeden Sonra 24 Saat Beklenmelidir.</div>
               )}
            </div>
-           <div className="bg-gray-900 border-2 border-teal-500/20 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden">
+           <div className="bg-slate-900/40 backdrop-blur-3xl border border-white/5 border-2 border-teal-500/20 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden">
               <h2 className="text-lg font-black text-teal-400 mb-6 uppercase tracking-widest">🔍 Hızlı Stok Sorgulama</h2>
               <div className="flex gap-2 mb-8">
                 <input type="text" placeholder="Kod veya Malzeme Adı..." value={smartSearchQuery} onChange={e=>setSmartSearchQuery(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleSmartLookup()} className="flex-1 bg-gray-800 border border-gray-700 rounded-2xl p-5 text-sm font-bold" />
@@ -242,7 +242,7 @@ export default function YedekParcaYonetimi() {
               </div>
            </div>
         </div>
-        <div className="bg-gray-900 border border-gray-800 rounded-[45px] p-8 shadow-2xl">
+        <div className="bg-slate-900/40 backdrop-blur-3xl border border-white/5 border border-gray-800 rounded-[45px] p-8 shadow-2xl">
            <div className="flex flex-col sm:flex-row justify-between items-center mb-10 gap-4">
               <h2 className="text-sm font-black text-gray-400 uppercase tracking-[0.2em]">⚙️ Malzeme Sarfiyat Geçmişi</h2>
               <div className="flex gap-2">

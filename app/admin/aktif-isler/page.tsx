@@ -79,7 +79,7 @@ export default function AktifIslerListesi() {
       <div className="w-80 h-0.5 bg-slate-900 rounded-full overflow-hidden mb-6 relative">
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-400 to-transparent w-full animate-[scan_2s_infinite_ease-in-out]"></div>
       </div>
-      <p className="text-slate-500 font-black tracking-[0.5em] text-[10px] uppercase animate-pulse">SCANNING ALERT GRIDS...</p>
+      <p className="text-slate-500 font-black tracking-[0.5em] text-[10px] uppercase animate-pulse">{`SCANNING ALERT GRIDS...`}</p>
       <style jsx>{` @keyframes scan { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } } `}</style>
     </div>
   );
@@ -114,7 +114,7 @@ export default function AktifIslerListesi() {
           </div>
         </div>
 
-        <div className="bg-slate-900/40 backdrop-blur-xl border-2 border-red-900/50 p-4 md:p-6 rounded-xl shadow-2xl overflow-x-auto">
+        <div className="bg-slate-900/40 backdrop-blur-3xl border border-white/5 border-2 border-red-900/50 p-4 md:p-6 rounded-xl shadow-2xl overflow-x-auto">
           {orders.length === 0 ? <div className="text-center py-10 text-gray-500 font-medium">Şu an tesiste bekleyen hiçbir aktif iş emri yok. Harika!</div> : (
             <table className="w-full text-left text-sm whitespace-nowrap md:whitespace-normal">
               <thead>

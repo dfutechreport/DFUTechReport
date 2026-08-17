@@ -171,7 +171,25 @@ export default function YedekParcaYonetimi() {
     document.body.removeChild(link);
   };
 
-  if (loading) return <div className="min-h-screen bg-[#020617] flex justify-center items-center text-teal-400 font-black tracking-tighter animate-pulse">SİSTEM VERİLERİ SENKRONİZE EDİLİYOR...</div>;
+  if (loading) return (
+    <div className="min-h-screen bg-[#010409] flex flex-col justify-center items-center overflow-hidden">
+      <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'linear-gradient(#1e293b 1px, transparent 1px), linear-gradient(90deg, #1e293b 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
+      <div className="relative mb-16 scale-125">
+        <div className="absolute inset-0 bg-yellow-500/20 blur-[120px] rounded-full animate-pulse"></div>
+        <img src="/dfulogo.png" className="h-40 w-auto relative z-10 animate-[bounce_3s_infinite_ease-in-out] drop-shadow-[0_0_30px_rgba(234,179,8,0.4)]" alt="DFU" />
+      </div>
+      <div className="w-96 h-0.5 bg-white/5 rounded-full overflow-hidden mb-8 relative">
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-400 to-transparent w-full animate-[scan_2.5s_infinite_linear]"></div>
+      </div>
+      <div className="flex flex-col items-center gap-2">
+        <p className="text-white/40 font-black tracking-[0.8em] text-[10px] uppercase animate-pulse mb-1">QUANTUM DATABASE LINKED...</p>
+        <div className="flex gap-1">
+          {[1,2,3].map(i => <div key={i} className="w-1 h-1 bg-yellow-500 rounded-full animate-bounce" style={{ animationDelay: `${i*0.2}s` }}></div>)}
+        </div>
+      </div>
+      <style jsx>{` @keyframes scan { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } } `}</style>
+    </div>
+  );
 
     const handleExcelIndir = () => {
     try {
@@ -191,55 +209,55 @@ export default function YedekParcaYonetimi() {
     } catch (error) { alert("Excel Hatası"); }
   };
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100 p-4 md:p-8 font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-[#010409] text-white p-4 md:p-8 font-sans overflow-x-hidden">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-end mb-6 no-print pt-4"><button onClick={handleExcelIndir} className="bg-emerald-600 hover:bg-emerald-500 text-slate-100 px-10 py-5 rounded-[25px] text-xs font-black tracking-tighter uppercase tracking-[0.2em] transition-all shadow-[0_20px_50px_rgba(16,185,129,0.3)] flex items-center gap-3 border-2 border-emerald-400/20 active:scale-95"><span className="text-2xl">📊</span> GÜNCEL MASTER STOK LİSTESİNİ İNDİR (EXCEL)</button></div>
+        <div className="flex justify-end mb-6 no-print pt-4"><button onClick={handleExcelIndir} className="bg-emerald-600 hover:bg-emerald-500 text-white px-10 py-5 rounded-[25px] text-xs font-black uppercase tracking-[0.2em] transition-all shadow-[0_20px_50px_rgba(16,185,129,0.3)] flex items-center gap-3 border-2 border-emerald-400/20 active:scale-95"><span className="text-2xl">📊</span> GÜNCEL MASTER STOK LİSTESİNİ İNDİR (EXCEL)</button></div>
         <div className="flex justify-between items-center mb-8 border-b border-gray-800 pb-6 no-print">
-           <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-10 bg-white p-1 rounded" /><h1 className="text-xl font-black tracking-tighter uppercase tracking-tighter">Yedek Parça & Depo Denetimi</h1></div>
-           <Link href="/admin" className="bg-gray-800 text-[10px] font-black tracking-tighter px-5 py-3 rounded-2xl border border-gray-700 hover:bg-gray-700 transition">Geri Dön</Link>
+           <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-10 bg-white p-1 rounded" /><h1 className="text-xl font-black uppercase tracking-[0.2em] text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-300 to-gray-600">Yedek Parça & Depo Denetimi</h1></div>
+           <Link href="/admin" className="bg-gray-800 text-[10px] font-black px-5 py-3 rounded-2xl border border-gray-700 hover:bg-gray-700 transition">Geri Dön</Link>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10 no-print">
-           <div className="bg-slate-900/40 backdrop-blur-3xl border border-white/5 shadow-2xl border-2 border-indigo-500/20 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden">
+           <div className="bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-2xl border-2 border-indigo-500/20 p-8 rounded-[3.5rem] shadow-2xl relative overflow-hidden">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-black tracking-tighter text-indigo-400 uppercase tracking-widest">📥 Master Stok Excel Güncelleme</h2>
-                {timeLeft && <span className="bg-red-900/30 text-red-500 px-4 py-2 rounded-2xl shadow-lg text-[10px] font-black tracking-tighter border border-red-900/40 animate-pulse">Kilit: {timeLeft}</span>}
+                <h2 className="text-lg font-black text-indigo-400 uppercase tracking-widest">📥 Master Stok Excel Güncelleme</h2>
+                {timeLeft && <span className="bg-red-900/30 text-red-500 px-4 py-2 rounded-xl text-[10px] font-black border border-red-900/40 animate-pulse">Kilit: {timeLeft}</span>}
               </div>
               {!timeLeft ? (
                 <div className="space-y-4">
-                  <input type="file" accept=".xlsx, .xls" onChange={handleExcelUpload} className="w-full bg-gray-800 border border-gray-700 rounded-2xl p-6 text-sm font-black tracking-tighter text-gray-400 cursor-pointer" />
+                  <input type="file" accept=".xlsx, .xls" onChange={handleExcelUpload} className="w-full bg-gray-800 border border-gray-700 rounded-2xl p-6 text-sm font-black text-gray-400 cursor-pointer" />
                   {progress > 0 && <div className="w-full bg-gray-800 h-2 rounded-full overflow-hidden"><div className="bg-indigo-500 h-full transition-all" style={{width:`${progress}%`}}></div></div>}
                 </div>
               ) : (
                 <div className="py-10 text-center bg-black/20 rounded-3xl border border-dashed border-gray-800 text-gray-500 font-bold uppercase tracking-widest text-xs">Son Yüklemeden Sonra 24 Saat Beklenmelidir.</div>
               )}
            </div>
-           <div className="bg-slate-900/40 backdrop-blur-3xl border border-white/5 shadow-2xl border-2 border-teal-500/20 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden">
-              <h2 className="text-lg font-black tracking-tighter text-teal-400 mb-6 uppercase tracking-widest">🔍 Hızlı Stok Sorgulama</h2>
+           <div className="bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-2xl border-2 border-teal-500/20 p-8 rounded-[3.5rem] shadow-2xl relative overflow-hidden">
+              <h2 className="text-lg font-black text-teal-400 mb-6 uppercase tracking-widest">🔍 Hızlı Stok Sorgulama</h2>
               <div className="flex gap-2 mb-8">
                 <input type="text" placeholder="Kod veya Malzeme Adı..." value={smartSearchQuery} onChange={e=>setSmartSearchQuery(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleSmartLookup()} className="flex-1 bg-gray-800 border border-gray-700 rounded-2xl p-5 text-sm font-bold" />
-                <button onClick={handleSmartLookup} className="bg-teal-600 hover:bg-teal-500 px-10 rounded-2xl font-black tracking-tighter transition">GÖSTER</button>
+                <button onClick={handleSmartLookup} className="bg-teal-600 hover:bg-teal-500 px-10 rounded-2xl font-black transition">GÖSTER</button>
               </div>
               <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
                 {smartSearchResults.map((p, i) => (
                   <div key={i} className="bg-black/40 border border-gray-800 p-5 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-4">
-                    <div className="flex-1"><p className="text-[10px] text-gray-500 uppercase font-black tracking-tighter">Malzeme:</p><p className="text-sm font-black tracking-tighter text-slate-100 uppercase">{p.parcaAdi || p.name || "İsimsiz"}</p><p className="text-[9px] text-gray-600 font-bold mt-1 uppercase tracking-widest">KOD: {p.stokKodu || p.id}</p></div>
-                    <div className="bg-amber-600 text-slate-100 px-8 py-3 rounded-2xl shadow-lg flex flex-col items-center shadow-lg min-w-[140px] border border-amber-400/30"><span className="text-[8px] font-black tracking-tighter uppercase tracking-widest">Mevcut Stok</span><span className="text-2xl font-black tracking-tighter">{p.mevcutMiktar ?? p.stock ?? 0}</span></div>
+                    <div className="flex-1"><p className="text-[10px] text-gray-500 uppercase font-black">Malzeme:</p><p className="text-sm font-black text-white uppercase">{p.parcaAdi || p.name || "İsimsiz"}</p><p className="text-[9px] text-gray-600 font-bold mt-1 uppercase tracking-widest">KOD: {p.stokKodu || p.id}</p></div>
+                    <div className="bg-amber-600 text-white px-8 py-3 rounded-xl flex flex-col items-center shadow-lg min-w-[140px] border border-amber-400/30"><span className="text-[8px] font-black uppercase tracking-widest">Mevcut Stok</span><span className="text-2xl font-black">{p.mevcutMiktar ?? p.stock ?? 0}</span></div>
                   </div>
                 ))}
               </div>
            </div>
         </div>
-        <div className="bg-slate-900/40 backdrop-blur-3xl border border-white/5 shadow-2xl border border-gray-800 rounded-[45px] p-8 shadow-2xl">
+        <div className="bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-2xl border border-gray-800 rounded-[45px] p-8 shadow-2xl">
            <div className="flex flex-col sm:flex-row justify-between items-center mb-10 gap-4">
-              <h2 className="text-sm font-black tracking-tighter text-gray-400 uppercase tracking-[0.2em]">⚙️ Malzeme Sarfiyat Geçmişi</h2>
+              <h2 className="text-sm font-black text-gray-400 uppercase tracking-[0.2em]">⚙️ Malzeme Sarfiyat Geçmişi</h2>
               <div className="flex gap-2">
-                 <button onClick={fetchUsageHistory} disabled={isFetchingUsage} className="bg-indigo-600 hover:bg-indigo-500 text-slate-100 text-[10px] font-black tracking-tighter px-6 py-2.5 rounded-2xl shadow-lg uppercase transition shadow-lg">{isFetchingUsage ? "YÜKLENİYOR..." : "VERİLERİ GETİR"}</button>
-                 <button onClick={exportUsageExcel} disabled={!isDataFetched || usedMaterials.length === 0} className="bg-green-700 hover:bg-green-600 text-slate-100 text-[10px] font-black tracking-tighter px-6 py-2.5 rounded-2xl shadow-lg uppercase transition shadow-lg disabled:opacity-20">EXCEL ÇIKTISI AL</button>
+                 <button onClick={fetchUsageHistory} disabled={isFetchingUsage} className="bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-black px-6 py-2.5 rounded-xl uppercase transition shadow-lg">{isFetchingUsage ? "YÜKLENİYOR..." : "VERİLERİ GETİR"}</button>
+                 <button onClick={exportUsageExcel} disabled={!isDataFetched || usedMaterials.length === 0} className="bg-green-700 hover:bg-green-600 text-white text-[10px] font-black px-6 py-2.5 rounded-xl uppercase transition shadow-lg disabled:opacity-20">EXCEL ÇIKTISI AL</button>
               </div>
            </div>
            <div className="overflow-x-auto max-h-[450px] custom-scrollbar">
               <table className="w-full text-left">
-                <thead className="text-gray-600 border-b border-gray-800 text-[10px] uppercase font-black tracking-tighter tracking-widest">
+                <thead className="text-gray-600 border-b border-gray-800 text-[10px] uppercase font-black tracking-widest">
                   <tr><th className="pb-5 px-2">Tarih</th><th className="pb-5">Makine</th><th className="pb-5">Malzeme</th><th className="pb-5 text-center">Miktar</th><th className="pb-5 text-right px-4">Personel</th></tr>
                 </thead>
                 <tbody className="text-xs font-bold uppercase">
@@ -248,13 +266,13 @@ export default function YedekParcaYonetimi() {
                       <td className="py-4 px-2 text-gray-500">{m.tarih}</td>
                       <td className="py-4 text-teal-400">{m.makine}</td>
                       <td className="py-4 text-gray-200">{(!m.name || m.name.toUpperCase() === "ORIJINAL KAYIT") ? (yedekParcalar.find(p => (p.stokKodu && p.stokKodu === m.stockCode) || p.id === m.stockCode)?.parcaAdi || m.stockCode) : m.name}</td>
-                      <td className="py-4 text-center text-slate-100 font-black tracking-tighter tracking-widest">{m.quantity} {m.unit}</td>
+                      <td className="py-4 text-center text-white font-black tracking-widest">{m.quantity} {m.unit}</td>
                       <td className="py-4 text-right px-4 text-gray-500 font-normal italic">{m.personel}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              {!isDataFetched && <div className="py-20 text-center text-gray-700 font-black tracking-tighter uppercase tracking-widest text-[10px]">Görüntülemek için "Verileri Getir" butonuna basın.</div>}
+              {!isDataFetched && <div className="py-20 text-center text-gray-700 font-black uppercase tracking-widest text-[10px]">Görüntülemek için "Verileri Getir" butonuna basın.</div>}
            </div>
         </div>
       </div>

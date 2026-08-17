@@ -69,23 +69,10 @@ export default function AktifIslerListesi() {
     try { await deleteDoc(doc(db, "work_orders", id)); fetchOrders(); } catch (error) { alert("Hata"); }
   };
 
-  if (loading) return (
-    <div className="min-h-screen bg-[#020617] flex flex-col justify-center items-center overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_rgba(30,58,138,0.15),_transparent_70%)]"></div>
-      <div className="relative mb-12">
-        <div className="absolute inset-0 bg-yellow-500/10 blur-[100px] rounded-full animate-pulse"></div>
-        <img src="/dfulogo.png" className="h-32 w-auto relative z-10 animate-bounce" alt="DFU" />
-      </div>
-      <div className="w-80 h-0.5 bg-slate-900 rounded-full overflow-hidden mb-6 relative">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-400 to-transparent w-full animate-[scan_2s_infinite_ease-in-out]"></div>
-      </div>
-      <p className="text-slate-500 font-black tracking-[0.5em] text-[10px] uppercase animate-pulse">{`SCANNING ACTIVE ALERT GRIDS...`}</p>
-      <style jsx>{` @keyframes scan { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } } `}</style>
-    </div>
-  );
+  if (loading) return <div className="min-h-screen bg-[#020617] flex justify-center items-center text-slate-100">Yükleniyor...</div>;
 
   return (
-    <div className="min-h-screen bg-[#020617] text-white p-4 md:p-8">
+    <div className="min-h-screen bg-[#020617] text-slate-100 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         
         <div className="flex justify-between items-center mb-8 border-b border-gray-800 pb-5">
@@ -102,19 +89,19 @@ export default function AktifIslerListesi() {
           {/* YENİ: Yönlendirme Düzeltildi */}
                     <div className="flex flex-wrap gap-2 items-center">
             {/* TEKNİK NAVİGASYON BUTONLARI */}
-            <Link href="/dashboard/kontrol-formlari" className="bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-lg">✅ Kontrol Formları</Link>
-            <Link href="/dashboard/periyodik-bakim" className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-lg">🛠️ Manuel PM</Link>
-            <Link href="/admin/eked" className="bg-yellow-600 hover:bg-yellow-500 text-black px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-lg">🔒 EKED Uygula</Link>
-            <Link href="/dashboard/pano-listesi" className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-lg">🔌 Pano Temizliği</Link>
-            <Link href="/dashboard/sayac" className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition shadow-lg">⚡ Sayaç Okuma</Link>
+            <Link href="/dashboard/kontrol-formlari" className="bg-cyan-600 hover:bg-cyan-500 text-slate-100 px-3 py-2 rounded-2xl shadow-lg text-[10px] font-black tracking-tighter uppercase tracking-widest transition shadow-lg">✅ Kontrol Formları</Link>
+            <Link href="/dashboard/periyodik-bakim" className="bg-emerald-600 hover:bg-emerald-500 text-slate-100 px-3 py-2 rounded-2xl shadow-lg text-[10px] font-black tracking-tighter uppercase tracking-widest transition shadow-lg">🛠️ Manuel PM</Link>
+            <Link href="/admin/eked" className="bg-yellow-600 hover:bg-yellow-500 text-black px-3 py-2 rounded-2xl shadow-lg text-[10px] font-black tracking-tighter uppercase tracking-widest transition shadow-lg">🔒 EKED Uygula</Link>
+            <Link href="/dashboard/pano-listesi" className="bg-indigo-600 hover:bg-indigo-500 text-slate-100 px-3 py-2 rounded-2xl shadow-lg text-[10px] font-black tracking-tighter uppercase tracking-widest transition shadow-lg">🔌 Pano Temizliği</Link>
+            <Link href="/dashboard/sayac" className="bg-blue-600 hover:bg-blue-500 text-slate-100 px-3 py-2 rounded-2xl shadow-lg text-[10px] font-black tracking-tighter uppercase tracking-widest transition shadow-lg">⚡ Sayaç Okuma</Link>
             
-            <Link href={userRole === "admin" || userRole === "operator" ? "/admin" : "/dashboard"} className="bg-gray-800 hover:bg-gray-700 text-gray-300 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition border border-gray-700 ml-2">
+            <Link href={userRole === "admin" || userRole === "operator" ? "/admin" : "/dashboard"} className="bg-gray-800 hover:bg-gray-700 text-gray-300 px-4 py-2 rounded-2xl shadow-lg text-[10px] font-black tracking-tighter uppercase tracking-widest transition border border-gray-700 ml-2">
               ← Geri
             </Link>
           </div>
         </div>
 
-        <div className="bg-slate-900/40 backdrop-blur-3xl border border-white/5 border-2 border-red-900/50 p-4 md:p-6 rounded-xl shadow-2xl overflow-x-auto">
+        <div className="bg-slate-900/40 backdrop-blur-3xl border border-white/5 shadow-2xl border-2 border-red-900/50 p-4 md:p-6 rounded-2xl shadow-lg shadow-2xl overflow-x-auto">
           {orders.length === 0 ? <div className="text-center py-10 text-gray-500 font-medium">Şu an tesiste bekleyen hiçbir aktif iş emri yok. Harika!</div> : (
             <table className="w-full text-left text-sm whitespace-nowrap md:whitespace-normal">
               <thead>
@@ -146,12 +133,12 @@ export default function AktifIslerListesi() {
                       <td className="py-4 px-2 text-right space-x-2">
                         <button 
                           onClick={() => handleIsiTamamla(o)} 
-                          className="bg-green-600 hover:bg-green-500 text-white font-bold text-xs px-4 py-2 rounded shadow-lg transition"
+                          className="bg-green-600 hover:bg-green-500 text-slate-100 font-bold text-xs px-4 py-2 rounded shadow-lg transition"
                         >
                           ✅ İşi Tamamla
                         </button>
                         {userRole === "admin" && (
-                           <button onClick={() => handleSil(o.id)} className="bg-red-900/50 hover:bg-red-600 text-red-400 hover:text-white text-xs px-3 py-2 rounded border border-red-800/50">Sil</button>
+                           <button onClick={() => handleSil(o.id)} className="bg-red-900/50 hover:bg-red-600 text-red-400 hover:text-slate-100 text-xs px-3 py-2 rounded border border-red-800/50">Sil</button>
                         )}
                       </td>
                     )}

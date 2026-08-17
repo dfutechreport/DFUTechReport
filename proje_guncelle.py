@@ -1,29 +1,18 @@
 
 import os
+import re
+
+# Logo yerleştirme fonksiyonu
+def add_logo(c):
+    if not c or '/dfulogo.png' in c: return c
+    logo = '<img src="/dfulogo.png" className="h-10 md:h-12 bg-white p-1 rounded shadow-sm" alt="DFU" />'
+    pats = [(r'(<h1.*?>.*?</h1>)', r'<div className="flex items-center gap-4">' + logo + r'\1</div>'), 
+            (r'(<h2.*?>.*?</h2>)', r'<div className="flex items-center gap-4">' + logo + r'\1</div>')]
+    for p, r in pats:
+        if re.search(p, c): return re.sub(p, r, c, count=1)
+    return c
+
 files = {
-    "lib/firebase.ts": r'''import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
-import { getFirestore, enableMultiTabIndexedDbPersistence } from "firebase/firestore";
-
-// BURAYI KENDİ FIREBASE BİLGİLERİNİZLE GÜNCELLEYİN
-const firebaseConfig = {
-  apiKey: "AIzaSyDWqJA91hlpCb0vOsI0SopHLX_9Xfr2WM4",
-  authDomain: "dfu-tech-report.firebaseapp.com",
-  projectId: "dfu-tech-report",
-  storageBucket: "dfu-tech-report.firebasestorage.app",
-  messagingSenderId: "714961673687",
-  appId: "1:714961673687:web:d21e6d6398677f421b7f92"
-};
-
-// Mantıksal Akış: Sistem birden fazla kez yüklenirse Firebase'in çökmesini engelleriz (Singleton Pattern)
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-
-// Yetkilendirme (Gmail Girişi) Modülünü Dışa Aktarıyoruz
-export const auth = getAuth(app);
-export const googleProvider = new GoogleAuthProvider();
-
-// Veritabanı Modülünü Dışa Aktarıyoruz
-export const db = getFirestore(app);''',
     "app/admin/page.tsx": r'''"use client";
 import { useEffect, useState } from "react";
 import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, writeBatch, setDoc, serverTimestamp } from "firebase/firestore";
@@ -668,7 +657,7 @@ function DashboardIcerik() {
       <div className="w-64 h-1.5 bg-gray-800 rounded-full overflow-hidden mb-4 shadow-inner">
         <div className="h-full bg-gradient-to-r from-yellow-600 via-yellow-400 to-yellow-600 w-full animate-[loading_1.5s_infinite_ease-in-out] origin-left"></div>
       </div>
-      <p className="text-teal-400 font-black tracking-[0.3em] text-[10px] uppercase animate-pulse">{`SİSTEM VERİLERİ SENKRONİZE EDİLİYOR...`}</p>
+      <p className="text-teal-400 font-black tracking-[0.3em] text-[10px] uppercase animate-pulse">{`SİSTEM VERİLERİ SENKRONİZE EDİLYOR...`}</p>
       <style jsx>{`
         @keyframes loading {
           0% { transform: translateX(-100%); }
@@ -853,24 +842,7 @@ export default function YedekParcaYonetimi() {
         await initialSync();
       } else { window.location.href = "/"; }
     });
-      const handleExcelIndir = () => {
-    try {
-      const dataToExport = yedekParcalar
-        .filter(p => !p.parcaAdi?.toLowerCase().includes("pasif"))
-        .map(p => ({
-          "Stok Kodu": p.stokKodu || p.id,
-          "Parça Adı": p.parcaAdi || "-",
-          "Mevcut Miktar": p.mevcutMiktar || 0,
-          "Birim": p.birim || "Adet",
-          "Durum": (Number(p.mevcutMiktar) <= 2) ? "KRİTİK" : "NORMAL"
-        }));
-      const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Güncel Stok");
-      XLSX.writeFile(workbook, `DFU_Master_Stok_${new Date().toISOString().split('T')[0]}.xlsx`);
-    } catch (error) { alert("Excel Hatası"); }
-  };
-  return () => unsubscribe();
+    return () => unsubscribe();
   }, []);
 
   const initialSync = async () => {
@@ -899,24 +871,7 @@ export default function YedekParcaYonetimi() {
         setKalanSure(`${h}s ${m}d ${s}sn`);
       }
     }, 1000);
-      const handleExcelIndir = () => {
-    try {
-      const dataToExport = yedekParcalar
-        .filter(p => !p.parcaAdi?.toLowerCase().includes("pasif"))
-        .map(p => ({
-          "Stok Kodu": p.stokKodu || p.id,
-          "Parça Adı": p.parcaAdi || "-",
-          "Mevcut Miktar": p.mevcutMiktar || 0,
-          "Birim": p.birim || "Adet",
-          "Durum": (Number(p.mevcutMiktar) <= 2) ? "KRİTİK" : "NORMAL"
-        }));
-      const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Güncel Stok");
-      XLSX.writeFile(workbook, `DFU_Master_Stok_${new Date().toISOString().split('T')[0]}.xlsx`);
-    } catch (error) { alert("Excel Hatası"); }
-  };
-  return () => clearInterval(interval);
+    return () => clearInterval(interval);
   }, [lastUploadTime]);
 
   const handleSmartLookup = () => {
@@ -1014,7 +969,8 @@ export default function YedekParcaYonetimi() {
     </div>
   );
 
-    const handleExcelIndir = () => {
+  
+  const handleExcelIndir = () => {
     try {
       const dataToExport = yedekParcalar
         .filter(p => !p.parcaAdi?.toLowerCase().includes("pasif"))
@@ -1025,16 +981,29 @@ export default function YedekParcaYonetimi() {
           "Birim": p.birim || "Adet",
           "Durum": (Number(p.mevcutMiktar) <= 2) ? "KRİTİK" : "NORMAL"
         }));
+
       const worksheet = XLSX.utils.json_to_sheet(dataToExport);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Güncel Stok");
-      XLSX.writeFile(workbook, `DFU_Master_Stok_${new Date().toISOString().split('T')[0]}.xlsx`);
-    } catch (error) { alert("Excel Hatası"); }
+      XLSX.writeFile(workbook, `DFU_Master_Stok_Listesi_${new Date().toISOString().split('T')[0]}.xlsx`);
+    } catch (error) {
+      alert("Excel dökümü alınırken bir hata oluştu.");
+    }
   };
-  return (
+
+return (
     <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8 font-sans overflow-x-hidden">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-end mb-6 no-print pt-4"><button onClick={handleExcelIndir} className="bg-emerald-600 hover:bg-emerald-500 text-white px-10 py-5 rounded-[25px] text-xs font-black uppercase tracking-[0.2em] transition-all shadow-[0_20px_50px_rgba(16,185,129,0.3)] flex items-center gap-3 border-2 border-emerald-400/20 active:scale-95"><span className="text-2xl">📊</span> GÜNCEL MASTER STOK LİSTESİNİ İNDİR (EXCEL)</button></div>
+        {/* EXCEL INDIRME BUTONU - SAYFA BASI KESIN KONUM */}
+        <div className="flex justify-end mb-6 no-print pt-4">
+          <button 
+            onClick={handleExcelIndir} 
+            className="bg-emerald-600 hover:bg-emerald-500 text-white px-10 py-5 rounded-[25px] text-xs font-black uppercase tracking-[0.2em] transition-all shadow-[0_20px_50px_rgba(16,185,129,0.3)] flex items-center gap-3 border-2 border-emerald-400/20 active:scale-95"
+          >
+            <span className="text-2xl">📊</span> GÜNCEL MASTER STOK LİSTESİNİ İNDİR (EXCEL)
+          </button>
+        </div>
+
         <div className="flex justify-between items-center mb-8 border-b border-gray-800 pb-6 no-print">
            <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-10 bg-white p-1 rounded" /><h1 className="text-xl font-black uppercase tracking-tighter">Yedek Parça & Depo Denetimi</h1></div>
            <Link href="/admin" className="bg-gray-800 text-[10px] font-black px-5 py-3 rounded-2xl border border-gray-700 hover:bg-gray-700 transition">Geri Dön</Link>
@@ -1088,7 +1057,7 @@ export default function YedekParcaYonetimi() {
                     <tr key={i} className="border-b border-gray-800/40 hover:bg-white/5 transition">
                       <td className="py-4 px-2 text-gray-500">{m.tarih}</td>
                       <td className="py-4 text-teal-400">{m.makine}</td>
-                      <td className="py-4 text-gray-200">{(!m.name || m.name.toUpperCase() === "ORIJINAL KAYIT") ? (yedekParcalar.find(p => (p.stokKodu && p.stokKodu === m.stockCode) || p.id === m.stockCode)?.parcaAdi || m.stockCode) : m.name}</td>
+                      <td className="py-4 text-gray-200">{m.name}</td>
                       <td className="py-4 text-center text-white font-black tracking-widest">{m.quantity} {m.unit}</td>
                       <td className="py-4 text-right px-4 text-gray-500 font-normal italic">{m.personel}</td>
                     </tr>
@@ -1555,13 +1524,12 @@ export default function LoginPage() {
   );
 }'''
 }
-# Firebase Persistence Fix in script
-files["lib/firebase.ts"] = files["lib/firebase.ts"].replace('const db = getFirestore(app);', 'const db = getFirestore(app);\nif (typeof window !== "undefined") { enableMultiTabIndexedDbPersistence(db).catch(() => {}); }')
 
-print("--- DFU TECH REPORT MASTER GÜNCELLEME V11 (KESİN ÇÖZÜM) ---")
+print("--- DFU TECH REPORT MASTER GÜNCELLEME V12 (LOGO & MOBİL UYUM) ---")
 for path, content in files.items():
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         f.write(content.strip())
     print(f"[BAŞARILI] {path} güncellendi.")
-print("\nİşlem bitti. Sarfiyat hatası giderildi ve animasyonlar eklendi.")
+
+print("\nLogo taraması ve enjeksiyonu tamamlandı.")

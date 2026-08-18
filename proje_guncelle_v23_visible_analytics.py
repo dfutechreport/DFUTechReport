@@ -1,4 +1,7 @@
-"use client";
+
+import os
+files = {
+    "app/admin/page.tsx": r'''"use client";
 import { useEffect, useState } from "react";
 import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, writeBatch, setDoc, serverTimestamp } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
@@ -452,4 +455,11 @@ export default function AdminDashboard() {
       )}
     </div>
   );
+}'''
 }
+print("--- DFU TECH REPORT MASTER GÜNCELLEME V23 (FORCE VISIBLE) ---")
+for path, content in files.items():
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f: f.write(content.strip())
+    print(f"[BAŞARILI] {path} mühürlendi.")
+print("\nİşlem tamamlandı. Analitik paneller artık veri olmasa dahi 'Boş/Bekleme' modunda görünecektir.")

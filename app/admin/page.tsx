@@ -12,13 +12,13 @@ export default function AdminDashboard() {
   const [userName, setUserName] = useState(""); 
   const [userEmail, setUserEmail] = useState(""); 
   const [loading, setLoading] = useState(true);
+  const [predictiveInsights, setPredictiveInsights] = useState<any[]>([]);
+  const [mtbfMetrics, setMtbfMetrics] = useState<any[]>([]);
   
   // DATA STATES
   const [rawLogs, setRawLogs] = useState<any[]>([]);
   const [rcaLogs, setRcaLogs] = useState<any[]>([]);
   const [rawMeterLogs, setRawMeterLogs] = useState<any[]>([]);
-  const [predictiveInsights, setPredictiveInsights] = useState<any[]>([]);
-  const [mtbfMetrics, setMtbfMetrics] = useState<any[]>([]);
   const [kpiOnayBekleyen, setKpiOnayBekleyen] = useState(0);
 
   // MONITORING
@@ -172,43 +172,31 @@ export default function AdminDashboard() {
     setGrafikIsHatti(Object.keys(hD).map(k=>({ isim: k, adet: hD[k] })));
     setPersonelPerformans(Object.keys(pD).map(k=>({ isim: k, ...pD[k] })).sort((a,b)=> filterPerfSiralama === "efor" ? b.eforDk - a.eforDk : b.isSayisi - a.isSayisi));
     setEkipmanPerformans(Object.keys(eD).map(k=>({ ekipman: k, ...eD[k] })).sort((a,b)=>b.count-a.count).slice(0, 5));
-    // --- AI CORE ANALYTICS ENGINE (PREDICTIVE & MTBF) ---
-    const eqGroups: any = {};
-    rawLogs.forEach(l => {
-      if (!eqGroups[l.ekipmanAdi]) eqGroups[l.ekipmanAdi] = [];
-      eqGroups[l.ekipmanAdi].push(l);
-    });
 
-    const insights: any[] = [];
-    const mtbfData: any[] = [];
-
-    Object.keys(eqGroups).forEach(eqName => {
-      const logs = eqGroups[eqName].sort((a:any, b:any) => 
-        (b.kayitTarihi?.toDate?.() || new Date(b.kayitTarihi)).getTime() - 
-        (a.kayitTarihi?.toDate?.() || new Date(a.kayitTarihi)).getTime()
-      );
-
-      if (logs.length >= 2) {
-        let totalInterval = 0;
-        for (let i = 0; i < logs.length - 1; i++) {
-          const d1 = (logs[i].kayitTarihi?.toDate?.() || new Date(logs[i].kayitTarihi)).getTime();
-          const d2 = (logs[i+1].kayitTarihi?.toDate?.() || new Date(logs[i+1].kayitTarihi)).getTime();
-          totalInterval += (d1 - d2);
+    // --- AI CORE ANALYTICS ENGINE (v22) ---
+    if (rawLogs.length > 0) {
+      const eqGroups: any = {};
+      rawLogs.forEach(l => { if (!eqGroups[l.ekipmanAdi]) eqGroups[l.ekipmanAdi] = []; eqGroups[l.ekipmanAdi].push(l); });
+      const insights: any[] = [];
+      const mtbfData: any[] = [];
+      Object.keys(eqGroups).forEach(eqName => {
+        const logs = eqGroups[eqName].sort((a:any, b:any) => (b.kayitTarihi?.toDate?.() || new Date(b.kayitTarihi)).getTime() - (a.kayitTarihi?.toDate?.() || new Date(a.kayitTarihi)).getTime());
+        if (logs.length >= 2) {
+          let totalInterval = 0;
+          for (let i = 0; i < logs.length - 1; i++) {
+            totalInterval += (logs[i].kayitTarihi?.toDate?.() || new Date(logs[i].kayitTarihi)).getTime() - (logs[i+1].kayitTarihi?.toDate?.() || new Date(logs[i+1].kayitTarihi)).getTime();
+          }
+          const avgMtbf = (totalInterval / (logs.length - 1)) / (1000 * 60 * 60 * 24);
+          mtbfData.push({ equipment: eqName, mtbf: avgMtbf.toFixed(1), count: logs.length });
+          const last15Days = Date.now() - (15 * 1000 * 60 * 60 * 24);
+          if (logs.filter((l:any) => (l.kayitTarihi?.toDate?.() || new Date(l.kayitTarihi)).getTime() > last15Days).length >= 2) {
+            insights.push({ equipment: eqName, risk: "YÜKSEK", reason: "Sıklaşan Arıza Periyodu" });
+          }
         }
-        const avgMtbfDays = (totalInterval / (logs.length - 1)) / (1000 * 60 * 60 * 24);
-        mtbfData.push({ equipment: eqName, mtbf: avgMtbfDays.toFixed(1), count: logs.length });
-
-        // Predictive Risk: Son 15 günde 2'den fazla arıza varsa
-        const last15Days = Date.now() - (15 * 1000 * 60 * 60 * 24);
-        const recentFailures = logs.filter((l:any) => (l.kayitTarihi?.toDate?.() || new Date(l.kayitTarihi)).getTime() > last15Days).length;
-        if (recentFailures >= 2) {
-          insights.push({ equipment: eqName, risk: "YÜKSEK", reason: "Artan Arıza Sıklığı" });
-        }
-      }
-    });
-
-    setPredictiveInsights(insights.slice(0, 3));
-    setMtbfMetrics(mtbfData.sort((a,b) => b.count - a.count).slice(0, 5));
+      });
+      setPredictiveInsights(insights.slice(0, 3));
+      setMtbfMetrics(mtbfData.sort((a,b) => b.count - a.count).slice(0, 5));
+    }
 
   }, [rawLogs, filterYil, filterAy, filterHat, filterPerfVardiya, filterPerfPersonel, filterPerfSiralama, filterPerfDurus]);
 
@@ -236,20 +224,7 @@ export default function AdminDashboard() {
     alert("Analiz Kaydedildi"); setShowRcaModal(false); fetchRcaData();
   };
 
-  if (loading) return (
-    <div className="min-h-screen bg-[#020617] flex flex-col justify-center items-center overflow-hidden font-sans">
-      <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(#4f46e5 0.5px, transparent 0.5px)', backgroundSize: '30px 30px' }}></div>
-      <div className="relative mb-20 scale-110">
-        <div className="absolute inset-0 bg-indigo-600/20 blur-[150px] rounded-full animate-pulse"></div>
-        <img src="/dfulogo.png" className="h-40 w-auto relative z-10 animate-[pulse_3s_infinite_ease-in-out] drop-shadow-[0_0_50px_rgba(79,70,229,0.4)]" alt="DFU" />
-      </div>
-      <div className="relative w-80 h-1 bg-white/5 rounded-full overflow-hidden mb-8">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-indigo-400 to-transparent w-full animate-[ai_scan_2s_infinite_linear]"></div>
-      </div>
-      <p className="text-indigo-400/60 font-black tracking-[1em] text-[10px] uppercase animate-pulse mb-4">SYNCHRONIZING AI ANALYTICS ENGINE...</p>
-      <style jsx>{` @keyframes ai_scan { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } } `}</style>
-    </div>
-  );
+  if (loading) return <div className="min-h-screen bg-gray-950 flex justify-center items-center text-teal-400 font-black animate-pulse uppercase tracking-[0.2em]">DFU SİSTEM YÜKLENİYOR...</div>;
   if (!isAdmin) return <div className="min-h-screen bg-gray-950 text-red-500 flex justify-center items-center font-bold text-xl uppercase italic tracking-tighter">YETKİSİZ ERİŞİM!</div>;return (
     <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8 font-sans overflow-x-hidden">
       <div className="max-w-7xl mx-auto">

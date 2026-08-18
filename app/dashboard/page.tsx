@@ -35,6 +35,11 @@ function DashboardIcerik() {
   const [isDictating, setIsDictating] = useState(false);
   const [hesaplananSure, setHesaplananSure] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [showScoreInfo, setShowScoreInfo] = useState(false);
+  const [showFinanceInfo, setShowFinanceInfo] = useState(false);
+  const [bakimLigi, setBakimLigi] = useState<any[]>([]);
+  const [maliyetAnalizi, setMaliyetAnalizi] = useState<any[]>([]);
+  const [rawLogs, setRawLogs] = useState<any[]>([]);
   const [selectedVaka, setSelectedVaka] = useState<any>(null);
   const [showVakaModal, setShowVakaModal] = useState(false);
 

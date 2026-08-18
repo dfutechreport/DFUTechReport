@@ -198,34 +198,29 @@ function DashboardIcerik() {
       <div className="relative w-80 h-1 bg-white/5 rounded-full overflow-hidden mb-8">
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-indigo-400 to-transparent w-full animate-[ai_scan_2s_infinite_linear]"></div>
       </div>
-      <div className="flex flex-col items-center">
-        <p className="text-indigo-400/60 font-black tracking-[1em] text-[10px] uppercase animate-pulse mb-4">ESTABLISHING CORE INTERFACE...</p>
-        <div className="grid grid-cols-5 gap-2 opacity-20">
-          {[1,2,3,4,5].map(i => <div key={i} className="w-2 h-0.5 bg-indigo-500 animate-ping" style={{ animationDelay: `${i*0.3}s` }}></div>)}
-        </div>
-      </div>
+      <p className="text-indigo-400/60 font-black tracking-[1em] text-[10px] uppercase animate-pulse mb-4">ESTABLISHING CORE INTERFACE...</p>
       <style jsx>{` @keyframes ai_scan { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } } `}</style>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#020617] text-white p-4 md:p-8 font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8 font-sans overflow-x-hidden">
       <div className="max-w-6xl mx-auto">
         
         {/* HEADER */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 border-b border-gray-800 pb-6 gap-4">
            <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-10 bg-white p-1 rounded" /><div><p className="text-sm font-black text-teal-400 uppercase tracking-tighter">{userName}</p></div></div>
            <div className="flex flex-wrap gap-2">
-             {(userRole === "admin" || userRole === "operator") && (<Link href="/admin" className="bg-gray-800 text-[10px] font-black px-4 py-2.5 rounded-2xl border border-gray-700 uppercase transition tracking-widest">Admin Panel</Link>)}
+             {(userRole === "admin" || userRole === "operator") && (<Link href="/admin" className="bg-gray-800 text-[10px] font-black px-4 py-2.5 rounded-xl border border-gray-700 uppercase transition tracking-widest">Admin Panel</Link>)}
              
-             <Link href="/dashboard/kontrol-formlari" className="bg-cyan-600 text-white text-[10px] font-black px-4 py-2.5 rounded-2xl shadow-lg uppercase transition tracking-widest hover:bg-cyan-500">✅ Kontrol Formları</Link>
-             <Link href="/dashboard/periyodik-bakim" className="bg-emerald-600 text-white text-[10px] font-black px-4 py-2.5 rounded-2xl shadow-lg uppercase transition tracking-widest hover:bg-emerald-500">🛠️ Manuel PM</Link>
-             <Link href="/admin/eked" className="bg-yellow-600 text-black text-[10px] font-black px-4 py-2.5 rounded-2xl shadow-lg uppercase transition tracking-widest hover:bg-yellow-500">🔒 EKED Uygula</Link>
-             <Link href="/dashboard/pano-listesi" className="bg-indigo-600 text-white text-[10px] font-black px-4 py-2.5 rounded-2xl shadow-lg uppercase transition tracking-widest hover:bg-indigo-500">🔌 Pano Temizliği</Link>
-             <Link href="/dashboard/sayac" className="bg-blue-600 text-white text-[10px] font-black px-4 py-2.5 rounded-2xl shadow-lg uppercase transition tracking-widest hover:bg-blue-500">⚡ Sayaç Okuma</Link>
-             <Link href="/dashboard/mesai" className="bg-amber-600 text-white text-[10px] font-black px-4 py-2.5 rounded-2xl shadow-lg uppercase transition tracking-widest">Mesai Yaz</Link>
-             <Link href="/admin/mesai" className="bg-gray-800 text-white text-[10px] font-black px-4 py-2.5 rounded-2xl border border-gray-700 uppercase transition tracking-widest">Mesailerim</Link>
-             <button onClick={()=>auth.signOut()} className="bg-red-900/30 text-red-500 text-[10px] font-black px-4 py-2.5 rounded-2xl border border-red-900/30 transition">ÇIKIŞ</button>
+             <Link href="/dashboard/kontrol-formlari" className="bg-cyan-600 text-white text-[10px] font-black px-4 py-2.5 rounded-xl shadow-lg uppercase transition tracking-widest hover:bg-cyan-500">✅ Kontrol Formları</Link>
+             <Link href="/dashboard/periyodik-bakim" className="bg-emerald-600 text-white text-[10px] font-black px-4 py-2.5 rounded-xl shadow-lg uppercase transition tracking-widest hover:bg-emerald-500">🛠️ Manuel PM</Link>
+             <Link href="/admin/eked" className="bg-yellow-600 text-black text-[10px] font-black px-4 py-2.5 rounded-xl shadow-lg uppercase transition tracking-widest hover:bg-yellow-500">🔒 EKED Uygula</Link>
+             <Link href="/dashboard/pano-listesi" className="bg-indigo-600 text-white text-[10px] font-black px-4 py-2.5 rounded-xl shadow-lg uppercase transition tracking-widest hover:bg-indigo-500">🔌 Pano Temizliği</Link>
+             <Link href="/dashboard/sayac" className="bg-blue-600 text-white text-[10px] font-black px-4 py-2.5 rounded-xl shadow-lg uppercase transition tracking-widest hover:bg-blue-500">⚡ Sayaç Okuma</Link>
+             <Link href="/dashboard/mesai" className="bg-amber-600 text-white text-[10px] font-black px-4 py-2.5 rounded-xl shadow-lg uppercase transition tracking-widest">Mesai Yaz</Link>
+             <Link href="/admin/mesai" className="bg-gray-800 text-white text-[10px] font-black px-4 py-2.5 rounded-xl border border-gray-700 uppercase transition tracking-widest">Mesailerim</Link>
+             <button onClick={()=>auth.signOut()} className="bg-red-900/30 text-red-500 text-[10px] font-black px-4 py-2.5 rounded-xl border border-red-900/30 transition">ÇIKIŞ</button>
            </div>
         </div>
 
@@ -243,7 +238,7 @@ function DashboardIcerik() {
                 ))}
               </div>
             )}
-            <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border border-gray-800 p-7 rounded-[3rem] shadow-2xl">
+            <div className="bg-gray-900 border border-gray-800 p-7 rounded-[40px] shadow-2xl">
               <h3 className="text-[11px] font-black text-gray-500 uppercase mb-5 tracking-widest">🔔 Aktif Bildirimler</h3>
               {aktifIsler.map(is => (
                 <div key={is.id} className="bg-gray-800/40 border border-gray-700/50 p-4 rounded-[20px] mb-3 flex justify-between items-center hover:border-teal-500/50 transition duration-300">
@@ -257,7 +252,7 @@ function DashboardIcerik() {
 
           {/* SAĞ PANEL (FORM) */}
           <div className="lg:col-span-2">
-            <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border border-gray-800 rounded-[50px] p-8 md:p-12 shadow-2xl relative">
+            <div className="bg-gray-900 border border-gray-800 rounded-[50px] p-8 md:p-12 shadow-2xl relative">
               <h2 className="text-2xl font-black mb-8 text-white uppercase tracking-tighter border-b border-gray-800 pb-5">Bakım İş Bitirme Raporu</h2>
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-7">
                 <input type="hidden" {...register("linkedOrderId")} />
@@ -270,25 +265,25 @@ function DashboardIcerik() {
                   <div className="flex items-center gap-4 bg-gray-800/50 p-4 rounded-2xl border border-gray-700"><input type="checkbox" {...register("isDuruslu")} className="w-6 h-6 rounded accent-red-600 cursor-pointer" /><label className="text-[10px] font-black text-red-400 uppercase tracking-widest tracking-widest">Duruş Var</label></div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5 font-bold uppercase">
-                   <div className="flex gap-2"><input type="date" {...register("baslangicTarihi")} className="bg-gray-800 border-gray-700 rounded-2xl p-3 text-xs w-full text-white font-bold" /><input type="time" {...register("baslangicSaati")} className="bg-gray-800 border-gray-700 rounded-2xl p-3 text-xs text-white font-black text-center" /></div>
-                   <div className="flex gap-2"><input type="date" {...register("bitisTarihi")} className="bg-gray-800 border-gray-700 rounded-2xl p-3 text-xs w-full text-white font-bold" /><input type="time" {...register("bitisSaati")} className="bg-gray-800 border-gray-700 rounded-2xl p-3 text-xs text-white font-black text-center" /></div>
+                   <div className="flex gap-2"><input type="date" {...register("baslangicTarihi")} className="bg-gray-800 border-gray-700 rounded-xl p-3 text-xs w-full text-white font-bold" /><input type="time" {...register("baslangicSaati")} className="bg-gray-800 border-gray-700 rounded-xl p-3 text-xs text-white font-black text-center" /></div>
+                   <div className="flex gap-2"><input type="date" {...register("bitisTarihi")} className="bg-gray-800 border-gray-700 rounded-xl p-3 text-xs w-full text-white font-bold" /><input type="time" {...register("bitisSaati")} className="bg-gray-800 border-gray-700 rounded-xl p-3 text-xs text-white font-black text-center" /></div>
                 </div>
 
                 {/* --- MALZEME SARFİYATI: V83 ZIRHLI TASARIM --- */}
                 <div className="bg-gray-800/20 border border-gray-800 p-6 rounded-[35px] space-y-6 shadow-inner">
-                  <div className="flex justify-between items-center mb-2"><h3 className="text-[11px] font-black text-gray-500 uppercase tracking-widest">⚙️ Malzeme Sarfiyat Listesi</h3><button type="button" onClick={()=>setUsedMaterials([...usedMaterials, { id: Date.now(), stockCode: "", name: "Kod Bekleniyor", stock: "-", quantity: 1, unit: "Adet" }])} className="bg-teal-600 hover:bg-teal-500 text-[10px] font-black px-4 py-2 rounded-2xl shadow-lg shadow-teal-600/20 transition">+ EKLE</button></div>
+                  <div className="flex justify-between items-center mb-2"><h3 className="text-[11px] font-black text-gray-500 uppercase tracking-widest">⚙️ Malzeme Sarfiyat Listesi</h3><button type="button" onClick={()=>setUsedMaterials([...usedMaterials, { id: Date.now(), stockCode: "", name: "Kod Bekleniyor", stock: "-", quantity: 1, unit: "Adet" }])} className="bg-teal-600 hover:bg-teal-500 text-[10px] font-black px-4 py-2 rounded-xl shadow-lg shadow-teal-600/20 transition">+ EKLE</button></div>
                   
                   {usedMaterials.map(m => (
                     <div key={m.id} className="bg-black/30 p-5 rounded-[30px] border border-gray-700/50 space-y-4 animate-fadeIn transition-all shadow-xl">
                       <div className="flex flex-col sm:flex-row gap-2">
-                        <input type="text" placeholder="Stok Kodu Girin..." value={m.stockCode} onChange={e=>setUsedMaterials(usedMaterials.map(x=>x.id===m.id?{...x, stockCode:e.target.value}:x))} className="flex-1 bg-gray-800 border border-gray-700 rounded-2xl p-3 text-[10px] uppercase font-black text-white outline-none focus:border-indigo-500" />
+                        <input type="text" placeholder="Stok Kodu Girin..." value={m.stockCode} onChange={e=>setUsedMaterials(usedMaterials.map(x=>x.id===m.id?{...x, stockCode:e.target.value}:x))} className="flex-1 bg-gray-800 border border-gray-700 rounded-xl p-3 text-[10px] uppercase font-black text-white outline-none focus:border-indigo-500" />
                         <div className="flex gap-2 w-full sm:w-auto">
-                           <button type="button" onClick={()=>findStockItem(m.id)} className="flex-1 sm:px-8 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-black py-3 rounded-2xl uppercase transition">GÖSTER</button>
-                           <button type="button" onClick={()=>setUsedMaterials(usedMaterials.filter(x=>x.id!==m.id))} className="bg-gray-800 text-red-500 px-4 rounded-2xl border border-gray-700 hover:bg-red-900 transition">✕</button>
+                           <button type="button" onClick={()=>findStockItem(m.id)} className="flex-1 sm:px-8 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-black py-3 rounded-xl uppercase transition">GÖSTER</button>
+                           <button type="button" onClick={()=>setUsedMaterials(usedMaterials.filter(x=>x.id!==m.id))} className="bg-gray-800 text-red-500 px-4 rounded-xl border border-gray-700 hover:bg-red-900 transition">✕</button>
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)]/90 p-4 rounded-2xl border border-gray-800 min-h-[50px] flex items-center">
+                        <div className="bg-gray-900/90 p-4 rounded-2xl border border-gray-800 min-h-[50px] flex items-center">
                            <p className={`text-[11px] font-black uppercase flex-1 ${m.name === "Hatalı Kod" ? "text-red-500" : "text-teal-400"}`}>{m.name}</p>
                         </div>
                         {m.stock !== "-" && (
@@ -301,11 +296,11 @@ function DashboardIcerik() {
                       <div className="flex items-center gap-3">
                         <div className="flex-1 flex flex-col gap-1">
                            <label className="text-[9px] font-black text-gray-500 uppercase ml-2">Miktar</label>
-                           <input type="number" value={m.quantity} onChange={e=>setUsedMaterials(usedMaterials.map(x=>x.id===m.id?{...x, quantity:Number(e.target.value)}:x))} className="w-full bg-gray-800 p-3 rounded-2xl text-lg font-black text-white border border-gray-700 text-center" min="1" />
+                           <input type="number" value={m.quantity} onChange={e=>setUsedMaterials(usedMaterials.map(x=>x.id===m.id?{...x, quantity:Number(e.target.value)}:x))} className="w-full bg-gray-800 p-3 rounded-xl text-lg font-black text-white border border-gray-700 text-center" min="1" />
                         </div>
                         <div className="flex-1 flex flex-col gap-1">
                            <label className="text-[9px] font-black text-gray-500 uppercase ml-2">Birim</label>
-                           <select value={m.unit} onChange={e=>setUsedMaterials(usedMaterials.map(x=>x.id===m.id?{...x, unit:e.target.value}:x))} className="w-full bg-gray-800 p-3 rounded-2xl text-xs font-black text-white border border-gray-700 uppercase"><option value="Adet">Adet</option><option value="Litre">Litre</option><option value="Kg">Kg</option><option value="Metre">Metre</option></select>
+                           <select value={m.unit} onChange={e=>setUsedMaterials(usedMaterials.map(x=>x.id===m.id?{...x, unit:e.target.value}:x))} className="w-full bg-gray-800 p-3 rounded-xl text-xs font-black text-white border border-gray-700 uppercase"><option value="Adet">Adet</option><option value="Litre">Litre</option><option value="Kg">Kg</option><option value="Metre">Metre</option></select>
                         </div>
                       </div>
                     </div>
@@ -330,7 +325,7 @@ function DashboardIcerik() {
       {/* VAKA DETAY MODALI */}
       {showVakaModal && selectedVaka && (
         <div className="fixed inset-0 bg-black/95 backdrop-blur-md flex justify-center items-center z-[1000] p-4 font-sans">
-          <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border border-gray-800 p-8 md:p-12 rounded-[50px] w-full max-w-2xl shadow-3xl relative overflow-hidden">
+          <div className="bg-gray-900 border border-gray-800 p-8 md:p-12 rounded-[50px] w-full max-w-2xl shadow-3xl relative overflow-hidden">
              <div className={`absolute top-0 left-0 w-full h-2 ${selectedVaka.ekipmanAdi === "KAR devreye alma" ? "bg-red-600 shadow-2xl" : "bg-indigo-600 shadow-2xl"}`}></div>
              <h2 className="text-2xl font-black text-white mb-8 uppercase tracking-widest">Vaka Detay Raporu</h2>
              <div className="grid grid-cols-2 gap-8 mb-8 border-b border-gray-800 pb-8 uppercase font-black">

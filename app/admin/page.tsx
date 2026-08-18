@@ -166,7 +166,7 @@ export default function AdminDashboard() {
     setGrafikIsHatti(Object.keys(hD).map(k=>({ isim: k, adet: hD[k] })));
     setPersonelPerformans(Object.keys(pD).map(k=>({ isim: k, ...pD[k] })).sort((a,b)=> filterPerfSiralama === "efor" ? b.eforDk - a.eforDk : b.isSayisi - a.isSayisi));
     setEkipmanPerformans(Object.keys(eD).map(k=>({ ekipman: k, ...eD[k] })).sort((a,b)=>b.count-a.count).slice(0, 5));
-    // --- AI CORE ANALYTICS (v25) ---
+    // --- AI CORE ANALYTICS (v26) ---
     const eqGroups: any = {};
     rawLogs.forEach(l => { if (!eqGroups[l.ekipmanAdi]) eqGroups[l.ekipmanAdi] = []; eqGroups[l.ekipmanAdi].push(l); });
     const insights: any[] = []; const mtbfD: any[] = [];
@@ -206,11 +206,11 @@ export default function AdminDashboard() {
     alert("Analiz Kaydedildi"); setShowRcaModal(false); fetchRcaData();
   };
 
-  if (loading) return <div className="min-h-screen bg-[#020617] flex justify-center items-center text-teal-400 font-black animate-pulse uppercase tracking-[0.2em]">DFU SİSTEM YÜKLENİYOR...</div>;
-  if (!isAdmin) return <div className="min-h-screen bg-[#020617] text-red-500 flex justify-center items-center font-bold text-xl uppercase italic tracking-tighter">YETKİSİZ ERİŞİM!</div>;
+  if (loading) return <div className="min-h-screen bg-gray-950 flex justify-center items-center text-teal-400 font-black animate-pulse uppercase tracking-[0.2em]">DFU SİSTEM YÜKLENİYOR...</div>;
+  if (!isAdmin) return <div className="min-h-screen bg-gray-950 text-red-500 flex justify-center items-center font-bold text-xl uppercase italic tracking-tighter">YETKİSİZ ERİŞİM!</div>;
 
   return (
-    <div className="min-h-screen bg-[#020617] text-white p-4 md:p-8 font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8 font-sans overflow-x-hidden">
       <div className="max-w-7xl mx-auto">
         
         {/* HEADER */}
@@ -248,7 +248,7 @@ export default function AdminDashboard() {
 
         {/* NOTIFICATION CARDS */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-2xl border-2 border-red-900/40 p-7 rounded-[3rem] shadow-2xl">
+           <div className="bg-gray-900 border-2 border-red-900/40 p-7 rounded-[40px] shadow-2xl">
               <h2 className="text-lg font-black text-red-500 mb-6 flex items-center gap-3 uppercase tracking-[0.2em]">🚒 İSG ALARMLARI</h2>
               <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
                 {aktifIsgAlarmlari.map(a => (
@@ -260,7 +260,7 @@ export default function AdminDashboard() {
                 {aktifIsgAlarmlari.length === 0 && <p className="text-center py-10 text-gray-600 text-xs italic font-bold">Aktif İSG alarmı yok.</p>}
               </div>
            </div>
-           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-2xl border-2 border-indigo-900/40 p-7 rounded-[3rem] shadow-2xl">
+           <div className="bg-gray-900 border-2 border-indigo-900/40 p-7 rounded-[40px] shadow-2xl">
               <h2 className="text-lg font-black text-indigo-400 mb-6 flex items-center gap-3 uppercase tracking-[0.2em]">📢 SAHA BİLDİRİMLERİ</h2>
               <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
                 {aktifIsler.map(is => (
@@ -273,31 +273,56 @@ export default function AdminDashboard() {
               </div>
            </div>
         
-        {/* AI CORE ANALYTICS - v25 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-           <div className="bg-indigo-500/[0.03] backdrop-blur-3xl border border-indigo-500/10 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden group">
-              <h2 className="text-sm font-black text-indigo-400 mb-6 uppercase tracking-[0.3em]">🧠 AI KRİTİK ARIZA ÖNGÖRÜSÜ</h2>
-              {predictiveInsights.length > 0 ? predictiveInsights.map((ins, i) => (
-                <div key={i} className="bg-red-500/10 border border-red-500/20 p-4 rounded-3xl flex justify-between items-center mb-3 animate-pulse">
-                  <p className="text-[10px] font-black text-red-400 uppercase">{ins.equipment}</p>
-                  <span className="bg-red-600 text-white text-[8px] font-black px-3 py-1 rounded-full uppercase">Kritik Risk</span>
+        {/* AI CORE ANALYTICS - v26 (EXPANDED FULL-WIDTH) */}
+        {userRole !== "isg" && (
+          <div className="space-y-10 mb-16 no-print">
+             {/* AI KRİTİK ARIZA ÖNGÖRÜSÜ - GENİŞLETİLMİŞ */}
+             <div className="bg-indigo-500/[0.03] backdrop-blur-3xl border border-indigo-500/10 p-10 rounded-[3.5rem] shadow-2xl relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-red-600/5 blur-[120px] rounded-full animate-pulse"></div>
+                <h2 className="text-sm font-black text-indigo-400 mb-8 uppercase tracking-[0.5em] flex items-center gap-4">
+                  🧠 AI KRİTİK ARIZA ÖNGÖRÜSÜ 
+                  <span className="h-2 w-2 bg-red-500 rounded-full animate-ping"></span>
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {predictiveInsights.length > 0 ? predictiveInsights.map((ins, i) => (
+                    <div key={i} className="bg-red-500/10 border border-red-500/20 p-6 rounded-[2.5rem] flex flex-col justify-center items-center text-center animate-pulse hover:bg-red-500/20 transition-all duration-500">
+                      <p className="text-[12px] font-black text-red-400 uppercase mb-2">{ins.equipment}</p>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase mb-4">{ins.reason}</p>
+                      <span className="bg-red-600 text-white text-[9px] font-black px-6 py-2 rounded-full uppercase tracking-tighter shadow-lg shadow-red-600/20">Kritik Risk</span>
+                    </div>
+                  )) : (
+                    <div className="col-span-3 py-10 text-center border border-white/5 rounded-[2.5rem] bg-white/[0.02]">
+                      <p className="text-teal-500 font-black text-[11px] tracking-[0.4em] uppercase animate-pulse">✓ SİSTEM ANALİZİ TAMAMLANDI: TÜM EKİPMANLAR STABİL DURUMDA</p>
+                    </div>
+                  )}
                 </div>
-              )) : <p className="text-center py-6 text-gray-700 text-[10px] font-black uppercase">✓ Sistem Stabil: Risk Yok</p>}
-           </div>
-           <div className="bg-indigo-500/[0.03] backdrop-blur-3xl border border-indigo-500/10 p-8 rounded-[3rem] shadow-2xl">
-              <h2 className="text-sm font-black text-teal-400 mb-6 uppercase tracking-[0.3em]">📊 MTBF (ARIZASIZ ÇALIŞMA)</h2>
-              {mtbfMetrics.map((m, i) => (
-                <div key={i} className="flex justify-between items-center border-b border-white/5 pb-2 mb-2">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase">{m.equipment}</span>
-                  <span className="text-sm font-black text-white">{m.mtbf} GÜN</span>
+             </div>
+
+             {/* MTBF ANALİZİ - GENİŞLETİLMİŞ */}
+             <div className="bg-indigo-500/[0.03] backdrop-blur-3xl border border-indigo-500/10 p-10 rounded-[3.5rem] shadow-2xl">
+                <h2 className="text-sm font-black text-teal-400 mb-8 uppercase tracking-[0.5em]">📊 MTBF ANALİZİ (ARIZASIZ ÇALIŞMA KARARLILIĞI)</h2>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                  {mtbfMetrics.length > 0 ? mtbfMetrics.map((m, i) => (
+                    <div key={i} className="bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] text-center hover:border-teal-500/30 transition-all">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase mb-3 truncate">{m.equipment}</p>
+                      <div className="inline-block bg-gradient-to-br from-white to-gray-500 bg-clip-text text-transparent">
+                        <span className="text-3xl font-black">{m.mtbf}</span>
+                      </div>
+                      <p className="text-[8px] text-teal-500/60 font-black uppercase mt-1">GÜN STABİL</p>
+                    </div>
+                  )) : (
+                    <div className="col-span-5 py-10 text-center text-gray-700">
+                      <p className="text-[10px] font-black uppercase tracking-[0.3em]">Derin Veri Analizi Bekleniyor...</p>
+                    </div>
+                  )}
                 </div>
-              ))}
-           </div>
-        </div>
-</div>
+             </div>
+          </div>
+        )}
+
 
         {/* RCA TASK LIST */}
-        <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-2xl border border-gray-800 p-8 rounded-[3rem] mb-12 shadow-2xl">
+        <div className="bg-gray-900 border border-gray-800 p-8 rounded-[40px] mb-12 shadow-2xl">
           <h2 className="text-xl font-black text-white mb-6 uppercase tracking-widest">🧠 RCA Analizi Bekleyen Duruşlar</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {rawLogs.filter((l: any) => l.isDuruslu).slice(0, 6).map((log, idx) => {
@@ -314,25 +339,25 @@ export default function AdminDashboard() {
 
         {/* KPI CARDS */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10 text-center uppercase tracking-tighter">
-           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-2xl p-6 rounded-[30px] border border-gray-800 shadow-xl"><p className="text-[10px] text-gray-500 font-black mb-1">İş Sayısı</p><h3 className="text-4xl font-black text-green-400">{kpiTotals.is}</h3></div>
-           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-2xl p-6 rounded-[30px] border border-gray-800 shadow-xl"><p className="text-[10px] text-gray-500 font-black mb-1">Müdahale</p><h3 className="text-4xl font-black text-white">{kpiTotals.sure} dk</h3></div>
-           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-2xl p-6 rounded-[30px] border border-red-900/30 shadow-xl"><p className="text-[10px] text-red-500 font-black mb-1">Duruş Süresi</p><h3 className="text-4xl font-black text-red-400">{kpiTotals.durus} dk</h3></div>
-           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-2xl p-6 rounded-[30px] border border-indigo-900/30 shadow-xl"><p className="text-[10px] text-indigo-400 font-black mb-1">MTTR</p><h3 className="text-4xl font-black text-indigo-400">{kpiTotals.mttr.toFixed(0)} dk</h3></div>
+           <div className="bg-gray-900 p-6 rounded-[30px] border border-gray-800 shadow-xl"><p className="text-[10px] text-gray-500 font-black mb-1">İş Sayısı</p><h3 className="text-4xl font-black text-green-400">{kpiTotals.is}</h3></div>
+           <div className="bg-gray-900 p-6 rounded-[30px] border border-gray-800 shadow-xl"><p className="text-[10px] text-gray-500 font-black mb-1">Müdahale</p><h3 className="text-4xl font-black text-white">{kpiTotals.sure} dk</h3></div>
+           <div className="bg-gray-900 p-6 rounded-[30px] border border-red-900/30 shadow-xl"><p className="text-[10px] text-red-500 font-black mb-1">Duruş Süresi</p><h3 className="text-4xl font-black text-red-400">{kpiTotals.durus} dk</h3></div>
+           <div className="bg-gray-900 p-6 rounded-[30px] border border-indigo-900/30 shadow-xl"><p className="text-[10px] text-indigo-400 font-black mb-1">MTTR</p><h3 className="text-4xl font-black text-indigo-400">{kpiTotals.mttr.toFixed(0)} dk</h3></div>
         </div>
 
         {/* ENERGY CHARTS (FILTERED) */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
-          <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-2xl border border-gray-800 p-6 rounded-[30px] shadow-xl">
+          <div className="bg-gray-900 border border-gray-800 p-6 rounded-[30px] shadow-xl">
              <h2 className="text-xs font-bold text-yellow-400 mb-4 uppercase tracking-widest underline underline-offset-8">⚡ Elektrik (kWh)</h2>
              <select value={filterElekSayac} onChange={e=>setFilterElekSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-xl p-2 text-[10px] mb-4 text-white uppercase"><option value="">Tüm Sayaçlar</option>{elekSayacList.map(s=><option key={s} value={s}>{s}</option>)}</select>
              <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikElek}><XAxis dataKey="ay" tick={{fontSize:10}}/><Tooltip/><Bar dataKey="tuketim" fill="#EAB308" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div>
           </div>
-          <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-2xl border border-gray-800 p-6 rounded-[30px] shadow-xl">
+          <div className="bg-gray-900 border border-gray-800 p-6 rounded-[30px] shadow-xl">
              <h2 className="text-xs font-bold text-red-400 mb-4 uppercase tracking-widest underline underline-offset-8">🔥 Doğalgaz (m³)</h2>
              <select value={filterGazSayac} onChange={e=>setFilterGazSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-xl p-2 text-[10px] mb-4 text-white uppercase"><option value="">Tüm Sayaçlar</option>{gazSayacList.map(s=><option key={s} value={s}>{s}</option>)}</select>
              <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikGaz}><XAxis dataKey="ay" tick={{fontSize:10}}/><Tooltip/><Bar dataKey="tuketim" fill="#EF4444" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div>
           </div>
-          <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-2xl border border-gray-800 p-6 rounded-[30px] shadow-xl">
+          <div className="bg-gray-900 border border-gray-800 p-6 rounded-[30px] shadow-xl">
              <h2 className="text-xs font-bold text-blue-400 mb-4 uppercase tracking-widest underline underline-offset-8">💧 Su (Ton)</h2>
              <select value={filterSuSayac} onChange={e=>setFilterSuSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-xl p-2 text-[10px] mb-4 text-white uppercase"><option value="">Tüm Sayaçlar</option>{suSayacList.map(s=><option key={s} value={s}>{s}</option>)}</select>
              <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikSu}><XAxis dataKey="ay" tick={{fontSize:10}}/><Tooltip/><Bar dataKey="tuketim" fill="#3B82F6" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div>
@@ -340,7 +365,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* PERSONNEL PERFORMANCE MATRIX (FULL FILTER) */}
-        <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-2xl border border-gray-800 p-8 rounded-[45px] mb-12 shadow-2xl relative overflow-hidden">
+        <div className="bg-gray-900 border border-gray-800 p-8 rounded-[45px] mb-12 shadow-2xl relative overflow-hidden">
            <h2 className="text-xl font-black text-blue-400 mb-8 uppercase tracking-widest flex items-center gap-3 tracking-[0.2em]">👤 PERSONEL PERFORMANS MATRİSİ</h2>
            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8 bg-gray-800/40 p-6 rounded-[25px] border border-gray-700/50 no-print">
               <div><label className="text-[9px] text-gray-500 uppercase font-black mb-1 block ml-1">Filtre Yıl</label><select value={filterYil} onChange={e=>setFilterYil(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-xl p-2 text-xs text-white uppercase"><option value="">Tümü</option>{yilListesi.map(y=><option key={y} value={y}>{y}</option>)}</select></div>
@@ -354,8 +379,8 @@ export default function AdminDashboard() {
 
         {/* BOTTOM CHARTS */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
-          <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-2xl border border-gray-800 p-6 rounded-[35px] shadow-2xl"><h2 className="text-sm font-black text-indigo-400 mb-6 uppercase tracking-widest text-center tracking-[0.2em]">📈 RCA Pareto Analizi</h2><div className="h-64 w-full"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={RCA_CATEGORIES.map(c=>({ name: c.label, value: rcaLogs.filter(r=>r.category===c.id).length, color: c.color })).filter(d=>d.value>0)} cx="50%" cy="50%" innerRadius={60} outerRadius={80} dataKey="value">{RCA_CATEGORIES.map((e,i)=><Cell key={i} fill={e.color} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></div></div>
-          <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-2xl border border-gray-800 p-6 rounded-[35px] shadow-2xl"><h2 className="text-sm font-black text-teal-400 mb-6 uppercase tracking-widest text-center tracking-[0.2em]">⚡ Hat Bazlı İş Yoğunluğu</h2><div className="h-64 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikIsHatti}><XAxis dataKey="isim" tick={{fontSize:10, fill:'#6B7280'}} /><YAxis tick={{fontSize:10}} /><Tooltip /><Bar dataKey="adet" fill="#10B981" radius={[6,6,0,0]} /></BarChart></ResponsiveContainer></div></div>
+          <div className="bg-gray-900 border border-gray-800 p-6 rounded-[35px] shadow-2xl"><h2 className="text-sm font-black text-indigo-400 mb-6 uppercase tracking-widest text-center tracking-[0.2em]">📈 RCA Pareto Analizi</h2><div className="h-64 w-full"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={RCA_CATEGORIES.map(c=>({ name: c.label, value: rcaLogs.filter(r=>r.category===c.id).length, color: c.color })).filter(d=>d.value>0)} cx="50%" cy="50%" innerRadius={60} outerRadius={80} dataKey="value">{RCA_CATEGORIES.map((e,i)=><Cell key={i} fill={e.color} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></div></div>
+          <div className="bg-gray-900 border border-gray-800 p-6 rounded-[35px] shadow-2xl"><h2 className="text-sm font-black text-teal-400 mb-6 uppercase tracking-widest text-center tracking-[0.2em]">⚡ Hat Bazlı İş Yoğunluğu</h2><div className="h-64 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikIsHatti}><XAxis dataKey="isim" tick={{fontSize:10, fill:'#6B7280'}} /><YAxis tick={{fontSize:10}} /><Tooltip /><Bar dataKey="adet" fill="#10B981" radius={[6,6,0,0]} /></BarChart></ResponsiveContainer></div></div>
         </div>
 
       </div>
@@ -363,7 +388,7 @@ export default function AdminDashboard() {
       {/* INSPECTION MODAL */}
       {showVakaModal && selectedVaka && (
         <div className="fixed inset-0 bg-black/95 backdrop-blur-md flex justify-center items-center z-[1000] p-4 font-sans">
-          <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-2xl border border-gray-800 p-8 md:p-12 rounded-[50px] w-full max-w-2xl shadow-3xl relative overflow-hidden">
+          <div className="bg-gray-900 border border-gray-800 p-8 md:p-12 rounded-[50px] w-full max-w-2xl shadow-3xl relative overflow-hidden">
              <div className={`absolute top-0 left-0 w-full h-2 ${selectedVaka.ekipmanAdi === "KAR devreye alma" ? "bg-red-600 shadow-2xl" : "bg-indigo-600 shadow-2xl"}`}></div>
              <h2 className="text-2xl font-black text-white mb-8 uppercase tracking-widest">Bildirim Detay Raporu</h2>
              <div className="grid grid-cols-2 gap-8 mb-8 border-b border-gray-800 pb-8 uppercase font-black">
@@ -381,7 +406,7 @@ export default function AdminDashboard() {
       {/* RCA MODAL */}
       {showRcaModal && (
         <div className="fixed inset-0 bg-black/95 backdrop-blur-sm flex justify-center items-center z-[999] p-4">
-          <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-2xl border border-indigo-500/30 p-10 rounded-[50px] w-full max-w-xl shadow-2xl relative">
+          <div className="bg-gray-900 border border-indigo-500/30 p-10 rounded-[50px] w-full max-w-xl shadow-2xl relative">
             <h2 className="text-xl font-black text-white mb-2 uppercase tracking-tighter text-center tracking-[0.2em]">Root Cause Analysis</h2>
             <p className="text-[10px] text-center text-gray-500 mb-8 uppercase font-bold tracking-widest">{selectedLogForRca?.ekipmanAdi}</p>
             <div className="space-y-6">

@@ -307,6 +307,44 @@ function DashboardIcerik() {
           </div>
         </div>
       )}
+
+      {showScoreInfo && (
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-3xl flex items-center justify-center z-[1001] p-4">
+          <div className="bg-slate-900 border border-amber-500/30 p-10 rounded-[3.5rem] max-w-lg w-full relative shadow-3xl text-center">
+            <button onClick={() => setShowScoreInfo(false)} className="absolute top-8 right-8 text-gray-500 hover:text-white transition">✕</button>
+            <div className="text-4xl mb-6">🏆</div>
+            <h2 className="text-xl font-black text-amber-500 mb-6 uppercase tracking-widest">XP Puan Sistemi</h2>
+            <div className="text-left space-y-4 text-gray-300 text-sm leading-relaxed">
+              <p>Sıralamanız performans verileriyle anlık hesaplanır:</p>
+              <ul className="space-y-3 bg-white/5 p-5 rounded-3xl">
+                <li>🟢 <strong>Normal İş:</strong> +20 XP</li>
+                <li>🔴 <strong>Duruşlu İş:</strong> +50 XP</li>
+                <li>⚡ <strong>Hız Bonusu:</strong> MTTR başarısı etkilidir.</li>
+              </ul>
+              <p className="text-[10px] italic text-gray-500">İSG kuralları lig puanlamasında gizli çarpandır.</p>
+            </div>
+            <button onClick={() => setShowScoreInfo(false)} className="mt-8 w-full bg-amber-600 py-4 rounded-2xl font-black uppercase text-xs">Kapat</button>
+          </div>
+        </div>
+      )}
+      {showFinanceInfo && (
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-3xl flex items-center justify-center z-[1001] p-4">
+          <div className="bg-slate-900 border border-emerald-500/30 p-10 rounded-[3.5rem] max-w-lg w-full relative shadow-3xl text-center">
+            <button onClick={() => setShowFinanceInfo(false)} className="absolute top-8 right-8 text-gray-500 hover:text-white transition">✕</button>
+            <div className="text-4xl mb-6">💰</div>
+            <h2 className="text-xl font-black text-emerald-400 mb-6 uppercase tracking-widest">Maliyet Analiz Metodu</h2>
+            <div className="text-left space-y-4 text-gray-300 text-sm leading-relaxed">
+              <p>Maliyet listesi, ekipmanın tesis üzerindeki toplam yükünü temsil eder:</p>
+              <ul className="space-y-3 bg-white/5 p-5 rounded-3xl">
+                <li>🛠️ <strong>Yedek Parça:</strong> Kullanılan parçaların adedi.</li>
+                <li>⏰ <strong>Bakım Süresi:</strong> Müdahale için harcanan her dakika.</li>
+              </ul>
+            </div>
+            <button onClick={() => setShowFinanceInfo(false)} className="mt-8 w-full bg-emerald-600 py-4 rounded-2xl font-black uppercase text-xs">Kapat</button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

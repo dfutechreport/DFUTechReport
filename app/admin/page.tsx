@@ -264,6 +264,42 @@ export default function AdminDashboard() {
            </div>
         </div>
 
+        
+        {/* v34: PERFORMANCE & FINANCE ANALYTICS */}
+        {(userRole === "admin" || userRole === "teknisyen" || userRole === "operator") && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-16 no-print">
+             <div className="bg-amber-500/[0.03] backdrop-blur-3xl border border-amber-500/20 p-10 rounded-[3.5rem] shadow-2xl relative overflow-hidden">
+                <div className="flex justify-between items-start mb-8">
+                  <h2 className="text-sm font-black text-amber-500 uppercase tracking-[0.4em]">🏆 BAKIM YILDIZLARI LİGİ</h2>
+                  <button onClick={() => setShowScoreInfo(true)} className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 text-[8px] font-black px-3 py-1 rounded-full border border-amber-500/20 transition-all uppercase">Puanlar nasıl hesaplandı?</button>
+                </div>
+                <div className="space-y-6">
+                  {bakimLigi.map((p, i) => (
+                    <div key={i} className={`flex justify-between items-center p-5 rounded-[2rem] border ${i===0?'border-amber-500/40 bg-amber-500/10 shadow-lg':'border-white/5 bg-white/5'}`}>
+                      <div className="flex items-center gap-4"><span className="text-2xl">{i===0?'🥇':i===1?'🥈':'🥉'}</span><div><p className="text-xs font-black text-white uppercase">{p.isim}</p><p className="text-[8px] text-gray-500 font-bold uppercase">{p.is} Müdahale</p></div></div>
+                      <div className="text-right"><p className="text-sm font-black text-amber-400">{p.points}</p><p className="text-[8px] text-amber-600 font-black uppercase">XP PUAN</p></div>
+                    </div>
+                  ))}
+                </div>
+             </div>
+             <div className="bg-emerald-500/[0.03] backdrop-blur-3xl border border-emerald-500/20 p-10 rounded-[3.5rem] shadow-2xl">
+                <div className="flex justify-between items-start mb-8">
+                  <h2 className="text-sm font-black text-emerald-400 uppercase tracking-[0.4em]">💰 EN MALİYETLİ EKİPMANLAR</h2>
+                  <button onClick={() => setShowFinanceInfo(true)} className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 text-[8px] font-black px-3 py-1 rounded-full border border-emerald-500/20 transition-all uppercase">Liste neye göre belirlendi?</button>
+                </div>
+                <div className="space-y-4">
+                  {maliyetAnalizi.map((e, i) => (
+                    <div key={i} className="flex justify-between items-center border-b border-white/5 pb-4">
+                      <div><p className="text-[10px] font-bold text-gray-300 uppercase">{e.isim}</p><p className="text-[8px] text-gray-600 font-black uppercase">{e.pSay} Sarfiyat</p></div>
+                      <div className="text-right"><span className="text-sm font-black text-emerald-500">{e.tSure} DK</span><p className="text-[8px] text-emerald-800 font-black uppercase">BAKIM YÜKÜ</p></div>
+                    </div>
+                  ))}
+                </div>
+             </div>
+          </div>
+        )}
+
+
         {/* RCA TASK LIST */}
         <div className="bg-gray-900 border border-gray-800 p-8 rounded-[40px] mb-12 shadow-2xl">
           <h2 className="text-xl font-black text-white mb-6 uppercase tracking-widest">🧠 RCA Analizi Bekleyen Duruşlar</h2>
@@ -360,6 +396,44 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {showScoreInfo && (
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-3xl flex items-center justify-center z-[1001] p-4">
+          <div className="bg-slate-900 border border-amber-500/30 p-10 rounded-[3.5rem] max-w-lg w-full relative shadow-3xl text-center">
+            <button onClick={() => setShowScoreInfo(false)} className="absolute top-8 right-8 text-gray-500 hover:text-white transition">✕</button>
+            <div className="text-4xl mb-6">🏆</div>
+            <h2 className="text-xl font-black text-amber-500 mb-6 uppercase tracking-widest">XP Puan Sistemi</h2>
+            <div className="text-left space-y-4 text-gray-300 text-sm leading-relaxed">
+              <p>Sıralamanız performans verileriyle anlık hesaplanır:</p>
+              <ul className="space-y-3 bg-white/5 p-5 rounded-3xl">
+                <li>🟢 <strong>Normal İş:</strong> +20 XP</li>
+                <li>🔴 <strong>Duruşlu İş:</strong> +50 XP</li>
+                <li>⚡ <strong>Hız Bonusu:</strong> MTTR başarısı etkilidir.</li>
+              </ul>
+              <p className="text-[10px] italic text-gray-500">İSG kuralları lig puanlamasında gizli çarpandır.</p>
+            </div>
+            <button onClick={() => setShowScoreInfo(false)} className="mt-8 w-full bg-amber-600 py-4 rounded-2xl font-black uppercase text-xs">Kapat</button>
+          </div>
+        </div>
+      )}
+      {showFinanceInfo && (
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-3xl flex items-center justify-center z-[1001] p-4">
+          <div className="bg-slate-900 border border-emerald-500/30 p-10 rounded-[3.5rem] max-w-lg w-full relative shadow-3xl text-center">
+            <button onClick={() => setShowFinanceInfo(false)} className="absolute top-8 right-8 text-gray-500 hover:text-white transition">✕</button>
+            <div className="text-4xl mb-6">💰</div>
+            <h2 className="text-xl font-black text-emerald-400 mb-6 uppercase tracking-widest">Maliyet Analiz Metodu</h2>
+            <div className="text-left space-y-4 text-gray-300 text-sm leading-relaxed">
+              <p>Maliyet listesi, ekipmanın tesis üzerindeki toplam yükünü temsil eder:</p>
+              <ul className="space-y-3 bg-white/5 p-5 rounded-3xl">
+                <li>🛠️ <strong>Yedek Parça:</strong> Kullanılan parçaların adedi.</li>
+                <li>⏰ <strong>Bakım Süresi:</strong> Müdahale için harcanan her dakika.</li>
+              </ul>
+            </div>
+            <button onClick={() => setShowFinanceInfo(false)} className="mt-8 w-full bg-emerald-600 py-4 rounded-2xl font-black uppercase text-xs">Kapat</button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

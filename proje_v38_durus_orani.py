@@ -1,7 +1,7 @@
 import os
 import re
 
-def final_surgical_clean(path):
+def absolute_surgical_wipe(path):
     if not os.path.exists(path):
         print(f"[HATA] {path} bulunamadı. Lütfen betiği projenin ana dizininde çalıştırın.")
         return
@@ -9,14 +9,18 @@ def final_surgical_clean(path):
     with open(path, 'r', encoding='utf-8') as f:
         code = f.read()
 
-    # 1. TÜM ESKİ v38, v39, v40, v41 BLOĞUNU KOMPLE SİL
-    # Ne kadar eklenmişse hepsini temizler.
-    code = re.sub(r'\{/\* v3[89]_.*?\}\)$$\}', '', code, flags=re.DOTALL)
-    code = re.sub(r'\{/\* v4[012]_.*?\}\)$$$\}', '', code, flags=re.DOTALL)
+    # 1. TÜM ESKİ v38-v42 BLOKLARINI KOMPLE TEMİZLE
+    code = re.sub(r'\{/\* v(3[89]|4[0-9]).*?\}\)$$\}', '', code, flags=re.DOTALL)
+    
+    # 2. AYRICA EĞER MODAL OLARAK KALDIYSA ONLARI DA TEMİZLE
+    code = re.sub(r'\{showDowntimeModal && $$.*?$\}', '', code, flags=re.DOTALL)
+    
+    # 3. TEKRARLAYAN DIV KALINTILARINI TEMİZLE
+    code = re.sub(r'<div className="flex items-center gap-3 ml-6 px-4 py-2 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-md no-print">[\s\S]*?</div>', '', code)
 
-    # 2. TEK VE KESİN GÖSTERGEYİ EKLE
+    # 4. TEK VE KESİN GÖSTERGEYİ YERLEŞTİR
     final_ui = r"""
-              {/* v42_final: TEKİL DURUŞ ORANI */}
+              {/* v43_final: TEKİL DURUŞ ORANI */}
               {(() => {
                 const totalMins = Number(kpiTotals.sure) || 0;
                 const downtimeMins = Number(kpiTotals.durus) || 0;
@@ -32,7 +36,7 @@ def final_surgical_clean(path):
               })()}"""
 
     # Başlığın yanına sadece bir tane ekle
-    if 'v42_final' not in code:
+    if 'v43_final' not in code:
         code = code.replace('Komuta Merkezi</h1>', 'Komuta Merkezi</h1>' + final_ui)
 
     with open(path, 'w', encoding='utf-8') as f:
@@ -40,4 +44,4 @@ def final_surgical_clean(path):
     print("[BAŞARILI] Tüm kalabalık temizlendi. Sadece tek satır Duruş Oranı bırakıldı.")
 
 # ÇALIŞTIR
-final_surgical_clean("app/admin/page.tsx")
+absolute_surgical_wipe("app/admin/page.tsx")

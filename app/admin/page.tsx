@@ -60,7 +60,7 @@ export default function AdminDashboard() {
   const [suSayacList, setSuSayacList] = useState<string[]>([]);
 
   // OUTPUTS
-  const [kpiTotals, setKpiTotals] = useState({ is: 0, sure: 0, durus: 0, mttr: 0 });
+  const [kpiTotals, setKpiTotals] = useState({ is: 0, sure: 0, durus: 0, mttr: 0, durusCount: 0 });
   const [grafikIsHatti, setGrafikIsHatti] = useState<any[]>([]);
   const [personelPerformans, setPersonelPerformans] = useState<any[]>([]);
   const [ekipmanPerformans, setEkipmanPerformans] = useState<any[]>([]);
@@ -148,7 +148,7 @@ export default function AdminDashboard() {
   // --- CALCULATION ENGINE ---
   useEffect(() => {
     if (rawLogs.length === 0) return;
-    let isC=0, suC=0, duC=0;
+    let isC=0, suC=0, duC=0, duCount=0;
     const hD:any = {}, pD:any = {}, eD:any = {}, pNames = new Set<string>();
 
     rawLogs.forEach(l => {
@@ -180,7 +180,7 @@ export default function AdminDashboard() {
     });
 
     setPersonelHavuzu(Array.from(pNames).sort());
-    setKpiTotals({ is: isC, sure: suC, durus: duC, mttr: isC > 0 ? (suC/isC) : 0 });
+    setKpiTotals({ is: isC, sure: suC, durus: duC, mttr: isC > 0 ? (suC/isC) : 0, durusCount: duCount });
     setGrafikIsHatti(Object.keys(hD).map(k=>({ isim: k, adet: hD[k] })));
     setPersonelPerformans(Object.keys(pD).map(k=>({ isim: k, ...pD[k] })).sort((a,b)=> filterPerfSiralama === "efor" ? b.eforDk - a.eforDk : b.isSayisi - a.isSayisi));
     setEkipmanPerformans(Object.keys(eD).map(k=>({ ekipman: k, ...eD[k] })).sort((a,b)=>b.count-a.count).slice(0, 5));
@@ -219,7 +219,19 @@ export default function AdminDashboard() {
         
         {/* HEADER */}
         <div className="flex justify-between items-center mb-10 border-b border-gray-800 pb-5 no-print">
-          <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-12 bg-white rounded p-1" /><div><h1 className="text-2xl font-black uppercase tracking-tighter">Komuta Merkezi</h1><p className="text-[10px] text-gray-500 font-bold uppercase">{userName} | {userRole}</p></div></div>
+          <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-12 bg-white rounded p-1" /><div><h1 className="text-2xl font-black uppercase tracking-tighter">Komuta Merkezi</h1>
+              {/* v38_ratio: DURUŞ YOĞUNLUK GÖSTERGESİ */}
+              {(() => {
+                const ratio = kpiTotals.is > 0 ? (kpiTotals.durusCount / kpiTotals.is) * 100 : 0;
+                return (
+                  <div className="flex items-center gap-3 ml-6 px-4 py-2 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-md">
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">DURUŞ ORANI:</span>
+                    <span className={`text-sm font-black tracking-tighter ${ratio < 20 ? 'text-green-400' : ratio < 40 ? 'text-yellow-400' : 'text-red-400 animate-pulse'}`}>
+                      %{ratio.toFixed(1)}
+                    </span>
+                  </div>
+                )
+              })()}<p className="text-[10px] text-gray-500 font-bold uppercase">{userName} | {userRole}</p></div></div>
           <div className="flex gap-3">
              <Link href="/dashboard" className="bg-indigo-600 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase">Vardiya Raporu</Link>
              <button onClick={()=>auth.signOut()} className="bg-red-600 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase shadow-lg transition">Çıkış</button>

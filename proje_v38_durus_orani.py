@@ -1,21 +1,22 @@
 import os
 import re
 
-def full_clean_header(path):
+def final_surgical_clean(path):
     if not os.path.exists(path):
-        print(f"[HATA] {path} bulunamadı.")
+        print(f"[HATA] {path} bulunamadı. Lütfen betiği projenin ana dizininde çalıştırın.")
         return
     
     with open(path, 'r', encoding='utf-8') as f:
         code = f.read()
 
-    # 1. TÜM ESKİ KALINTILARI TEMİZLE (v38, v39, v40 bloklarını siler)
+    # 1. TÜM ESKİ v38, v39, v40, v41 BLOĞUNU KOMPLE SİL
+    # Ne kadar eklenmişse hepsini temizler.
     code = re.sub(r'\{/\* v3[89]_.*?\}\)$$\}', '', code, flags=re.DOTALL)
-    code = re.sub(r'\{/\* v40_.*?\}\)$$$\}', '', code, flags=re.DOTALL)
-    
+    code = re.sub(r'\{/\* v4[012]_.*?\}\)$$$\}', '', code, flags=re.DOTALL)
+
     # 2. TEK VE KESİN GÖSTERGEYİ EKLE
-    single_ui = r"""
-              {/* v41_final_ratio: KESİN DURUŞ ORANI */}
+    final_ui = r"""
+              {/* v42_final: TEKİL DURUŞ ORANI */}
               {(() => {
                 const totalMins = Number(kpiTotals.sure) || 0;
                 const downtimeMins = Number(kpiTotals.durus) || 0;
@@ -30,13 +31,13 @@ def full_clean_header(path):
                 )
               })()}"""
 
-    if 'v41_final_ratio' not in code:
-        # Başlığın hemen yanına sadece 1 adet ekle
-        code = re.sub(r'(Komuta Merkezi</h1>)', r'\1' + single_ui, code)
+    # Başlığın yanına sadece bir tane ekle
+    if 'v42_final' not in code:
+        code = code.replace('Komuta Merkezi</h1>', 'Komuta Merkezi</h1>' + final_ui)
 
     with open(path, 'w', encoding='utf-8') as f:
         f.write(code)
-    print(f"[BAŞARILI] {path} temizlendi. Mükerrer satırlar kaldırıldı.")
+    print("[BAŞARILI] Tüm kalabalık temizlendi. Sadece tek satır Duruş Oranı bırakıldı.")
 
 # ÇALIŞTIR
-full_clean_header("app/admin/page.tsx")
+final_surgical_clean("app/admin/page.tsx")

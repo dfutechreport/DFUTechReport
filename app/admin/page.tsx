@@ -303,13 +303,22 @@ export default function AdminDashboard() {
         {/* HEADER */}
         <div className="flex justify-between items-center mb-10 border-b border-gray-800 pb-5 no-print">
           <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-12 bg-white rounded p-1" /><div><h1 className="text-2xl font-black uppercase tracking-tighter">Komuta Merkezi</h1>
+              {/* v48: TEKİL DURUŞ ORANI */}
               {(() => {
-                const rat = (Number(kpiTotals.sure) > 0) ? (Number(kpiTotals.durus) / Number(kpiTotals.sure)) * 100 : 0;
+                const totalM = Number(kpiTotals.sure) || 0;
+                const downM = Number(kpiTotals.durus) || 0;
+                const rat = totalM > 0 ? (downM / totalM) * 100 : 0;
                 return (
                   <div className="flex items-center gap-3 ml-6 px-4 py-2 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-md no-print">
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">DURUŞ ORANI:</span>
                     <span className={`text-sm font-black tracking-tighter ${rat < 30 ? 'text-green-400' : rat < 60 ? 'text-yellow-400' : 'text-red-400 animate-pulse'}`}>%{rat.toFixed(1)}</span>
                   </div>
+                )
+              })()}
+              {(() => {
+                const rat = (Number(kpiTotals.sure) > 0) ? (Number(kpiTotals.durus) / Number(kpiTotals.sure)) * 100 : 0;
+                return (
+                  
                 )
               })()}<p className="text-[10px] text-gray-500 font-bold uppercase">{userName} | {userRole}</p></div></div>
           <div className="flex gap-3">

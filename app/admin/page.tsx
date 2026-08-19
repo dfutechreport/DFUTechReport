@@ -227,7 +227,7 @@ export default function AdminDashboard() {
         
         {/* HEADER */}
         <div className="flex justify-between items-center mb-10 border-b border-gray-800 pb-5 no-print">
-          <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-12 bg-white rounded p-1" /><div><h1 className="text-2xl font-black uppercase tracking-tighter">Komuta Merkezi</h1>
+          <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-12 bg-white rounded p-1" /><div><h1 className="text-2xl font-black uppercase tracking-tighter">Komuta Merkezi</h1>{/* v51: RATIO */}{(() => { const t = Number(kpiTotals.sure)||0, d = Number(kpiTotals.durus)||0, r = t > 0 ? (d/t)*100 : 0; return ( <div className="flex items-center gap-3 ml-6 px-4 py-2 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-md no-print"> <span className="text-[10px] font-black uppercase text-gray-500">DURUŞ ORANI:</span> <span className={`text-sm font-black ${r < 30 ? 'text-green-400' : 'text-red-400'}`}>%{r.toFixed(1)}</span> </div> ) })()}
               {/* v51: TEKİL DURUŞ ORANI */}
               {(() => {
                 const totalM = Number(kpiTotals.sure) || 0;
@@ -496,6 +496,10 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+
+      {showScoreInfo && ( <div className="fixed inset-0 bg-black/95 flex items-center justify-center z-[1001] p-4"> <div className="bg-slate-900 border border-amber-500/30 p-10 rounded-[3.5rem] max-w-lg w-full relative shadow-3xl text-center"> <button onClick={()=>setShowScoreInfo(false)} className="absolute top-8 right-8 text-white">✕</button> <h2 className="text-xl font-black text-amber-500 mb-6 uppercase">XP Puanlama Sistemi</h2> <div className="text-left text-sm text-gray-300 space-y-4"> <p>• Normal İş: +20 XP</p> <p>• Duruşlu İş: +50 XP</p> </div> <button onClick={()=>setShowScoreInfo(false)} className="mt-8 w-full bg-amber-600 py-4 rounded-2xl font-black uppercase text-xs">Kapat</button> </div> </div> )}
+      {showFinanceInfo && ( <div className="fixed inset-0 bg-black/95 flex items-center justify-center z-[1001] p-4"> <div className="bg-slate-900 border border-emerald-500/30 p-10 rounded-[3.5rem] max-w-lg w-full relative shadow-3xl text-center"> <button onClick={()=>setShowFinanceInfo(false)} className="absolute top-8 right-8 text-white">✕</button> <h2 className="text-xl font-black text-emerald-400 mb-6 uppercase">Maliyet Analizi</h2> <div className="text-left text-sm text-gray-300 space-y-4"> <p>• Yedek parça sarfiyatı ve bakım süreleri baz alınır.</p> </div> <button onClick={()=>setShowFinanceInfo(false)} className="mt-8 w-full bg-emerald-600 py-4 rounded-2xl font-black uppercase text-xs">Kapat</button> </div> </div> )}
 
     </div>
   );

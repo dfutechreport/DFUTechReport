@@ -345,6 +345,10 @@ function DashboardIcerik() {
         </div>
       )}
 
+
+      {showScoreInfo && ( <div className="fixed inset-0 bg-black/95 flex items-center justify-center z-[1001] p-4"> <div className="bg-slate-900 border border-amber-500/30 p-10 rounded-[3.5rem] max-w-lg w-full relative shadow-3xl text-center"> <button onClick={()=>setShowScoreInfo(false)} className="absolute top-8 right-8 text-white">✕</button> <h2 className="text-xl font-black text-amber-500 mb-6 uppercase">XP Puanlama Sistemi</h2> <div className="text-left text-sm text-gray-300 space-y-4"> <p>• Normal İş: +20 XP</p> <p>• Duruşlu İş: +50 XP</p> </div> <button onClick={()=>setShowScoreInfo(false)} className="mt-8 w-full bg-amber-600 py-4 rounded-2xl font-black uppercase text-xs">Kapat</button> </div> </div> )}
+      {showFinanceInfo && ( <div className="fixed inset-0 bg-black/95 flex items-center justify-center z-[1001] p-4"> <div className="bg-slate-900 border border-emerald-500/30 p-10 rounded-[3.5rem] max-w-lg w-full relative shadow-3xl text-center"> <button onClick={()=>setShowFinanceInfo(false)} className="absolute top-8 right-8 text-white">✕</button> <h2 className="text-xl font-black text-emerald-400 mb-6 uppercase">Maliyet Analizi</h2> <div className="text-left text-sm text-gray-300 space-y-4"> <p>• Yedek parça sarfiyatı ve bakım süreleri baz alınır.</p> </div> <button onClick={()=>setShowFinanceInfo(false)} className="mt-8 w-full bg-emerald-600 py-4 rounded-2xl font-black uppercase text-xs">Kapat</button> </div> </div> )}
+
     </div>
   );
 }

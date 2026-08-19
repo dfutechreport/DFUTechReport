@@ -18,7 +18,6 @@ export default function AdminDashboard() {
   const [maliyetAnalizi, setMaliyetAnalizi] = useState<any[]>([]);
   const [predictiveInsights, setPredictiveInsights] = useState<any[]>([]);
   const [mtbfMetrics, setMtbfMetrics] = useState<any[]>([]);
-  const [rawLogs, setRawLogs] = useState<any[]>([]);
   
   // DATA STATES
   const [rawLogs, setRawLogs] = useState<any[]>([]);
@@ -169,26 +168,27 @@ export default function AdminDashboard() {
     setPersonelHavuzu(Array.from(pNames).sort());
     setKpiTotals({ is: isC, sure: suC, durus: duC, mttr: isC > 0 ? (suC/isC) : 0 });
     setGrafikIsHatti(Object.keys(hD).map(k=>({ isim: k, adet: hD[k] })));
-    const ligaD49: any = {}; const finD49: any = {}; const grp49: any = {};
+    // --- v51 TITANIUM ANALYTICS ---
+    const ligaD51: any = {}; const finD51: any = {}; const grp51: any = {};
     rawLogs.forEach(l => {
       const crew = Array.isArray(l.isiYapanlar) ? l.isiYapanlar : [l.bildirenKisi];
-      crew.forEach((p: string) => { if(p) { if (!ligaD49[p]) ligaD49[p] = { isim: p, is: 0, pts: 0 }; ligaD49[p].is++; ligaD49[p].pts += l.isDuruslu ? 50 : 20; } });
-      if (!finD49[l.ekipmanAdi]) finD49[l.ekipmanAdi] = { isim: l.ekipmanAdi, pSy: 0, tSr: 0 };
-      finD49[l.ekipmanAdi].pSy += (l.kullanilanMalzemeler?.length || 0); finD49[l.ekipmanAdi].tSr += Number(l.toplamSureDakika) || 0;
-      if (!grp49[l.ekipmanAdi]) grp49[l.ekipmanAdi] = []; grp49[l.ekipmanAdi].push(l);
+      crew.forEach((p: string) => { if(p) { if (!ligaD51[p]) ligaD51[p] = { isim: p, is: 0, pts: 0 }; ligaD51[p].is++; ligaD51[p].pts += l.isDuruslu ? 50 : 20; } });
+      if (!finD51[l.ekipmanAdi]) finD51[l.ekipmanAdi] = { isim: l.ekipmanAdi, pSy: 0, tSr: 0 };
+      finD51[l.ekipmanAdi].pSy += (l.kullanilanMalzemeler?.length || 0); finD51[l.ekipmanAdi].tSr += Number(l.toplamSureDakika) || 0;
+      if (!grp51[l.ekipmanAdi]) grp51[l.ekipmanAdi] = []; grp51[l.ekipmanAdi].push(l);
     });
-    setBakimLigi(Object.values(ligaD49).sort((a:any, b:any) => b.pts - a.pts).slice(0, 3));
-    setMaliyetAnalizi(Object.values(finD49).sort((a:any, b:any) => b.pSy - a.pSy).slice(0, 5));
-    const m49: any[] = []; const i49: any[] = [];
-    Object.keys(grp49).forEach(eq => {
-      const lgs = grp49[eq].sort((a:any,b:any)=> (b.kayitTarihi?.toDate?.()||new Date(b.kayitTarihi)).getTime() - (a.kayitTarihi?.toDate?.()||new Date(a.kayitTarihi)).getTime());
+    setBakimLigi(Object.values(ligaD51).sort((a:any, b:any) => b.pts - a.pts).slice(0, 3));
+    setMaliyetAnalizi(Object.values(finD51).sort((a:any, b:any) => b.pSay - a.pSay).slice(0, 5));
+    const m51: any[] = []; const i51: any[] = [];
+    Object.keys(grp51).forEach(eq => {
+      const lgs = grp51[eq].sort((a:any,b:any)=> (b.kayitTarihi?.toDate?.()||new Date(b.kayitTarihi)).getTime() - (a.kayitTarihi?.toDate?.()||new Date(a.kayitTarihi)).getTime());
       if(lgs.length >= 2) {
         let tt = 0; for(let i=0; i<lgs.length-1; i++) tt += (lgs[i].kayitTarihi?.toDate?.()||new Date(lgs[i].kayitTarihi)).getTime() - (lgs[i+1].kayitTarihi?.toDate?.()||new Date(lgs[i+1].kayitTarihi)).getTime();
-        m49.push({ equipment: eq, mtbf: (tt/(lgs.length-1)/86400000).toFixed(1) });
-        if(lgs.filter((l:any)=> (l.kayitTarihi?.toDate?.()||new Date(l.kayitTarihi)).getTime() > Date.now()-1296000000).length >= 2) i49.push({ equipment: eq });
+        m51.push({ equipment: eq, mtbf: (tt/(lgs.length-1)/86400000).toFixed(1) });
+        if(lgs.filter((l:any)=> (l.kayitTarihi?.toDate?.()||new Date(l.kayitTarihi)).getTime() > Date.now()-1296000000).length >= 2) i51.push({ equipment: eq });
       }
     });
-    setPredictiveInsights(i49.slice(0,3)); setMtbfMetrics(m49.sort((a,b)=>Number(b.mtbf)-Number(a.mtbf)).slice(0,5));
+    setPredictiveInsights(i51.slice(0,3)); setMtbfMetrics(m51.sort((a,b)=>Number(b.mtbf)-Number(a.mtbf)).slice(0,5));
     
     setPersonelPerformans(Object.keys(pD).map(k=>({ isim: k, ...pD[k] })).sort((a,b)=> filterPerfSiralama === "efor" ? b.eforDk - a.eforDk : b.isSayisi - a.isSayisi));
     setEkipmanPerformans(Object.keys(eD).map(k=>({ ekipman: k, ...eD[k] })).sort((a,b)=>b.count-a.count).slice(0, 5));
@@ -218,17 +218,17 @@ export default function AdminDashboard() {
     alert("Analiz Kaydedildi"); setShowRcaModal(false); fetchRcaData();
   };
 
-  if (loading) return <div className="min-h-screen bg-gray-950 flex justify-center items-center text-teal-400 font-black animate-pulse uppercase tracking-[0.2em]">DFU SİSTEM YÜKLENİYOR...</div>;
-  if (!isAdmin) return <div className="min-h-screen bg-gray-950 text-red-500 flex justify-center items-center font-bold text-xl uppercase italic tracking-tighter">YETKİSİZ ERİŞİM!</div>;
+  if (loading) return <div className="min-h-screen bg-[#020617] flex justify-center items-center text-teal-400 font-black animate-pulse uppercase tracking-[0.2em]">DFU SİSTEM YÜKLENİYOR...</div>;
+  if (!isAdmin) return <div className="min-h-screen bg-[#020617] text-red-500 flex justify-center items-center font-bold text-xl uppercase italic tracking-tighter">YETKİSİZ ERİŞİM!</div>;
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8 font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-[#020617] text-white p-4 md:p-8 font-sans overflow-x-hidden">
       <div className="max-w-7xl mx-auto">
         
         {/* HEADER */}
         <div className="flex justify-between items-center mb-10 border-b border-gray-800 pb-5 no-print">
           <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-12 bg-white rounded p-1" /><div><h1 className="text-2xl font-black uppercase tracking-tighter">Komuta Merkezi</h1>
-              {/* DURUŞ ORANI */}
+              {/* v51: TEKİL DURUŞ ORANI */}
               {(() => {
                 const totalM = Number(kpiTotals.sure) || 0;
                 const downM = Number(kpiTotals.durus) || 0;
@@ -236,7 +236,7 @@ export default function AdminDashboard() {
                 return (
                   <div className="flex items-center gap-3 ml-6 px-4 py-2 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-md no-print">
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">DURUŞ ORANI:</span>
-                    <span className={`text-sm font-black tracking-tighter ${rat < 30 ? 'text-green-400' : 'text-red-400'}`}>%{rat.toFixed(1)}</span>
+                    <span className={`text-sm font-black tracking-tighter ${rat < 30 ? 'text-green-400' : 'text-red-400 animate-pulse'}`}>%{rat.toFixed(1)}</span>
                   </div>
                 )
               })()}<p className="text-[10px] text-gray-500 font-bold uppercase">{userName} | {userRole}</p></div></div>
@@ -244,33 +244,7 @@ export default function AdminDashboard() {
              <Link href="/dashboard" className="bg-indigo-600 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase">Vardiya Raporu</Link>
              <button onClick={()=>auth.signOut()} className="bg-red-600 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase shadow-lg transition">Çıkış</button>
           </div>
-        
-        {/* v49: TOP PRIORITY */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-           <div className="bg-red-500/[0.03] backdrop-blur-3xl border border-red-500/20 p-8 rounded-[3.5rem] shadow-2xl relative overflow-hidden group">
-              <h2 className="text-sm font-black text-red-500 mb-6 uppercase tracking-[0.4em] flex items-center gap-3">🚒 İSG ALARMLARI</h2>
-              <div className="space-y-3 max-h-[250px] overflow-y-auto">
-                {aktifIsgAlarmlari.map(a => (
-                  <div key={a.id} className="bg-white/5 p-5 rounded-[2rem] flex justify-between items-center">
-                    <div><p className="text-[9px] font-black text-red-400 uppercase">{a.hatAdi}</p><p className="text-xs font-bold">{a.ekipmanAdi}</p></div>
-                    <button onClick={()=> {setSelectedVaka(a); setShowVakaModal(true);}} className="bg-red-600 text-white text-[9px] font-black px-5 py-2 rounded-xl">Detay</button>
-                  </div>
-                ))}
-              </div>
-           </div>
-           <div className="bg-indigo-500/[0.03] backdrop-blur-3xl border border-indigo-500/10 p-8 rounded-[3.5rem] shadow-2xl">
-              <h2 className="text-sm font-black text-indigo-400 mb-6 uppercase tracking-[0.4em] flex items-center gap-3">📢 SAHA BİLDİRİMLERİ</h2>
-              <div className="space-y-3 max-h-[250px] overflow-y-auto">
-                {aktifIsler.map(is => (
-                  <div key={is.id} className="bg-white/5 p-5 rounded-[2rem] flex justify-between items-center">
-                    <div><p className="text-[9px] font-black text-indigo-400 uppercase">{is.hatAdi}</p><p className="text-xs font-bold">{is.ekipmanAdi}</p></div>
-                    <button onClick={()=> {setSelectedVaka(is); setShowVakaModal(true);}} className="bg-indigo-600 text-white text-[9px] font-black px-5 py-2 rounded-xl">İncele</button>
-                  </div>
-                ))}
-              </div>
-           </div>
         </div>
-</div>
 
         {/* 22 BUTTON GRID (COMPLETE) */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-12 no-print">
@@ -298,7 +272,7 @@ export default function AdminDashboard() {
 
         {/* NOTIFICATION CARDS */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-           <div className="bg-gray-900 border-2 border-red-900/40 p-7 rounded-[40px] shadow-2xl">
+           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-2xl border-2 border-red-900/40 p-7 rounded-[3.5rem] shadow-2xl">
               <h2 className="text-lg font-black text-red-500 mb-6 flex items-center gap-3 uppercase tracking-[0.2em]">🚒 İSG ALARMLARI</h2>
               <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
                 {aktifIsgAlarmlari.map(a => (
@@ -310,7 +284,7 @@ export default function AdminDashboard() {
                 {aktifIsgAlarmlari.length === 0 && <p className="text-center py-10 text-gray-600 text-xs italic font-bold">Aktif İSG alarmı yok.</p>}
               </div>
            </div>
-           <div className="bg-gray-900 border-2 border-indigo-900/40 p-7 rounded-[40px] shadow-2xl">
+           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-2xl border-2 border-indigo-900/40 p-7 rounded-[3.5rem] shadow-2xl">
               <h2 className="text-lg font-black text-indigo-400 mb-6 flex items-center gap-3 uppercase tracking-[0.2em]">📢 SAHA BİLDİRİMLERİ</h2>
               <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
                 {aktifIsler.map(is => (
@@ -324,8 +298,83 @@ export default function AdminDashboard() {
            </div>
         </div>
 
+        
+        {/* v51: SEVİYE 2 - İSG VE SAHA BİLDİRİMLERİ (YAN YANA) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12 no-print">
+           <div className="bg-red-500/[0.03] backdrop-blur-3xl border border-red-500/20 p-8 rounded-[3.5rem] shadow-2xl relative overflow-hidden group">
+              <h2 className="text-sm font-black text-red-500 mb-6 uppercase tracking-[0.4em] flex items-center gap-3">🚒 İSG ALARMLARI</h2>
+              <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                {aktifIsgAlarmlari.map(a => (
+                  <div key={a.id} className="bg-white/5 border border-white/5 p-5 rounded-[2rem] flex justify-between items-center">
+                    <div><p className="text-[9px] font-black text-red-400 uppercase">{a.hatAdi}</p><p className="text-xs font-bold text-gray-200">{a.ekipmanAdi}</p></div>
+                    <button onClick={()=> {setSelectedVaka(a); setShowVakaModal(true);}} className="bg-red-600 text-white text-[9px] font-black px-5 py-2 rounded-xl">Detay</button>
+                  </div>
+                ))}
+              </div>
+           </div>
+           <div className="bg-indigo-500/[0.03] backdrop-blur-3xl border border-indigo-500/10 p-8 rounded-[3.5rem] shadow-2xl">
+              <h2 className="text-sm font-black text-indigo-400 mb-6 uppercase tracking-[0.4em] flex items-center gap-3">📢 SAHA BİLDİRİMLERİ</h2>
+              <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                {aktifIsler.map(is => (
+                  <div key={is.id} className="bg-white/5 border border-white/5 p-5 rounded-[2rem] flex justify-between items-center">
+                    <div><p className="text-[9px] font-black text-indigo-400 uppercase">{is.hatAdi}</p><p className="text-xs font-bold text-gray-200">{is.ekipmanAdi}</p></div>
+                    <button onClick={()=> {setSelectedVaka(is); setShowVakaModal(true);}} className="bg-indigo-600 text-white text-[9px] font-black px-5 py-2 rounded-xl">İncele</button>
+                  </div>
+                ))}
+              </div>
+           </div>
+        </div>
+
+        {/* v51: SEVİYE 3 - LİG, FİNANS VE ANALİTİK */}
+        {userRole !== "isg" && (
+          <div className="space-y-12 mb-16 no-print">
+             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="bg-amber-500/[0.03] backdrop-blur-3xl border border-amber-500/20 p-10 rounded-[3.5rem] shadow-2xl relative overflow-hidden">
+                   <div className="flex justify-between items-start mb-8">
+                      <h2 className="text-sm font-black text-amber-500 uppercase tracking-[0.4em]">🏆 BAKIM YILDIZLARI LİGİ</h2>
+                      <button onClick={() => setShowScoreInfo(true)} className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 text-[8px] font-black px-3 py-1 rounded-full border border-amber-500/20 uppercase transition-all">Puanlar nasıl hesaplandı?</button>
+                   </div>
+                   <div className="space-y-6">
+                     {bakimLigi.length > 0 ? bakimLigi.map((p, i) => (
+                       <div key={i} className={`flex justify-between items-center p-5 rounded-[2rem] border ${i===0?'border-amber-500/40 bg-amber-500/10':'border-white/5 bg-white/5'}`}>
+                         <div className="flex items-center gap-4"><span className="text-2xl">{i===0?'🥇':i===1?'🥈':'🥉'}</span><div><p className="text-xs font-black text-white uppercase">{p.isim}</p><p className="text-[8px] text-gray-500 font-bold uppercase">{p.is} Müdahale</p></div></div>
+                         <div className="text-right"><p className="text-sm font-black text-amber-400">{p.pts}</p><p className="text-[8px] text-amber-600 font-black uppercase">XP PUAN</p></div>
+                       </div>
+                     )) : <p className="text-center py-10 text-gray-700 text-[10px] font-black uppercase tracking-widest animate-pulse">Veri Bekleniyor...</p>}
+                   </div>
+                </div>
+                <div className="bg-emerald-500/[0.03] backdrop-blur-3xl border border-emerald-500/20 p-10 rounded-[3.5rem] shadow-2xl">
+                   <div className="flex justify-between items-start mb-8">
+                      <h2 className="text-sm font-black text-emerald-400 uppercase tracking-[0.4em]">💰 EN MALİYETLİ EKİPMANLAR</h2>
+                      <button onClick={() => setShowFinanceInfo(true)} className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 text-[8px] font-black px-3 py-1 rounded-full border border-emerald-500/20 uppercase transition-all">Liste neye göre belirlendi?</button>
+                   </div>
+                   <div className="space-y-4">
+                     {maliyetAnalizi.length > 0 ? maliyetAnalizi.map((e, i) => (
+                       <div key={i} className="flex justify-between items-center border-b border-white/5 pb-4">
+                         <div><p className="text-[10px] font-bold text-gray-300 uppercase">{e.isim}</p><p className="text-[8px] text-gray-600 font-black uppercase">{e.pSay} Sarfiyat</p></div>
+                         <div className="text-right"><span className="text-sm font-black text-emerald-500">{e.tSr} DK</span><p className="text-[8px] text-emerald-800 font-black uppercase">TOPLAM MALİYET</p></div>
+                       </div>
+                     )) : <p className="text-center py-10 text-gray-700 text-[10px] font-black uppercase tracking-widest animate-pulse">Analiz Bekleniyor...</p>}
+                   </div>
+                </div>
+             </div>
+             <div className="bg-indigo-500/[0.03] backdrop-blur-3xl border border-indigo-500/10 p-10 rounded-[3.5rem] shadow-2xl relative overflow-hidden group">
+                <h2 className="text-sm font-black text-indigo-400 mb-8 uppercase tracking-[0.5em] flex items-center gap-4">🧠 AI KRİTİK ARIZA ÖNGÖRÜSÜ <span className="h-2 w-2 bg-red-500 rounded-full animate-ping"></span></h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {predictiveInsights.length > 0 ? predictiveInsights.map((ins, i) => (
+                    <div key={i} className="bg-red-500/10 border border-red-500/20 p-6 rounded-[2.5rem] flex flex-col justify-center items-center text-center animate-pulse">
+                      <p className="text-[12px] font-black text-red-400 uppercase mb-2">{ins.equipment}</p>
+                      <span className="bg-red-600 text-white text-[9px] font-black px-6 py-2 rounded-full uppercase">Kritik Risk</span>
+                    </div>
+                  )) : <div className="col-span-3 py-10 text-center text-teal-500 font-black text-[11px] uppercase animate-pulse tracking-[0.4em]">✓ SİSTEM ANALİZİ TAMAMLANDI</div>}
+                </div>
+             </div>
+          </div>
+        )}
+
+
         {/* RCA TASK LIST */}
-        <div className="bg-gray-900 border border-gray-800 p-8 rounded-[40px] mb-12 shadow-2xl">
+        <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-2xl border border-gray-800 p-8 rounded-[3.5rem] mb-12 shadow-2xl">
           <h2 className="text-xl font-black text-white mb-6 uppercase tracking-widest">🧠 RCA Analizi Bekleyen Duruşlar</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {rawLogs.filter((l: any) => l.isDuruslu).slice(0, 6).map((log, idx) => {
@@ -342,25 +391,25 @@ export default function AdminDashboard() {
 
         {/* KPI CARDS */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10 text-center uppercase tracking-tighter">
-           <div className="bg-gray-900 p-6 rounded-[30px] border border-gray-800 shadow-xl"><p className="text-[10px] text-gray-500 font-black mb-1">İş Sayısı</p><h3 className="text-4xl font-black text-green-400">{kpiTotals.is}</h3></div>
-           <div className="bg-gray-900 p-6 rounded-[30px] border border-gray-800 shadow-xl"><p className="text-[10px] text-gray-500 font-black mb-1">Müdahale</p><h3 className="text-4xl font-black text-white">{kpiTotals.sure} dk</h3></div>
-           <div className="bg-gray-900 p-6 rounded-[30px] border border-red-900/30 shadow-xl"><p className="text-[10px] text-red-500 font-black mb-1">Duruş Süresi</p><h3 className="text-4xl font-black text-red-400">{kpiTotals.durus} dk</h3></div>
-           <div className="bg-gray-900 p-6 rounded-[30px] border border-indigo-900/30 shadow-xl"><p className="text-[10px] text-indigo-400 font-black mb-1">MTTR</p><h3 className="text-4xl font-black text-indigo-400">{kpiTotals.mttr.toFixed(0)} dk</h3></div>
+           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-2xl p-6 rounded-[30px] border border-gray-800 shadow-xl"><p className="text-[10px] text-gray-500 font-black mb-1">İş Sayısı</p><h3 className="text-4xl font-black text-green-400">{kpiTotals.is}</h3></div>
+           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-2xl p-6 rounded-[30px] border border-gray-800 shadow-xl"><p className="text-[10px] text-gray-500 font-black mb-1">Müdahale</p><h3 className="text-4xl font-black text-white">{kpiTotals.sure} dk</h3></div>
+           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-2xl p-6 rounded-[30px] border border-red-900/30 shadow-xl"><p className="text-[10px] text-red-500 font-black mb-1">Duruş Süresi</p><h3 className="text-4xl font-black text-red-400">{kpiTotals.durus} dk</h3></div>
+           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-2xl p-6 rounded-[30px] border border-indigo-900/30 shadow-xl"><p className="text-[10px] text-indigo-400 font-black mb-1">MTTR</p><h3 className="text-4xl font-black text-indigo-400">{kpiTotals.mttr.toFixed(0)} dk</h3></div>
         </div>
 
         {/* ENERGY CHARTS (FILTERED) */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
-          <div className="bg-gray-900 border border-gray-800 p-6 rounded-[30px] shadow-xl">
+          <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-2xl border border-gray-800 p-6 rounded-[30px] shadow-xl">
              <h2 className="text-xs font-bold text-yellow-400 mb-4 uppercase tracking-widest underline underline-offset-8">⚡ Elektrik (kWh)</h2>
              <select value={filterElekSayac} onChange={e=>setFilterElekSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-xl p-2 text-[10px] mb-4 text-white uppercase"><option value="">Tüm Sayaçlar</option>{elekSayacList.map(s=><option key={s} value={s}>{s}</option>)}</select>
              <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikElek}><XAxis dataKey="ay" tick={{fontSize:10}}/><Tooltip/><Bar dataKey="tuketim" fill="#EAB308" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div>
           </div>
-          <div className="bg-gray-900 border border-gray-800 p-6 rounded-[30px] shadow-xl">
+          <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-2xl border border-gray-800 p-6 rounded-[30px] shadow-xl">
              <h2 className="text-xs font-bold text-red-400 mb-4 uppercase tracking-widest underline underline-offset-8">🔥 Doğalgaz (m³)</h2>
              <select value={filterGazSayac} onChange={e=>setFilterGazSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-xl p-2 text-[10px] mb-4 text-white uppercase"><option value="">Tüm Sayaçlar</option>{gazSayacList.map(s=><option key={s} value={s}>{s}</option>)}</select>
              <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikGaz}><XAxis dataKey="ay" tick={{fontSize:10}}/><Tooltip/><Bar dataKey="tuketim" fill="#EF4444" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div>
           </div>
-          <div className="bg-gray-900 border border-gray-800 p-6 rounded-[30px] shadow-xl">
+          <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-2xl border border-gray-800 p-6 rounded-[30px] shadow-xl">
              <h2 className="text-xs font-bold text-blue-400 mb-4 uppercase tracking-widest underline underline-offset-8">💧 Su (Ton)</h2>
              <select value={filterSuSayac} onChange={e=>setFilterSuSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-xl p-2 text-[10px] mb-4 text-white uppercase"><option value="">Tüm Sayaçlar</option>{suSayacList.map(s=><option key={s} value={s}>{s}</option>)}</select>
              <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikSu}><XAxis dataKey="ay" tick={{fontSize:10}}/><Tooltip/><Bar dataKey="tuketim" fill="#3B82F6" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div>
@@ -368,7 +417,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* PERSONNEL PERFORMANCE MATRIX (FULL FILTER) */}
-        <div className="bg-gray-900 border border-gray-800 p-8 rounded-[45px] mb-12 shadow-2xl relative overflow-hidden">
+        <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-2xl border border-gray-800 p-8 rounded-[45px] mb-12 shadow-2xl relative overflow-hidden">
            <h2 className="text-xl font-black text-blue-400 mb-8 uppercase tracking-widest flex items-center gap-3 tracking-[0.2em]">👤 PERSONEL PERFORMANS MATRİSİ</h2>
            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8 bg-gray-800/40 p-6 rounded-[25px] border border-gray-700/50 no-print">
               <div><label className="text-[9px] text-gray-500 uppercase font-black mb-1 block ml-1">Filtre Yıl</label><select value={filterYil} onChange={e=>setFilterYil(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-xl p-2 text-xs text-white uppercase"><option value="">Tümü</option>{yilListesi.map(y=><option key={y} value={y}>{y}</option>)}</select></div>
@@ -382,8 +431,8 @@ export default function AdminDashboard() {
 
         {/* BOTTOM CHARTS */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
-          <div className="bg-gray-900 border border-gray-800 p-6 rounded-[35px] shadow-2xl"><h2 className="text-sm font-black text-indigo-400 mb-6 uppercase tracking-widest text-center tracking-[0.2em]">📈 RCA Pareto Analizi</h2><div className="h-64 w-full"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={RCA_CATEGORIES.map(c=>({ name: c.label, value: rcaLogs.filter(r=>r.category===c.id).length, color: c.color })).filter(d=>d.value>0)} cx="50%" cy="50%" innerRadius={60} outerRadius={80} dataKey="value">{RCA_CATEGORIES.map((e,i)=><Cell key={i} fill={e.color} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></div></div>
-          <div className="bg-gray-900 border border-gray-800 p-6 rounded-[35px] shadow-2xl"><h2 className="text-sm font-black text-teal-400 mb-6 uppercase tracking-widest text-center tracking-[0.2em]">⚡ Hat Bazlı İş Yoğunluğu</h2><div className="h-64 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikIsHatti}><XAxis dataKey="isim" tick={{fontSize:10, fill:'#6B7280'}} /><YAxis tick={{fontSize:10}} /><Tooltip /><Bar dataKey="adet" fill="#10B981" radius={[6,6,0,0]} /></BarChart></ResponsiveContainer></div></div>
+          <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-2xl border border-gray-800 p-6 rounded-[35px] shadow-2xl"><h2 className="text-sm font-black text-indigo-400 mb-6 uppercase tracking-widest text-center tracking-[0.2em]">📈 RCA Pareto Analizi</h2><div className="h-64 w-full"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={RCA_CATEGORIES.map(c=>({ name: c.label, value: rcaLogs.filter(r=>r.category===c.id).length, color: c.color })).filter(d=>d.value>0)} cx="50%" cy="50%" innerRadius={60} outerRadius={80} dataKey="value">{RCA_CATEGORIES.map((e,i)=><Cell key={i} fill={e.color} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></div></div>
+          <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-2xl border border-gray-800 p-6 rounded-[35px] shadow-2xl"><h2 className="text-sm font-black text-teal-400 mb-6 uppercase tracking-widest text-center tracking-[0.2em]">⚡ Hat Bazlı İş Yoğunluğu</h2><div className="h-64 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikIsHatti}><XAxis dataKey="isim" tick={{fontSize:10, fill:'#6B7280'}} /><YAxis tick={{fontSize:10}} /><Tooltip /><Bar dataKey="adet" fill="#10B981" radius={[6,6,0,0]} /></BarChart></ResponsiveContainer></div></div>
         </div>
 
       </div>
@@ -391,7 +440,7 @@ export default function AdminDashboard() {
       {/* INSPECTION MODAL */}
       {showVakaModal && selectedVaka && (
         <div className="fixed inset-0 bg-black/95 backdrop-blur-md flex justify-center items-center z-[1000] p-4 font-sans">
-          <div className="bg-gray-900 border border-gray-800 p-8 md:p-12 rounded-[50px] w-full max-w-2xl shadow-3xl relative overflow-hidden">
+          <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-2xl border border-gray-800 p-8 md:p-12 rounded-[50px] w-full max-w-2xl shadow-3xl relative overflow-hidden">
              <div className={`absolute top-0 left-0 w-full h-2 ${selectedVaka.ekipmanAdi === "KAR devreye alma" ? "bg-red-600 shadow-2xl" : "bg-indigo-600 shadow-2xl"}`}></div>
              <h2 className="text-2xl font-black text-white mb-8 uppercase tracking-widest">Bildirim Detay Raporu</h2>
              <div className="grid grid-cols-2 gap-8 mb-8 border-b border-gray-800 pb-8 uppercase font-black">
@@ -409,7 +458,7 @@ export default function AdminDashboard() {
       {/* RCA MODAL */}
       {showRcaModal && (
         <div className="fixed inset-0 bg-black/95 backdrop-blur-sm flex justify-center items-center z-[999] p-4">
-          <div className="bg-gray-900 border border-indigo-500/30 p-10 rounded-[50px] w-full max-w-xl shadow-2xl relative">
+          <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-2xl border border-indigo-500/30 p-10 rounded-[50px] w-full max-w-xl shadow-2xl relative">
             <h2 className="text-xl font-black text-white mb-2 uppercase tracking-tighter text-center tracking-[0.2em]">Root Cause Analysis</h2>
             <p className="text-[10px] text-center text-gray-500 mb-8 uppercase font-bold tracking-widest">{selectedLogForRca?.ekipmanAdi}</p>
             <div className="space-y-6">
@@ -420,6 +469,34 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {showScoreInfo && (
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-3xl flex items-center justify-center z-[1001] p-4">
+          <div className="bg-slate-900 border border-amber-500/30 p-10 rounded-[3.5rem] max-w-lg w-full relative shadow-3xl text-center">
+            <button onClick={() => setShowScoreInfo(false)} className="absolute top-8 right-8 text-gray-500 hover:text-white transition">✕</button>
+            <div className="text-4xl mb-6">🏆</div>
+            <h2 className="text-xl font-black text-amber-500 mb-6 uppercase tracking-widest">XP Puan Sistemi</h2>
+            <div className="text-left space-y-4 text-gray-300 text-sm leading-relaxed">
+              <p>Normal İş Kapatma: +20 XP | Duruşlu İş Kapatma: +50 XP</p>
+            </div>
+            <button onClick={() => setShowScoreInfo(false)} className="mt-8 w-full bg-amber-600 py-4 rounded-2xl font-black uppercase text-xs">Kapat</button>
+          </div>
+        </div>
+      )}
+      {showFinanceInfo && (
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-3xl flex items-center justify-center z-[1001] p-4">
+          <div className="bg-slate-900 border border-emerald-500/30 p-10 rounded-[3.5rem] max-w-lg w-full relative shadow-3xl text-center">
+            <button onClick={() => setShowFinanceInfo(false)} className="absolute top-8 right-8 text-gray-500 hover:text-white transition">✕</button>
+            <div className="text-4xl mb-6">💰</div>
+            <h2 className="text-xl font-black text-emerald-400 mb-6 uppercase tracking-widest">Maliyet Analizi</h2>
+            <div className="text-left space-y-4 text-gray-300 text-sm leading-relaxed">
+              <p>Liste yedek parça sarfiyatı ve toplam müdahale süresi baz alınarak hesaplanır.</p>
+            </div>
+            <button onClick={() => setShowFinanceInfo(false)} className="mt-8 w-full bg-emerald-600 py-4 rounded-2xl font-black uppercase text-xs">Kapat</button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

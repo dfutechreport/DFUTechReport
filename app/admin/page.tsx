@@ -220,6 +220,22 @@ export default function AdminDashboard() {
         {/* HEADER */}
         <div className="flex justify-between items-center mb-10 border-b border-gray-800 pb-5 no-print">
           <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-12 bg-white rounded p-1" /><div><h1 className="text-2xl font-black uppercase tracking-tighter">Komuta Merkezi</h1>
+              {/* v39_duration_ratio: SÜRE BAZLI DURUŞ YOĞUNLUĞU */}
+              {(() => {
+                // SÜRE BAZLI HESAPLAMA: (Duruş Süresi / Toplam Bakım Süresi)
+                const totalMins = Number(kpiTotals.sure) || 0;
+                const downtimeMins = Number(kpiTotals.durus) || 0;
+                const durationRatio = totalMins > 0 ? (downtimeMins / totalMins) * 100 : 0;
+                
+                return (
+                  <div className="flex items-center gap-3 ml-6 px-4 py-2 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-md">
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">DURUŞ YOĞUNLUĞU (SÜRE):</span>
+                    <span className={`text-sm font-black tracking-tighter ${durationRatio < 30 ? 'text-green-400' : durationRatio < 60 ? 'text-yellow-400' : 'text-red-400 animate-pulse'}`}>
+                      %{durationRatio.toFixed(1)}
+                    </span>
+                  </div>
+                )
+              })()}
               {/* v38_ratio: DURUŞ YOĞUNLUK GÖSTERGESİ */}
               {(() => {
                 const ratio = kpiTotals.is > 0 ? (kpiTotals.durusCount / kpiTotals.is) * 100 : 0;

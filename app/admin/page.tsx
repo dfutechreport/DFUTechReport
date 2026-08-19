@@ -93,6 +93,20 @@ export default function AdminDashboard() {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (rawLogs.length === 0) return;
+    const ligaD35: any = {}; const finD35: any = {};
+    rawLogs.forEach(l => {
+      const crew = Array.isArray(l.isiYapanlar) ? l.isiYapanlar : [l.bildirenKisi];
+      crew.forEach((p: string) => { if(p) { if (!ligaD35[p]) ligaD35[p] = { isim: p, is: 0, points: 0 }; ligaD35[p].is++; ligaD35[p].points += l.isDuruslu ? 50 : 20; } });
+      if (!finD35[l.ekipmanAdi]) finD35[l.ekipmanAdi] = { isim: l.ekipmanAdi, pSay: 0, tSure: 0 };
+      finD35[l.ekipmanAdi].pSay += (l.kullanilanMalzemeler?.length || 0); finD35[l.ekipmanAdi].tSure += Number(l.toplamSureDakika) || 0;
+    });
+    setBakimLigi(Object.values(ligaD35).sort((a:any, b:any) => b.points - a.points).slice(0, 3));
+    setMaliyetAnalizi(Object.values(finD35).sort((a:any, b:any) => b.pSay - a.pSay).slice(0, 5));
+  }, [rawLogs]);
+
+
   const fetchRcaData = async () => {
     const snap = await getDocs(collection(db, "root_cause_analysis"));
     setRcaLogs(snap.docs.map(d => ({ id: d.id, ...d.data() } as any)));

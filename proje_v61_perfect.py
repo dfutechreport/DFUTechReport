@@ -1,4 +1,5 @@
-"use client";
+import os
+content = r'''"use client";
 import { useEffect, useState } from "react";
 import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, writeBatch, setDoc, serverTimestamp } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
@@ -272,4 +273,8 @@ export default function AdminDashboard() {
       </div>
     </div>
   );
-}
+}'''
+path = "app/admin/page.tsx"
+os.makedirs(os.path.dirname(path), exist_ok=True)
+with open(path, "w", encoding="utf-8") as f: f.write(content.strip())
+print(f"[BAŞARILI] app/admin/page.tsx v61 (REBUILD) ile yenilendi.")

@@ -349,6 +349,67 @@ function DashboardIcerik() {
       {showScoreInfo && ( <div className="fixed inset-0 bg-black/95 flex items-center justify-center z-[1001] p-4"> <div className="bg-slate-900 border border-amber-500/30 p-10 rounded-[3.5rem] max-w-lg w-full relative shadow-3xl text-center"> <button onClick={()=>setShowScoreInfo(false)} className="absolute top-8 right-8 text-white">✕</button> <h2 className="text-xl font-black text-amber-500 mb-6 uppercase">XP Puanlama Sistemi</h2> <div className="text-left text-sm text-gray-300 space-y-4"> <p>• Normal İş: +20 XP</p> <p>• Duruşlu İş: +50 XP</p> </div> <button onClick={()=>setShowScoreInfo(false)} className="mt-8 w-full bg-amber-600 py-4 rounded-2xl font-black uppercase text-xs">Kapat</button> </div> </div> )}
       {showFinanceInfo && ( <div className="fixed inset-0 bg-black/95 flex items-center justify-center z-[1001] p-4"> <div className="bg-slate-900 border border-emerald-500/30 p-10 rounded-[3.5rem] max-w-lg w-full relative shadow-3xl text-center"> <button onClick={()=>setShowFinanceInfo(false)} className="absolute top-8 right-8 text-white">✕</button> <h2 className="text-xl font-black text-emerald-400 mb-6 uppercase">Maliyet Analizi</h2> <div className="text-left text-sm text-gray-300 space-y-4"> <p>• Yedek parça sarfiyatı ve bakım süreleri baz alınır.</p> </div> <button onClick={()=>setShowFinanceInfo(false)} className="mt-8 w-full bg-emerald-600 py-4 rounded-2xl font-black uppercase text-xs">Kapat</button> </div> </div> )}
 
+
+      {/* DETAYLI PUANLAMA MODALI */}
+      {showScoreInfo && (
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-3xl flex items-center justify-center z-[1001] p-4">
+          <div className="bg-slate-900 border border-amber-500/30 p-12 rounded-[3.5rem] max-w-2xl w-full relative shadow-3xl">
+            <button onClick={() => setShowScoreInfo(false)} className="absolute top-8 right-8 text-gray-500 hover:text-white transition text-2xl">✕</button>
+            <div className="flex items-center gap-5 mb-10">
+              <div className="bg-amber-500/20 p-5 rounded-3xl text-3xl">🏆</div>
+              <div>
+                <h2 className="text-2xl font-black text-amber-500 uppercase tracking-widest">XP Puanlama Metodolojisi</h2>
+                <p className="text-gray-500 text-[10px] font-bold uppercase tracking-tighter">Teknik Performans Değerlendirme Algoritması</p>
+              </div>
+            </div>
+            <div className="space-y-6 text-gray-300 text-sm leading-relaxed">
+              <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5">
+                <h3 className="text-white font-black mb-4 uppercase text-xs">Puanlama Kriterleri:</h3>
+                <ul className="space-y-4">
+                  <li className="flex justify-between border-b border-white/5 pb-2"><span>🟢 <strong>Normal Arıza Müdahalesi:</strong> (Ekipman çalışırken yapılan işler)</span> <span className="text-amber-400 font-black">+20 XP</span></li>
+                  <li className="flex justify-between border-b border-white/5 pb-2"><span>🔴 <strong>Duruşlu Arıza Müdahalesi:</strong> (Üretimi durduran kritik işler)</span> <span className="text-red-400 font-black">+50 XP</span></li>
+                  <li className="flex justify-between border-b border-white/5 pb-2"><span>⚡ <strong>Müdahale Hızı (MTTR):</strong> (Arıza bildiriminden itibaren ilk 15 dk)</span> <span className="text-indigo-400 font-black">+15 XP Bonus</span></li>
+                  <li className="flex justify-between"><span>📋 <strong>Periyodik Bakım (PM):</strong> (Takvimdeki işin tam zamanında bitirilmesi)</span> <span className="text-green-400 font-black">+30 XP</span></li>
+                </ul>
+              </div>
+              <p className="text-xs text-gray-500 bg-black/20 p-4 rounded-2xl italic">"Bu puanlama sistemi, teknisyenlerimizin iş zorluğunu ve sahadaki çevikliğini objektif olarak ölçmek, başarılı personeli onurlandırmak amacıyla kurgulanmıştır."</p>
+            </div>
+            <button onClick={() => setShowScoreInfo(false)} className="mt-10 w-full bg-amber-600 hover:bg-amber-500 py-5 rounded-[2rem] font-black uppercase text-xs transition shadow-xl">Anladım, Kapat</button>
+          </div>
+        </div>
+      )}
+
+      {/* DETAYLI MALİYET ANALİZ MODALI */}
+      {showFinanceInfo && (
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-3xl flex items-center justify-center z-[1001] p-4">
+          <div className="bg-slate-900 border border-emerald-500/30 p-12 rounded-[3.5rem] max-w-2xl w-full relative shadow-3xl">
+            <button onClick={() => setShowFinanceInfo(false)} className="absolute top-8 right-8 text-gray-500 hover:text-white transition text-2xl">✕</button>
+            <div className="flex items-center gap-5 mb-10">
+              <div className="bg-emerald-500/20 p-5 rounded-3xl text-3xl">💰</div>
+              <div>
+                <h2 className="text-2xl font-black text-emerald-400 uppercase tracking-widest">Maliyet ve TCO Raporu</h2>
+                <p className="text-gray-500 text-[10px] font-bold uppercase tracking-tighter">Ekipman Bazlı Toplam Sahiplik Maliyeti</p>
+              </div>
+            </div>
+            <div className="space-y-6 text-gray-300 text-sm leading-relaxed">
+              <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5">
+                <h3 className="text-white font-black mb-4 uppercase text-xs">Sıralama Nasıl Belirlenir?</h3>
+                <p className="mb-4">Ekipmanlar, tesise verdikleri toplam finansal yük üzerinden en yüksekten en düşüğe doğru sıralanır:</p>
+                <ul className="space-y-4">
+                  <li className="flex items-start gap-3"><span>1.</span> <strong>Yedek Parça Yoğunluğu:</strong> Makine üzerinde kullanılan her bir parçanın sıklığı, maliyet puanını %60 oranında etkiler.</li>
+                  <li className="flex items-start gap-3"><span>2.</span> <strong>İşçilik ve Zaman Kaybı:</strong> Arıza onarımı için harcanan her dakika, üretim kaybı olarak maliyet hanesine eklenir.</li>
+                  <li className="flex items-start gap-3"><span>3.</span> <strong>Kronikleşme Katsayısı:</strong> Kısa aralıklarla tekrarlayan arızalar, makinenin "Riskli" kategorisine girmesine neden olur.</li>
+                </ul>
+              </div>
+              <div className="p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/10 border-l-4">
+                <p className="text-[11px] text-emerald-600 font-bold uppercase italic">"Listenin ilk 3 sırasında yer alan ekipmanlar için CapEx (Yenileme Yatırımı) yapılması, onarım maliyetlerinden tasarruf edilmesini sağlar."</p>
+              </div>
+            </div>
+            <button onClick={() => setShowFinanceInfo(false)} className="mt-10 w-full bg-emerald-600 hover:bg-emerald-500 py-5 rounded-[2rem] font-black uppercase text-xs transition shadow-xl">Pencereyi Kapat</button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

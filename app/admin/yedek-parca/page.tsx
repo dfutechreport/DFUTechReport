@@ -171,7 +171,25 @@ export default function YedekParcaYonetimi() {
     document.body.removeChild(link);
   };
 
-  if (loading) return <div className="min-h-screen bg-gray-950 flex justify-center items-center text-teal-400 font-black animate-pulse">SİSTEM VERİLERİ SENKRONİZE EDİLİYOR...</div>;
+  if (loading) return (
+    <div className="min-h-screen bg-[#020617] flex flex-col justify-center items-center overflow-hidden font-sans">
+      <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(#4f46e5 0.5px, transparent 0.5px)', backgroundSize: '30px 30px' }}></div>
+      <div className="relative mb-20 scale-110">
+        <div className="absolute inset-0 bg-indigo-600/20 blur-[150px] rounded-full animate-pulse"></div>
+        <img src="/dfulogo.png" className="h-40 w-auto relative z-10 animate-[pulse_3s_infinite_ease-in-out] drop-shadow-[0_0_50px_rgba(79,70,229,0.4)]" alt="DFU" />
+      </div>
+      <div className="relative w-80 h-1 bg-white/5 rounded-full overflow-hidden mb-8">
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-indigo-400 to-transparent w-full animate-[ai_scan_2s_infinite_linear]"></div>
+      </div>
+      <div className="flex flex-col items-center">
+        <p className="text-indigo-400/60 font-black tracking-[1em] text-[10px] uppercase animate-pulse mb-4">MAPPING RESOURCE NODES...</p>
+        <div className="grid grid-cols-5 gap-2 opacity-20">
+          {[1,2,3,4,5].map(i => <div key={i} className="w-2 h-0.5 bg-indigo-500 animate-ping" style={{ animationDelay: `${i*0.3}s` }}></div>)}
+        </div>
+      </div>
+      <style jsx>{` @keyframes ai_scan { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } } `}</style>
+    </div>
+  );
 
     const handleExcelIndir = () => {
     try {
@@ -191,18 +209,18 @@ export default function YedekParcaYonetimi() {
     } catch (error) { alert("Excel Hatası"); }
   };
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8 font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-[#020617] text-white p-4 md:p-8 font-sans overflow-x-hidden">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-end mb-6 no-print pt-4"><button onClick={handleExcelIndir} className="bg-emerald-600 hover:bg-emerald-500 text-white px-10 py-5 rounded-[25px] text-xs font-black uppercase tracking-[0.2em] transition-all shadow-[0_20px_50px_rgba(16,185,129,0.3)] flex items-center gap-3 border-2 border-emerald-400/20 active:scale-95"><span className="text-2xl">📊</span> GÜNCEL MASTER STOK LİSTESİNİ İNDİR (EXCEL)</button></div>
         <div className="flex justify-between items-center mb-8 border-b border-gray-800 pb-6 no-print">
-           <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-10 bg-white p-1 rounded" /><h1 className="text-xl font-black uppercase tracking-tighter">Yedek Parça & Depo Denetimi</h1></div>
+           <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-10 bg-white p-1 rounded" /><h1 className="text-xl font-black uppercase tracking-[0.2em] text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-white to-indigo-300">Yedek Parça & Depo Denetimi</h1></div>
            <Link href="/admin" className="bg-gray-800 text-[10px] font-black px-5 py-3 rounded-2xl border border-gray-700 hover:bg-gray-700 transition">Geri Dön</Link>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10 no-print">
-           <div className="bg-gray-900 border-2 border-indigo-500/20 p-8 rounded-[40px] shadow-2xl relative overflow-hidden">
+           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border-2 border-indigo-500/20 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-lg font-black text-indigo-400 uppercase tracking-widest">📥 Master Stok Excel Güncelleme</h2>
-                {timeLeft && <span className="bg-red-900/30 text-red-500 px-4 py-2 rounded-xl text-[10px] font-black border border-red-900/40 animate-pulse">Kilit: {timeLeft}</span>}
+                {timeLeft && <span className="bg-red-900/30 text-red-500 px-4 py-2 rounded-2xl text-[10px] font-black border border-red-900/40 animate-pulse">Kilit: {timeLeft}</span>}
               </div>
               {!timeLeft ? (
                 <div className="space-y-4">
@@ -213,7 +231,7 @@ export default function YedekParcaYonetimi() {
                 <div className="py-10 text-center bg-black/20 rounded-3xl border border-dashed border-gray-800 text-gray-500 font-bold uppercase tracking-widest text-xs">Son Yüklemeden Sonra 24 Saat Beklenmelidir.</div>
               )}
            </div>
-           <div className="bg-gray-900 border-2 border-teal-500/20 p-8 rounded-[40px] shadow-2xl relative overflow-hidden">
+           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border-2 border-teal-500/20 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden">
               <h2 className="text-lg font-black text-teal-400 mb-6 uppercase tracking-widest">🔍 Hızlı Stok Sorgulama</h2>
               <div className="flex gap-2 mb-8">
                 <input type="text" placeholder="Kod veya Malzeme Adı..." value={smartSearchQuery} onChange={e=>setSmartSearchQuery(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleSmartLookup()} className="flex-1 bg-gray-800 border border-gray-700 rounded-2xl p-5 text-sm font-bold" />
@@ -223,18 +241,18 @@ export default function YedekParcaYonetimi() {
                 {smartSearchResults.map((p, i) => (
                   <div key={i} className="bg-black/40 border border-gray-800 p-5 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-4">
                     <div className="flex-1"><p className="text-[10px] text-gray-500 uppercase font-black">Malzeme:</p><p className="text-sm font-black text-white uppercase">{p.parcaAdi || p.name || "İsimsiz"}</p><p className="text-[9px] text-gray-600 font-bold mt-1 uppercase tracking-widest">KOD: {p.stokKodu || p.id}</p></div>
-                    <div className="bg-amber-600 text-white px-8 py-3 rounded-xl flex flex-col items-center shadow-lg min-w-[140px] border border-amber-400/30"><span className="text-[8px] font-black uppercase tracking-widest">Mevcut Stok</span><span className="text-2xl font-black">{p.mevcutMiktar ?? p.stock ?? 0}</span></div>
+                    <div className="bg-amber-600 text-white px-8 py-3 rounded-2xl flex flex-col items-center shadow-lg min-w-[140px] border border-amber-400/30"><span className="text-[8px] font-black uppercase tracking-widest">Mevcut Stok</span><span className="text-2xl font-black">{p.mevcutMiktar ?? p.stock ?? 0}</span></div>
                   </div>
                 ))}
               </div>
            </div>
         </div>
-        <div className="bg-gray-900 border border-gray-800 rounded-[45px] p-8 shadow-2xl">
+        <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border border-gray-800 rounded-[45px] p-8 shadow-2xl">
            <div className="flex flex-col sm:flex-row justify-between items-center mb-10 gap-4">
               <h2 className="text-sm font-black text-gray-400 uppercase tracking-[0.2em]">⚙️ Malzeme Sarfiyat Geçmişi</h2>
               <div className="flex gap-2">
-                 <button onClick={fetchUsageHistory} disabled={isFetchingUsage} className="bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-black px-6 py-2.5 rounded-xl uppercase transition shadow-lg">{isFetchingUsage ? "YÜKLENİYOR..." : "VERİLERİ GETİR"}</button>
-                 <button onClick={exportUsageExcel} disabled={!isDataFetched || usedMaterials.length === 0} className="bg-green-700 hover:bg-green-600 text-white text-[10px] font-black px-6 py-2.5 rounded-xl uppercase transition shadow-lg disabled:opacity-20">EXCEL ÇIKTISI AL</button>
+                 <button onClick={fetchUsageHistory} disabled={isFetchingUsage} className="bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-black px-6 py-2.5 rounded-2xl uppercase transition shadow-lg">{isFetchingUsage ? "YÜKLENİYOR..." : "VERİLERİ GETİR"}</button>
+                 <button onClick={exportUsageExcel} disabled={!isDataFetched || usedMaterials.length === 0} className="bg-green-700 hover:bg-green-600 text-white text-[10px] font-black px-6 py-2.5 rounded-2xl uppercase transition shadow-lg disabled:opacity-20">EXCEL ÇIKTISI AL</button>
               </div>
            </div>
            <div className="overflow-x-auto max-h-[450px] custom-scrollbar">

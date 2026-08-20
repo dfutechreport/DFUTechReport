@@ -227,7 +227,19 @@ export default function AdminDashboard() {
         
         {/* HEADER */}
         <div className="flex justify-between items-center mb-10 border-b border-gray-800 pb-5 no-print">
-          <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-12 bg-white rounded p-1" /><div><h1 className="text-2xl font-black uppercase tracking-tighter">Komuta Merkezi</h1>{/* v54: RATIO */}{(() => { const t = Number(kpiTotals.sure)||0, d = Number(kpiTotals.durus)||0, r = t > 0 ? (d/t)*100 : 0; return ( <div className="flex items-center gap-3 ml-6 px-4 py-2 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-md no-print"> <span className="text-[10px] font-black uppercase text-gray-500">DURUŞ ORANI:</span> <span className={`text-sm font-black ${r < 30 ? 'text-green-400' : 'text-red-400 animate-pulse'}`}>%{r.toFixed(1)}</span> </div> ) })()}<p className="text-[10px] text-gray-500 font-bold uppercase">{userName} | {userRole}</p></div></div>
+          <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-12 bg-white rounded p-1" /><div><h1 className="text-2xl font-black uppercase tracking-tighter">Komuta Merkezi</h1>
+              {/* v55: SINGLE RATIO */}
+              {(() => {
+                const t = Number(kpiTotals.sure) || 0;
+                const d = Number(kpiTotals.durus) || 0;
+                const r = t > 0 ? (d / t) * 100 : 0;
+                return (
+                  <div className="flex items-center gap-3 ml-6 px-4 py-2 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-md no-print">
+                    <span className="text-[10px] font-black uppercase text-gray-500">DURUŞ ORANI:</span>
+                    <span className={`text-sm font-black ${r < 30 ? 'text-green-400' : 'text-red-400 animate-pulse'}`}>%{r.toFixed(1)}</span>
+                  </div>
+                )
+              })()}<p className="text-[10px] text-gray-500 font-bold uppercase">{userName} | {userRole}</p></div></div>
           <div className="flex gap-3">
              <Link href="/dashboard" className="bg-indigo-600 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase">Vardiya Raporu</Link>
              <button onClick={()=>auth.signOut()} className="bg-red-600 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase shadow-lg transition">Çıkış</button>
@@ -262,34 +274,9 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
            <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-2xl border-2 border-red-900/40 p-7 rounded-[3rem] shadow-2xl">
               
-        {/* v54: SEVİYE 2 - KRİTİK BİLDİRİMLER (YAN YANA) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-           <div className="bg-red-500/5 border border-red-500/20 p-8 rounded-[3.5rem] shadow-2xl relative overflow-hidden group">
-              <h2 className="text-sm font-black text-red-500 mb-6 uppercase tracking-[0.4em] flex items-center gap-3">🚒 İSG ALARMLARI</h2>
-              <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
-                {aktifIsgAlarmlari.map(a => (<div key={a.id} className="bg-white/5 p-4 rounded-2xl flex justify-between items-center group hover:bg-red-600/10"><div><p className="text-[9px] font-black text-red-400 uppercase">{a.hatAdi}</p><p className="text-xs font-bold">{a.ekipmanAdi}</p></div><button onClick={()=> {setSelectedVaka(a); setShowVakaModal(true);}} className="bg-red-600 text-white text-[9px] font-black px-4 py-2 rounded-xl shadow-lg active:scale-95">Detay</button></div>))}
-              </div>
-              {aktifIsgAlarmlari.length === 0 && <p className="text-center py-10 text-gray-700 text-[10px] font-black uppercase">Aktif Alarm Yok.</p>}
-           </div>
-           <div className="bg-indigo-500/5 border border-indigo-500/20 p-8 rounded-[3.5rem] shadow-2xl">
-              <h2 className="text-sm font-black text-indigo-400 mb-6 uppercase tracking-[0.4em] flex items-center gap-3">📢 SAHA BİLDİRİMLERİ</h2>
-              <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
-                {aktifIsler.map(is => (<div key={is.id} className="bg-white/5 p-4 rounded-2xl flex justify-between items-center group hover:bg-indigo-600/10"><div><p className="text-[9px] font-black text-indigo-400 uppercase">{is.hatAdi}</p><p className="text-xs font-bold">{is.ekipmanAdi}</p></div><button onClick={()=> {setSelectedVaka(is); setShowVakaModal(true);}} className="bg-indigo-600 text-white text-[9px] font-black px-4 py-2 rounded-xl shadow-lg active:scale-95">İncele</button></div>))}
-              </div>
-              {aktifIsler.length === 0 && <p className="text-center py-10 text-gray-700 text-[10px] font-black uppercase">Bekleyen İş Yok.</p>}
-           </div>
-        </div>
+        
 
-        {/* v54: SEVİYE 3 - LİG, FİNANS VE ANALİTİK */}
-        {userRole !== "isg" && (
-          <div className="space-y-12 mb-16 no-print">
-             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="bg-amber-500/[0.03] backdrop-blur-3xl border border-amber-500/20 p-10 rounded-[3.5rem] shadow-2xl relative overflow-hidden">
-                   <div className="flex justify-between items-start mb-8"><h2 className="text-sm font-black text-amber-500 uppercase">🏆 BAKIM LİGİ</h2><button onClick={()=>setShowScoreInfo(true)} className="bg-amber-500/10 text-amber-500 text-[8px] font-black px-3 py-1 rounded-full border border-amber-500/20 uppercase">Puanlar nasıl hesaplandı?</button></div>
-                   <div className="space-y-4">
-                     {bakimLigi.length > 0 ? bakimLigi.map((p,i)=>(<div key={i} className={`flex justify-between items-center p-4 rounded-2xl border ${i===0?'border-amber-500/40 bg-amber-500/10 shadow-lg':'border-white/5 bg-white/5'}`}><div className="flex items-center gap-3"><span className="text-xl">{i===0?'🥇':i===1?'🥈':'🥉'}</span><span className="text-xs font-black uppercase text-white">{p.isim}</span></div><span className="text-amber-400 font-black text-sm">{p.points} XP</span></div>)) : <p className="text-center py-10 text-gray-700 text-[10px] font-black uppercase">Veri Bekleniyor...</p>}
-                   </div>
-                </div>
+        
                 <div className="bg-emerald-500/[0.03] backdrop-blur-3xl border border-emerald-500/20 p-10 rounded-[3.5rem] shadow-2xl">
                    <div className="flex justify-between items-start mb-8"><h2 className="text-sm font-black text-emerald-400 uppercase">💰 EN MALİYETLİLER</h2><button onClick={()=>setShowFinanceInfo(true)} className="bg-emerald-500/10 text-emerald-400 text-[8px] font-black px-3 py-1 rounded-full border border-emerald-500/20 uppercase">Liste neye göre belirlendi?</button></div>
                    <div className="space-y-4">
@@ -335,6 +322,36 @@ export default function AdminDashboard() {
               </div>
            </div>
         </div>
+
+        
+        {/* v55: LEVEL 2 - KRİTİK BİLDİRİMLER (YAN YANA) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+           <div className="bg-red-500/5 border border-red-500/20 p-8 rounded-[3.5rem] shadow-2xl relative overflow-hidden group">
+              <h2 className="text-sm font-black text-red-500 mb-6 uppercase tracking-[0.4em] flex items-center gap-3">🚒 İSG ALARMLARI</h2>
+              <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                {aktifIsgAlarmlari.map(a => (
+                  <div key={a.id} className="bg-white/5 border border-white/5 p-5 rounded-[2rem] flex justify-between items-center group hover:bg-red-600/10 transition-all border border-white/5">
+                    <div><p className="text-[9px] font-black text-red-400 uppercase">{a.hatAdi}</p><p className="text-xs font-bold text-gray-200">{a.ekipmanAdi}</p></div>
+                    <button onClick={()=> {setSelectedVaka(a); setShowVakaModal(true);}} className="bg-red-600 text-white text-[9px] font-black px-5 py-2 rounded-xl shadow-lg active:scale-95">Detay</button>
+                  </div>
+                ))}
+                {aktifIsgAlarmlari.length === 0 && <p className="text-center py-10 text-gray-700 text-[10px] font-black uppercase italic">Aktif Alarm Yok.</p>}
+              </div>
+           </div>
+           <div className="bg-indigo-500/5 border border-indigo-500/20 p-8 rounded-[3.5rem] shadow-2xl">
+              <h2 className="text-sm font-black text-indigo-400 mb-6 uppercase tracking-[0.4em] flex items-center gap-3">📢 SAHA BİLDİRİMLERİ</h2>
+              <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                {aktifIsler.map(is => (
+                  <div key={is.id} className="bg-white/5 border border-white/5 p-5 rounded-[2rem] flex justify-between items-center group hover:bg-indigo-600/10 transition-all border border-white/5">
+                    <div><p className="text-[9px] font-black text-indigo-400 uppercase">{is.hatAdi}</p><p className="text-xs font-bold text-gray-200">{is.ekipmanAdi}</p></div>
+                    <button onClick={()=> {setSelectedVaka(is); setShowVakaModal(true);}} className="bg-indigo-600 text-white text-[9px] font-black px-5 py-2 rounded-xl shadow-lg active:scale-95">İncele</button>
+                  </div>
+                ))}
+                {aktifIsler.length === 0 && <p className="text-center py-10 text-gray-700 text-[10px] font-black uppercase italic">Bekleyen İş Yok.</p>}
+              </div>
+           </div>
+        </div>
+
 
         {/* RCA TASK LIST */}
         <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-2xl border border-gray-800 p-8 rounded-[3rem] mb-12 shadow-2xl">
@@ -433,21 +450,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* v54: INFO MODALS */}
-      {showScoreInfo && (
-        <div className="fixed inset-0 bg-black/95 backdrop-blur-3xl flex items-center justify-center z-[1001] p-4">
-          <div className="bg-slate-900 border border-amber-500/30 p-12 rounded-[3.5rem] max-w-2xl w-full relative shadow-3xl">
-            <button onClick={() => setShowScoreInfo(false)} className="absolute top-8 right-8 text-gray-500 hover:text-white transition text-2xl">✕</button>
-            <h2 className="text-2xl font-black text-amber-500 mb-8 uppercase tracking-widest">XP Puanlama Metodolojisi</h2>
-            <div className="space-y-6 text-gray-300 text-sm leading-relaxed">
-              <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5">
-                <ul className="space-y-4">
-                  <li className="flex justify-between border-b border-white/5 pb-2"><span>🟢 Normal Arıza Müdahalesi:</span> <span className="text-amber-400 font-black">+20 XP</span></li>
-                  <li className="flex justify-between border-b border-white/5 pb-2"><span>🔴 Duruşlu Arıza Müdahalesi:</span> <span className="text-red-400 font-black">+50 XP</span></li>
-                  <li className="flex justify-between"><span>📋 Periyodik Bakım Başarısı:</span> <span className="text-green-400 font-black">+30 XP</span></li>
-                </ul>
-              </div>
-            </div>
+      
             <button onClick={() => setShowScoreInfo(false)} className="mt-10 w-full bg-amber-600 py-5 rounded-[2rem] font-black uppercase text-xs">Kapat</button>
           </div>
         </div>
@@ -467,6 +470,32 @@ export default function AdminDashboard() {
               </div>
             </div>
             <button onClick={() => setShowFinanceInfo(false)} className="mt-10 w-full bg-emerald-600 py-5 rounded-[2rem] font-black uppercase text-xs">Kapat</button>
+          </div>
+        </div>
+      )}
+
+
+      {/* v55: MASTER INFO MODALS */}
+      {showScoreInfo && (
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-3xl flex items-center justify-center z-[1001] p-4 font-sans">
+          <div className="bg-slate-900 border border-amber-500/30 p-12 rounded-[3.5rem] max-w-2xl w-full relative shadow-3xl">
+            <button onClick={() => setShowScoreInfo(false)} className="absolute top-8 right-8 text-gray-500 hover:text-white transition text-2xl">✕</button>
+            <h2 className="text-2xl font-black text-amber-500 mb-8 uppercase tracking-widest">XP Puanlama Metodolojisi</h2>
+            <div className="space-y-6 text-gray-300 text-sm leading-relaxed">
+              <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5">
+                <ul className="space-y-4">
+                  <li className="flex justify-between border-b border-white/5 pb-2"><span>🟢 Normal Arıza Müdahalesi:</span> <span className="text-amber-400 font-black">+20 XP</span></li>
+                  <li className="flex justify-between border-b border-white/5 pb-2"><span>🔴 Duruşlu Arıza Müdahalesi:</span> <span className="text-red-400 font-black">+50 XP</span></li>
+                  <li className="flex justify-between"><span>⚡ Müdahale Hızı Bonusu (İlk 15 dk):</span> <span className="text-indigo-400 font-black">+15 XP</span></li>
+                </ul>
+              </div>
+              <div className="bg-amber-500/10 p-6 rounded-[2rem] border border-amber-500/20">
+                <p className="text-amber-500 font-black mb-2 uppercase text-[10px]">Örnek Hesaplama:</p>
+                <p>Bir teknisyen <strong>Duruşlu</strong> bir arızayı <strong>10 dakika</strong> içinde bitirirse:</p>
+                <p className="mt-2 text-white font-black">50 (Duruş) + 15 (Hız) = 65 XP Kazanır.</p>
+              </div>
+            </div>
+            <button onClick={() => setShowScoreInfo(false)} className="mt-10 w-full bg-amber-600 py-5 rounded-[2rem] font-black uppercase text-xs transition active:scale-95">Anladım, Kapat</button>
           </div>
         </div>
       )}

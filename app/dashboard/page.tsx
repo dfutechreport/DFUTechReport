@@ -410,6 +410,32 @@ function DashboardIcerik() {
         </div>
       )}
 
+
+      {/* v55: MASTER INFO MODALS */}
+      {showScoreInfo && (
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-3xl flex items-center justify-center z-[1001] p-4 font-sans">
+          <div className="bg-slate-900 border border-amber-500/30 p-12 rounded-[3.5rem] max-w-2xl w-full relative shadow-3xl">
+            <button onClick={() => setShowScoreInfo(false)} className="absolute top-8 right-8 text-gray-500 hover:text-white transition text-2xl">✕</button>
+            <h2 className="text-2xl font-black text-amber-500 mb-8 uppercase tracking-widest">XP Puanlama Metodolojisi</h2>
+            <div className="space-y-6 text-gray-300 text-sm leading-relaxed">
+              <div className="bg-white/5 p-6 rounded-[2rem] border border-white/5">
+                <ul className="space-y-4">
+                  <li className="flex justify-between border-b border-white/5 pb-2"><span>🟢 Normal Arıza Müdahalesi:</span> <span className="text-amber-400 font-black">+20 XP</span></li>
+                  <li className="flex justify-between border-b border-white/5 pb-2"><span>🔴 Duruşlu Arıza Müdahalesi:</span> <span className="text-red-400 font-black">+50 XP</span></li>
+                  <li className="flex justify-between"><span>⚡ Müdahale Hızı Bonusu (İlk 15 dk):</span> <span className="text-indigo-400 font-black">+15 XP</span></li>
+                </ul>
+              </div>
+              <div className="bg-amber-500/10 p-6 rounded-[2rem] border border-amber-500/20">
+                <p className="text-amber-500 font-black mb-2 uppercase text-[10px]">Örnek Hesaplama:</p>
+                <p>Bir teknisyen <strong>Duruşlu</strong> bir arızayı <strong>10 dakika</strong> içinde bitirirse:</p>
+                <p className="mt-2 text-white font-black">50 (Duruş) + 15 (Hız) = 65 XP Kazanır.</p>
+              </div>
+            </div>
+            <button onClick={() => setShowScoreInfo(false)} className="mt-10 w-full bg-amber-600 py-5 rounded-[2rem] font-black uppercase text-xs transition active:scale-95">Anladım, Kapat</button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

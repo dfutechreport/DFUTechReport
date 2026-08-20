@@ -1,4 +1,17 @@
 
+import os
+
+def patch_file(file_path, new_content):
+    try:
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(new_content)
+        print(f"[BAŞARILI] {file_path} güncellendi.")
+    except Exception as e:
+        print(f"[HATA] {file_path} güncellenirken hata oluştu: {e}")
+
+# --- ADMIN DASHBOARD (Admin & Operatör İçin) ---
+admin_page_content = """
 "use client";
 import { useEffect, useState } from "react";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
@@ -6,7 +19,7 @@ import { db } from "../../lib/firebase";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 import Link from "next/link";
 
-export default function TechDashboard() {
+export default function AdminDashboard() {
   const [showLeagueInfo, setShowLeagueInfo] = useState(false);
   const [showCorrInfo, setShowCorrInfo] = useState(false);
   const [personelList, setPersonelList] = useState([
@@ -113,3 +126,11 @@ export default function TechDashboard() {
     </div>
   );
 }
+"""
+
+# Dosyaları yamala
+patch_file("app/admin/page.tsx", admin_page_content)
+patch_file("app/dashboard/page.tsx", admin_page_content.replace("AdminDashboard", "TechDashboard"))
+
+print("\n[TAMAMLANDI] v21_nexus güncellemesi başarıyla uygulandı.")
+print("Bakım Ligi ve Parça Korelasyonu modülleri yan yana eklendi.")

@@ -1,4 +1,5 @@
-"use client";
+import os
+files = { 'app/admin/page.tsx': r'''"use client";
 import { useEffect, useState } from "react";
 import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, writeBatch, setDoc, serverTimestamp } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
@@ -289,4 +290,8 @@ export default function AdminDashboard() {
     </div>
   );
 }
-}
+}''' }
+for path, content in files.items():
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f: f.write(content.strip())
+    print(f"[BAŞARILI] {path} v58 KUSURSUZ HİYERARŞİ (84KB Core) ile yenilendi.")

@@ -14,11 +14,6 @@ interface MaintenanceFormData {
 }
 
 function DashboardIcerik() {
-  const [showLeagueInfo, setShowLeagueInfo] = useState(false);
-  const [showCorrInfo, setShowCorrInfo] = useState(false);
-  const [personelList, setPersonelList] = useState<any[]>([]);
-  const [corrData, setCorrData] = useState<any[]>([]);
-
   const { register, handleSubmit, setValue, watch, formState: { isSubmitting } } = useForm<MaintenanceFormData>({
     defaultValues: {
       baslangicTarihi: new Date().toISOString().split('T')[0],
@@ -40,6 +35,11 @@ function DashboardIcerik() {
   const [isDictating, setIsDictating] = useState(false);
   const [hesaplananSure, setHesaplananSure] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [showLeagueInfo, setShowLeagueInfo] = useState(false);
+  const [showCorrInfo, setShowCorrInfo] = useState(false);
+  const [personelList, setPersonelList] = useState<any[]>([]);
+  const [corrData, setCorrData] = useState<any[]>([]);
+
   const [selectedVaka, setSelectedVaka] = useState<any>(null);
   const [showVakaModal, setShowVakaModal] = useState(false);
 
@@ -61,8 +61,8 @@ function DashboardIcerik() {
         const s = d.data().sarfiyat;
         if (s && Array.isArray(s)) {
           for (const item of s) {
-            const k = item.parcaAdi || item.stokKodu || "Bilinmeyen";
-            counts[k] = (counts[k] || 0) + 1;
+            const key = item.parcaAdi || item.stokKodu || "Bilinmeyen";
+            counts[key] = (counts[key] || 0) + 1;
           }
         }
       }
@@ -376,32 +376,93 @@ function DashboardIcerik() {
           </div>
         </div>
       )}
-    
+    </div>
+  );
+}
+export default function Page() { return (<Suspense fallback={<div>Yükleniyor...
+        {["teknisyen", "admin", "operator"].includes(userRole) && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8 w-full">
+            <div className="bg-white/5 border border-indigo-500/20 p-6 rounded-3xl relative backdrop-blur-md shadow-lg overflow-hidden group">
+              <button onClick={() => setShowLeagueInfo(true)} className="absolute top-4 right-4 text-indigo-400 text-[10px] border border-indigo-500/30 px-2 py-1 rounded hover:bg-indigo-500/20 font-bold uppercase transition-all tracking-tighter">XP ?</button>
+              <h3 className="text-indigo-400 text-xs font-bold mb-4 italic tracking-widest uppercase flex items-center underline">🏆 BAKIM LİGİ SIRALAMASI</h3>
+              <div className="space-y-2">
+                {personelList.map((p, i) => (
+                  <div key={i} className="flex justify-between items-center bg-black/40 p-3 rounded-2xl border border-white/5 text-xs font-bold">
+                    <span className="text-gray-300 uppercase tracking-tighter">{p.adSoyad || p.name}</span>
+                    <span className="text-emerald-400 font-mono italic">{p.xp || 0} XP</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="bg-white/5 border border-emerald-500/20 p-6 rounded-3xl relative backdrop-blur-md shadow-lg overflow-hidden group">
+              <button onClick={() => setShowCorrInfo(true)} className="absolute top-4 right-4 text-emerald-400 text-[10px] border border-emerald-500/30 px-2 py-1 rounded hover:bg-emerald-500/20 font-bold uppercase transition-all tracking-tighter">Analiz ?</button>
+              <h3 className="text-emerald-400 text-xs font-bold mb-4 italic tracking-widest uppercase flex items-center underline">📈 KRİTİK ARIZA ANALİZİ</h3>
+              <div className="h-40 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={corrData} layout="vertical">
+                    <XAxis type="number" hide /><YAxis dataKey="part" type="category" width={80} stroke="#64748b" fontSize={9} />
+                    <Tooltip contentStyle={{backgroundColor: '#020617', border: '1px solid #10b981'}} />
+                    <Bar dataKey="failure" fill="#10b981" radius={[0, 4, 4, 0]} barSize={16} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        )}
+
       {showLeagueInfo && (
         <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans">
-          <div className="bg-[#020617] border-2 border-indigo-500/50 p-8 rounded-3xl max-w-lg w-full">
-            <h4 className="text-indigo-400 font-bold mb-6 text-xl italic border-b border-indigo-500/20 pb-2 uppercase text-center tracking-tighter">XP & Seviye Sistemi Matrisi</h4>
+          <div className="bg-[#020617] border-2 border-indigo-500/50 p-8 rounded-3xl max-w-lg w-full shadow-[0_0_50px_rgba(99,102,241,0.2)]">
+            <h4 className="text-indigo-400 font-bold mb-6 text-xl italic border-b border-indigo-500/20 pb-2 uppercase text-center tracking-tighter shadow-[0_10px_10px_-10px_rgba(99,102,241,0.5)]">XP & Seviye Sistemi Matrisi</h4>
             <div className="space-y-4 text-sm text-gray-300 leading-relaxed font-mono italic">
               <p><span className="text-indigo-500">{" >> "}</span> <strong>Arıza Müdahale:</strong> +150 XP.</p>
-              <p><span className="text-indigo-500">{" >> "}</span> <strong>Planlı Bakım:</strong> +100 XP.</p>
+              <p><span className="text-indigo-500">{" >> "}</span> <strong>İSG & EKED:</strong> +200 XP Bonus.</p>
+              <p><span className="text-indigo-500">{" >> "}</span> <strong>Seviye:</strong> Her 1000 XP bir kademe.</p>
             </div>
-            <button type="button" onClick={() => setShowLeagueInfo(false)} className="mt-8 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic shadow-lg shadow-indigo-500/30">Anlaşıldı</button>
+            <button onClick={() => setShowLeagueInfo(false)} className="mt-8 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic shadow-lg shadow-indigo-500/30">Anlaşıldı</button>
           </div>
         </div>
       )}
       {showCorrInfo && (
         <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans">
           <div className="bg-[#020617] border-2 border-emerald-500/50 p-8 rounded-3xl max-w-lg w-full shadow-[0_0_50px_rgba(16,185,129,0.2)]">
-            <h4 className="text-emerald-400 font-bold mb-6 text-xl italic border-b border-emerald-500/20 pb-2 uppercase text-center tracking-tighter">Korelasyon Hesaplama Metodu</h4>
+            <h4 className="text-emerald-400 font-bold mb-6 text-xl italic border-b border-emerald-500/20 pb-2 uppercase text-center tracking-tighter shadow-[0_10px_10px_-10px_rgba(16,185,129,0.5)]">Korelasyon Hesaplama Metodu</h4>
             <div className="space-y-4 text-sm text-gray-300 leading-relaxed font-mono italic">
               <p><span className="text-emerald-500">{" >> "}</span> <strong>Veri Kaynağı:</strong> Firestore 'bakimlar' koleksiyonu.</p>
               <p><span className="text-emerald-500">{" >> "}</span> <strong>İşlem:</strong> Parça frekans analizi.</p>
             </div>
-            <button type="button" onClick={() => setShowCorrInfo(false)} className="mt-8 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic shadow-lg shadow-emerald-500/30">Anlaşıldı</button>
+            <button onClick={() => setShowCorrInfo(false)} className="mt-8 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic shadow-lg shadow-emerald-500/30">Anlaşıldı</button>
           </div>
         </div>
       )}
-</div>
+
+      {showLeagueInfo && (
+        <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans">
+          <div className="bg-[#020617] border-2 border-indigo-500/50 p-8 rounded-3xl max-w-lg w-full shadow-[0_0_50px_rgba(99,102,241,0.2)]">
+            <h4 className="text-indigo-400 font-bold mb-6 text-xl italic border-b border-indigo-500/20 pb-2 uppercase text-center tracking-tighter shadow-[0_10px_10px_-10px_rgba(99,102,241,0.5)]">XP & Seviye Sistemi Matrisi</h4>
+            <div className="space-y-4 text-sm text-gray-300 leading-relaxed font-mono italic">
+              <p><span className="text-indigo-500">{" >> "}</span> <strong>Arıza Müdahale:</strong> +150 XP.</p>
+              <p><span className="text-indigo-500">{" >> "}</span> <strong>İSG & EKED:</strong> +200 XP Bonus.</p>
+              <p><span className="text-indigo-500">{" >> "}</span> <strong>Seviye:</strong> Her 1000 XP bir kademe.</p>
+            </div>
+            <button onClick={() => setShowLeagueInfo(false)} className="mt-8 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic shadow-lg shadow-indigo-500/30">Anlaşıldı</button>
+          </div>
+        </div>
+      )}
+      {showCorrInfo && (
+        <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans">
+          <div className="bg-[#020617] border-2 border-emerald-500/50 p-8 rounded-3xl max-w-lg w-full shadow-[0_0_50px_rgba(16,185,129,0.2)]">
+            <h4 className="text-emerald-400 font-bold mb-6 text-xl italic border-b border-emerald-500/20 pb-2 uppercase text-center tracking-tighter shadow-[0_10px_10px_-10px_rgba(16,185,129,0.5)]">Korelasyon Hesaplama Metodu</h4>
+            <div className="space-y-4 text-sm text-gray-300 leading-relaxed font-mono italic">
+              <p><span className="text-emerald-500">{" >> "}</span> <strong>Veri Kaynağı:</strong> Firestore 'bakimlar' koleksiyonu.</p>
+              <p><span className="text-emerald-500">{" >> "}</span> <strong>İşlem:</strong> Parça frekans analizi.</p>
+            </div>
+            <button onClick={() => setShowCorrInfo(false)} className="mt-8 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic shadow-lg shadow-emerald-500/30">Anlaşıldı</button>
+          </div>
+        </div>
+      )}
+
+    </div>
   );
 }
 export default function Page() { return (<Suspense fallback={<div>Yükleniyor...</div>}><DashboardIcerik /></Suspense>); }

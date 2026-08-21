@@ -89,8 +89,8 @@ export default function AdminDashboard() {
         const s = d.data().sarfiyat;
         if (s && Array.isArray(s)) {
           for (const item of s) {
-            const k = item.parcaAdi || item.stokKodu || "Bilinmeyen";
-            counts[k] = (counts[k] || 0) + 1;
+            const key = item.parcaAdi || item.stokKodu || "Bilinmeyen";
+            counts[key] = (counts[key] || 0) + 1;
           }
         }
       }
@@ -327,7 +327,39 @@ export default function AdminDashboard() {
               </div>
            </div>
 
-           {/* SAHA BİLDİRİMLERİ */}
+           
+        {["admin", "operator"].includes(userRole) && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12 w-full">
+            <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border-2 border-indigo-900/40 p-7 rounded-[3rem] relative shadow-2xl overflow-hidden group">
+              <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500 shadow-[0_0_15px_#6366f1]"></div>
+              <button onClick={() => setShowLeagueInfo(true)} className="absolute top-6 right-6 text-indigo-400 text-[10px] border border-indigo-500/30 px-3 py-1 rounded hover:bg-indigo-500/20 font-black uppercase transition-all tracking-widest italic tracking-tighter">XP Algoritma ?</button>
+              <h2 className="text-lg font-black text-indigo-400 mb-6 flex items-center gap-3 uppercase tracking-[0.2em]">🏆 Bakım Ligi Liderleri</h2>
+              <div className="space-y-3">
+                {personelList.map((p, i) => (
+                  <div key={i} className="bg-indigo-950/20 border border-indigo-900/30 p-4 rounded-2xl flex justify-between items-center transition group hover:bg-indigo-900/30">
+                    <span className="text-gray-200 text-sm font-bold uppercase tracking-tighter italic">{p.adSoyad || p.name}</span>
+                    <span className="text-emerald-400 font-mono text-sm font-bold shadow-[0_0_10px_rgba(16,185,129,0.2)]">{p.xp || 0} XP</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border-2 border-indigo-900/40 p-7 rounded-[3rem] relative shadow-2xl overflow-hidden group">
+              <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 shadow-[0_0_15px_#10b981]"></div>
+              <button onClick={() => setShowCorrInfo(true)} className="absolute top-6 right-6 text-emerald-400 text-[10px] border border-emerald-500/30 px-3 py-1 rounded hover:bg-emerald-500/20 font-black uppercase transition-all tracking-widest italic tracking-tighter">Analiz Metot ?</button>
+              <h2 className="text-lg font-black text-emerald-400 mb-6 flex items-center gap-3 uppercase tracking-[0.2em]">📊 Kritik Parça Analizi</h2>
+              <div className="h-48 w-full mt-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={corrData} layout="vertical">
+                    <XAxis type="number" hide /><YAxis dataKey="part" type="category" width={100} stroke="#64748b" fontSize={10} />
+                    <Tooltip contentStyle={{backgroundColor: '#020617', border: '1px solid #10b981'}} />
+                    <Bar dataKey="failure" fill="#10b981" radius={[0, 4, 4, 0]} barSize={20} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        )}
+{/* SAHA BİLDİRİMLERİ */}
            <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border-2 border-indigo-900/40 p-7 rounded-[3rem] shadow-2xl">
               <h2 className="text-lg font-black text-indigo-400 mb-6 flex items-center gap-3 uppercase tracking-[0.2em]">📢 SAHA BİLDİRİMLERİ</h2>
               <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
@@ -489,7 +521,7 @@ export default function AdminDashboard() {
             <h4 className="text-emerald-400 font-bold mb-6 text-xl italic border-b border-emerald-500/20 pb-2 uppercase text-center tracking-tighter shadow-[0_10px_10px_-10px_rgba(16,185,129,0.5)]">Korelasyon Hesaplama Metodu</h4>
             <div className="space-y-4 text-sm text-gray-300 leading-relaxed font-mono italic">
               <p><span className="text-emerald-500">{" >> "}</span> <strong>Veri Kaynağı:</strong> Firestore 'bakimlar' koleksiyonu.</p>
-              <p><span className="text-emerald-500">{" >> "}</span> <strong>İşlem:</strong> Parça frekans korelasyonu.</p>
+              <p><span className="text-emerald-500">{" >> "}</span> <strong>İşlem:</strong> Parça frekans analizi.</p>
             </div>
             <button onClick={() => setShowCorrInfo(false)} className="mt-8 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic shadow-lg shadow-emerald-500/30">Anlaşıldı</button>
           </div>

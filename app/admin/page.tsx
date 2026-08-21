@@ -1,11 +1,10 @@
 "use client";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 import { useEffect, useState } from "react";
 import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, writeBatch, setDoc, serverTimestamp } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../../lib/firebase"; 
-import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid, LabelList, PieChart, Pie, Cell } from 'recharts';
 import Link from "next/link";
 
 export default function AdminDashboard() {
@@ -80,58 +79,38 @@ export default function AdminDashboard() {
   ];
 
   
-  
-      bSnap.docs.forEach(doc => {
-        const sarfiyat = doc.data().sarfiyat;
-        if (sarfiyat && Array.isArray(sarfiyat)) {
-          sarfiyat.forEach((item: any) => {
-            const key = item.parcaAdi || item.stokKodu || "Bilinmeyen";
-            c[key] = (c[key] || 0) + 1;
-          });
-        }
-      });
-      
-      const formatted = Object.entries(c).map(([part, count]) => ({
-        part,
-        failure: Number(count)
-      }));
-      
-      formatted.sort((a, b) => b.failure - a.failure);
-      setCorrData(formatted.slice(0, 5));
-    } catch (error) {
-      console.error("Nexus Sync Error:", error);
-    }
-  };
-
-  
   const fetchNexusData = async () => {
     try {
       const { collection, query, orderBy, limit, getDocs } = await import("firebase/firestore");
+      
+      // Personel Verisi
       const pSnap = await getDocs(query(collection(db, "personel"), orderBy("xp", "desc"), limit(5)));
-      const pData = pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setPersonelList(pData);
+      const pArr = pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setPersonelList(pArr);
       
+      // Bakım Verisi
       const bSnap = await getDocs(collection(db, "bakimlar"));
-      const c: any = {};
-      bSnap.docs.forEach(doc => {
-        const sarfiyat = doc.data().sarfiyat;
-        if (sarfiyat && Array.isArray(sarfiyat)) {
-          sarfiyat.forEach((item: any) => {
-            const key = item.parcaAdi || item.stokKodu || "Bilinmeyen";
-            c[key] = (c[key] || 0) + 1;
-          });
-        }
-      });
+      const counts: any = {};
       
-      const formatted = Object.entries(c).map(([part, count]) => ({
-        part,
-        failure: Number(count)
+      for (const d of bSnap.docs) {
+        const data = d.data();
+        if (data.sarfiyat && Array.isArray(data.sarfiyat)) {
+          for (const item of data.sarfiyat) {
+            const key = item.parcaAdi || item.stokKodu || "Bilinmeyen";
+            counts[key] = (counts[key] || 0) + 1;
+          }
+        }
+      }
+      
+      const formatted = Object.entries(counts).map(([part, failure]) => ({
+        part: String(part),
+        failure: Number(failure)
       }));
       
       formatted.sort((a, b) => b.failure - a.failure);
       setCorrData(formatted.slice(0, 5));
-    } catch (error) {
-      console.error("Nexus Sync Error:", error);
+    } catch (err) {
+      console.error("Nexus Sync Error:", err);
     }
   };
 
@@ -145,7 +124,7 @@ export default function AdminDashboard() {
           const userData = userSnap.data();
           setUserRole(userData.role); setUserName(userData.name);
           if (["admin", "operator", "uretim", "isg", "teknisyen"].includes(userData.role)) {
-            setIsAdmin(true); fetchInitialData(); fetchNexusData(); fetchRcaData();
+            setIsAdmin(true); fetchNexusData(); fetchInitialData(); fetchRcaData();
           } else { window.location.href = "/dashboard"; }
         }
       } else { window.location.href = "/"; }
@@ -196,58 +175,38 @@ export default function AdminDashboard() {
 
   // --- CALCULATION ENGINE ---
   
-  
-      bSnap.docs.forEach(doc => {
-        const sarfiyat = doc.data().sarfiyat;
-        if (sarfiyat && Array.isArray(sarfiyat)) {
-          sarfiyat.forEach((item: any) => {
-            const key = item.parcaAdi || item.stokKodu || "Bilinmeyen";
-            c[key] = (c[key] || 0) + 1;
-          });
-        }
-      });
-      
-      const formatted = Object.entries(c).map(([part, count]) => ({
-        part,
-        failure: Number(count)
-      }));
-      
-      formatted.sort((a, b) => b.failure - a.failure);
-      setCorrData(formatted.slice(0, 5));
-    } catch (error) {
-      console.error("Nexus Sync Error:", error);
-    }
-  };
-
-  
   const fetchNexusData = async () => {
     try {
       const { collection, query, orderBy, limit, getDocs } = await import("firebase/firestore");
+      
+      // Personel Verisi
       const pSnap = await getDocs(query(collection(db, "personel"), orderBy("xp", "desc"), limit(5)));
-      const pData = pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setPersonelList(pData);
+      const pArr = pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setPersonelList(pArr);
       
+      // Bakım Verisi
       const bSnap = await getDocs(collection(db, "bakimlar"));
-      const c: any = {};
-      bSnap.docs.forEach(doc => {
-        const sarfiyat = doc.data().sarfiyat;
-        if (sarfiyat && Array.isArray(sarfiyat)) {
-          sarfiyat.forEach((item: any) => {
-            const key = item.parcaAdi || item.stokKodu || "Bilinmeyen";
-            c[key] = (c[key] || 0) + 1;
-          });
-        }
-      });
+      const counts: any = {};
       
-      const formatted = Object.entries(c).map(([part, count]) => ({
-        part,
-        failure: Number(count)
+      for (const d of bSnap.docs) {
+        const data = d.data();
+        if (data.sarfiyat && Array.isArray(data.sarfiyat)) {
+          for (const item of data.sarfiyat) {
+            const key = item.parcaAdi || item.stokKodu || "Bilinmeyen";
+            counts[key] = (counts[key] || 0) + 1;
+          }
+        }
+      }
+      
+      const formatted = Object.entries(counts).map(([part, failure]) => ({
+        part: String(part),
+        failure: Number(failure)
       }));
       
       formatted.sort((a, b) => b.failure - a.failure);
       setCorrData(formatted.slice(0, 5));
-    } catch (error) {
-      console.error("Nexus Sync Error:", error);
+    } catch (err) {
+      console.error("Nexus Sync Error:", err);
     }
   };
 
@@ -292,58 +251,38 @@ export default function AdminDashboard() {
   }, [rawLogs, filterYil, filterAy, filterHat, filterPerfVardiya, filterPerfPersonel, filterPerfSiralama, filterPerfDurus]);
 
   
-  
-      bSnap.docs.forEach(doc => {
-        const sarfiyat = doc.data().sarfiyat;
-        if (sarfiyat && Array.isArray(sarfiyat)) {
-          sarfiyat.forEach((item: any) => {
-            const key = item.parcaAdi || item.stokKodu || "Bilinmeyen";
-            c[key] = (c[key] || 0) + 1;
-          });
-        }
-      });
-      
-      const formatted = Object.entries(c).map(([part, count]) => ({
-        part,
-        failure: Number(count)
-      }));
-      
-      formatted.sort((a, b) => b.failure - a.failure);
-      setCorrData(formatted.slice(0, 5));
-    } catch (error) {
-      console.error("Nexus Sync Error:", error);
-    }
-  };
-
-  
   const fetchNexusData = async () => {
     try {
       const { collection, query, orderBy, limit, getDocs } = await import("firebase/firestore");
+      
+      // Personel Verisi
       const pSnap = await getDocs(query(collection(db, "personel"), orderBy("xp", "desc"), limit(5)));
-      const pData = pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setPersonelList(pData);
+      const pArr = pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setPersonelList(pArr);
       
+      // Bakım Verisi
       const bSnap = await getDocs(collection(db, "bakimlar"));
-      const c: any = {};
-      bSnap.docs.forEach(doc => {
-        const sarfiyat = doc.data().sarfiyat;
-        if (sarfiyat && Array.isArray(sarfiyat)) {
-          sarfiyat.forEach((item: any) => {
-            const key = item.parcaAdi || item.stokKodu || "Bilinmeyen";
-            c[key] = (c[key] || 0) + 1;
-          });
-        }
-      });
+      const counts: any = {};
       
-      const formatted = Object.entries(c).map(([part, count]) => ({
-        part,
-        failure: Number(count)
+      for (const d of bSnap.docs) {
+        const data = d.data();
+        if (data.sarfiyat && Array.isArray(data.sarfiyat)) {
+          for (const item of data.sarfiyat) {
+            const key = item.parcaAdi || item.stokKodu || "Bilinmeyen";
+            counts[key] = (counts[key] || 0) + 1;
+          }
+        }
+      }
+      
+      const formatted = Object.entries(counts).map(([part, failure]) => ({
+        part: String(part),
+        failure: Number(failure)
       }));
       
       formatted.sort((a, b) => b.failure - a.failure);
       setCorrData(formatted.slice(0, 5));
-    } catch (error) {
-      console.error("Nexus Sync Error:", error);
+    } catch (err) {
+      console.error("Nexus Sync Error:", err);
     }
   };
 
@@ -519,17 +458,14 @@ export default function AdminDashboard() {
           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border border-gray-800 p-6 rounded-[30px] shadow-xl">
              <h2 className="text-xs font-bold text-yellow-400 mb-4 uppercase tracking-widest underline underline-offset-8">⚡ Elektrik (kWh)</h2>
              <select value={filterElekSayac} onChange={e=>setFilterElekSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-2xl p-2 text-[10px] mb-4 text-white uppercase"><option value="">Tüm Sayaçlar</option>{elekSayacList.map(s=><option key={s} value={s}>{s}</option>)}</select>
-             <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikElek}><XAxis dataKey="ay" tick={{fontSize:10}}/><Tooltip/><Bar dataKey="tuketim" fill="#EAB308" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div>
           </div>
           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border border-gray-800 p-6 rounded-[30px] shadow-xl">
              <h2 className="text-xs font-bold text-red-400 mb-4 uppercase tracking-widest underline underline-offset-8">🔥 Doğalgaz (m³)</h2>
              <select value={filterGazSayac} onChange={e=>setFilterGazSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-2xl p-2 text-[10px] mb-4 text-white uppercase"><option value="">Tüm Sayaçlar</option>{gazSayacList.map(s=><option key={s} value={s}>{s}</option>)}</select>
-             <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikGaz}><XAxis dataKey="ay" tick={{fontSize:10}}/><Tooltip/><Bar dataKey="tuketim" fill="#EF4444" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div>
           </div>
           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border border-gray-800 p-6 rounded-[30px] shadow-xl">
              <h2 className="text-xs font-bold text-blue-400 mb-4 uppercase tracking-widest underline underline-offset-8">💧 Su (m³)</h2>
              <select value={filterSuSayac} onChange={e=>setFilterSuSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-2xl p-2 text-[10px] mb-4 text-white uppercase"><option value="">Tüm Sayaçlar</option>{suSayacList.map(s=><option key={s} value={s}>{s}</option>)}</select>
-             <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikSu}><XAxis dataKey="ay" tick={{fontSize:10}}/><Tooltip/><Bar dataKey="tuketim" fill="#3B82F6" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div>
           </div>
         </div>
 
@@ -548,11 +484,9 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
            <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border border-gray-800 p-6 rounded-[35px] shadow-2xl">
              <h2 className="text-sm font-black text-indigo-400 mb-6 uppercase tracking-widest text-center tracking-[0.2em]">📊 RCA Pareto Analizi</h2>
-             <div className="h-64 w-full"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={RCA_CATEGORIES.map(c=>({ name:c.label, value: rcaLogs.filter(r=>r.category===c.id).length, color: c.color })).filter(d=>d.value>0)} cx="50%" cy="50%" innerRadius={60} outerRadius={80} dataKey="value">{RCA_CATEGORIES.map((e,i)=><Cell key={i} fill={e.color} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></div>
            </div>
            <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border border-gray-800 p-6 rounded-[35px] shadow-2xl">
              <h2 className="text-sm font-black text-teal-400 mb-6 uppercase tracking-widest text-center tracking-[0.2em]">⚡ Hat Bazlı İş Yoğunluğu</h2>
-             <div className="h-64 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikIsHatti}><XAxis dataKey="isim" tick={{fontSize:10, fill:'#6B7280'}} /><YAxis tick={{fontSize:10}} /><Tooltip /><Bar dataKey="adet" fill="#10B981" radius={[6,6,0,0]} /></BarChart></ResponsiveContainer></div>
            </div>
         </div>
   </>
@@ -617,28 +551,29 @@ export default function AdminDashboard() {
         </div>
       )}
     
+      {/* NEXUS MODALLARI */}
       {showLeagueInfo && (
-        <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans">
+        <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6">
           <div className="bg-[#020617] border-2 border-indigo-500/50 p-8 rounded-3xl max-w-lg w-full">
             <h4 className="text-indigo-400 font-bold mb-6 text-xl italic border-b border-indigo-500/20 pb-2 uppercase text-center tracking-tighter italic">XP & Seviye Sistemi Matrisi</h4>
             <div className="space-y-4 text-sm text-gray-300 leading-relaxed font-mono italic">
-              <p><span className="text-indigo-500">{" >> "}</span> <strong>Arıza Müdahale:</strong> +150 XP.</p>
-              <p><span className="text-indigo-500">{" >> "}</span> <strong>İSG & EKED:</strong> +200 XP Bonus.</p>
-              <p><span className="text-indigo-500">{" >> "}</span> <strong>Seviye:</strong> Her 1000 XP bir kademe.</p>
+              <p>→ <strong>Arıza Müdahale:</strong> +150 XP.</p>
+              <p>→ <strong>İSG & EKED:</strong> +200 XP Bonus.</p>
+              <p>→ <strong>Seviye:</strong> Her 1000 XP bir kademe.</p>
             </div>
-            <button onClick={() => setShowLeagueInfo(false)} className="mt-8 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic tracking-widest shadow-lg shadow-indigo-500/30">Anlaşıldı</button>
+            <button onClick={() => setShowLeagueInfo(false)} className="mt-8 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic shadow-lg">Anlaşıldı</button>
           </div>
         </div>
       )}
       {showCorrInfo && (
-        <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans">
-          <div className="bg-[#020617] border-2 border-emerald-500/50 p-8 rounded-3xl max-w-lg w-full shadow-[0_0_50px_rgba(16,185,129,0.2)]">
+        <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 font-sans">
+          <div className="bg-[#020617] border-2 border-emerald-500/50 p-8 rounded-3xl max-w-lg w-full">
             <h4 className="text-emerald-400 font-bold mb-6 text-xl italic border-b border-emerald-500/20 pb-2 uppercase text-center tracking-tighter italic">Korelasyon Hesaplama Metodu</h4>
             <div className="space-y-4 text-sm text-gray-300 leading-relaxed font-mono italic">
-              <p><span className="text-emerald-500">{" >> "}</span> <strong>Veri Kaynağı:</strong> Firestore 'bakimlar' koleksiyonu.</p>
-              <p><span className="text-emerald-500">{" >> "}</span> <strong>İşlem:</strong> Parça frekans korelasyonu.</p>
+              <p>→ <strong>Veri Kaynağı:</strong> Firestore 'bakimlar' koleksiyonu.</p>
+              <p>→ <strong>İşlem:</strong> Parça frekans korelasyonu.</p>
             </div>
-            <button onClick={() => setShowCorrInfo(false)} className="mt-8 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic tracking-widest shadow-lg shadow-emerald-500/30">Anlaşıldı</button>
+            <button onClick={() => setShowCorrInfo(false)} className="mt-8 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic shadow-lg">Anlaşıldı</button>
           </div>
         </div>
       )}

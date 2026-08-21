@@ -13,7 +13,6 @@ export default function AdminDashboard() {
   const [userName, setUserName] = useState(""); 
   const [userEmail, setUserEmail] = useState(""); 
   const [loading, setLoading] = useState(true);
-  // NEXUS STABLE STATES
   const [showLeagueInfo, setShowLeagueInfo] = useState(false);
   const [showCorrInfo, setShowCorrInfo] = useState(false);
   const [personelList, setPersonelList] = useState<any[]>([]);
@@ -81,8 +80,10 @@ export default function AdminDashboard() {
 
   
   
+      
       for (const d of bSnap.docs) {
-        const sarfiyat = d.data().sarfiyat;
+        const data = d.data();
+        const sarfiyat = data.sarfiyat;
         if (sarfiyat && Array.isArray(sarfiyat)) {
           for (const item of sarfiyat) {
             const key = item.parcaAdi || item.stokKodu || "Bilinmeyen";
@@ -90,11 +91,18 @@ export default function AdminDashboard() {
           }
         }
       }
-      const formatted = Object.entries(counts).map(([part, failure]) => ({
-        part: String(part),
-        failure: Number(failure)
-      })).sort((a, b) => b.failure - a.failure).slice(0, 5);
-      setCorrData(formatted);
+      
+      const formatted = [];
+      const entries = Object.entries(counts);
+      for (const entry of entries) {
+        formatted.push({
+          part: String(entry[0]),
+          failure: Number(entry[1])
+        });
+      }
+      
+      formatted.sort((a, b) => b.failure - a.failure);
+      setCorrData(formatted.slice(0, 5));
     } catch (err) {
       console.error("Nexus Sync Error:", err);
     }
@@ -104,13 +112,19 @@ export default function AdminDashboard() {
   const fetchNexusData = async () => {
     try {
       const { collection, query, orderBy, limit, getDocs } = await import("firebase/firestore");
-      const pSnap = await getDocs(query(collection(db, "personel"), orderBy("xp", "desc"), limit(5)));
-      setPersonelList(pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       
+      // Personel Verisi
+      const pSnap = await getDocs(query(collection(db, "personel"), orderBy("xp", "desc"), limit(5)));
+      const pArr = pSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setPersonelList(pArr);
+      
+      // Bakım Verisi
       const bSnap = await getDocs(collection(db, "bakimlar"));
       const counts: any = {};
+      
       for (const d of bSnap.docs) {
-        const sarfiyat = d.data().sarfiyat;
+        const data = d.data();
+        const sarfiyat = data.sarfiyat;
         if (sarfiyat && Array.isArray(sarfiyat)) {
           for (const item of sarfiyat) {
             const key = item.parcaAdi || item.stokKodu || "Bilinmeyen";
@@ -118,11 +132,18 @@ export default function AdminDashboard() {
           }
         }
       }
-      const formatted = Object.entries(counts).map(([part, failure]) => ({
-        part: String(part),
-        failure: Number(failure)
-      })).sort((a, b) => b.failure - a.failure).slice(0, 5);
-      setCorrData(formatted);
+      
+      const formatted = [];
+      const entries = Object.entries(counts);
+      for (const entry of entries) {
+        formatted.push({
+          part: String(entry[0]),
+          failure: Number(entry[1])
+        });
+      }
+      
+      formatted.sort((a, b) => b.failure - a.failure);
+      setCorrData(formatted.slice(0, 5));
     } catch (err) {
       console.error("Nexus Sync Error:", err);
     }
@@ -190,8 +211,10 @@ export default function AdminDashboard() {
   // --- CALCULATION ENGINE ---
   
   
+      
       for (const d of bSnap.docs) {
-        const sarfiyat = d.data().sarfiyat;
+        const data = d.data();
+        const sarfiyat = data.sarfiyat;
         if (sarfiyat && Array.isArray(sarfiyat)) {
           for (const item of sarfiyat) {
             const key = item.parcaAdi || item.stokKodu || "Bilinmeyen";
@@ -199,11 +222,18 @@ export default function AdminDashboard() {
           }
         }
       }
-      const formatted = Object.entries(counts).map(([part, failure]) => ({
-        part: String(part),
-        failure: Number(failure)
-      })).sort((a, b) => b.failure - a.failure).slice(0, 5);
-      setCorrData(formatted);
+      
+      const formatted = [];
+      const entries = Object.entries(counts);
+      for (const entry of entries) {
+        formatted.push({
+          part: String(entry[0]),
+          failure: Number(entry[1])
+        });
+      }
+      
+      formatted.sort((a, b) => b.failure - a.failure);
+      setCorrData(formatted.slice(0, 5));
     } catch (err) {
       console.error("Nexus Sync Error:", err);
     }
@@ -213,13 +243,19 @@ export default function AdminDashboard() {
   const fetchNexusData = async () => {
     try {
       const { collection, query, orderBy, limit, getDocs } = await import("firebase/firestore");
-      const pSnap = await getDocs(query(collection(db, "personel"), orderBy("xp", "desc"), limit(5)));
-      setPersonelList(pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       
+      // Personel Verisi
+      const pSnap = await getDocs(query(collection(db, "personel"), orderBy("xp", "desc"), limit(5)));
+      const pArr = pSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setPersonelList(pArr);
+      
+      // Bakım Verisi
       const bSnap = await getDocs(collection(db, "bakimlar"));
       const counts: any = {};
+      
       for (const d of bSnap.docs) {
-        const sarfiyat = d.data().sarfiyat;
+        const data = d.data();
+        const sarfiyat = data.sarfiyat;
         if (sarfiyat && Array.isArray(sarfiyat)) {
           for (const item of sarfiyat) {
             const key = item.parcaAdi || item.stokKodu || "Bilinmeyen";
@@ -227,11 +263,18 @@ export default function AdminDashboard() {
           }
         }
       }
-      const formatted = Object.entries(counts).map(([part, failure]) => ({
-        part: String(part),
-        failure: Number(failure)
-      })).sort((a, b) => b.failure - a.failure).slice(0, 5);
-      setCorrData(formatted);
+      
+      const formatted = [];
+      const entries = Object.entries(counts);
+      for (const entry of entries) {
+        formatted.push({
+          part: String(entry[0]),
+          failure: Number(entry[1])
+        });
+      }
+      
+      formatted.sort((a, b) => b.failure - a.failure);
+      setCorrData(formatted.slice(0, 5));
     } catch (err) {
       console.error("Nexus Sync Error:", err);
     }
@@ -279,8 +322,10 @@ export default function AdminDashboard() {
 
   
   
+      
       for (const d of bSnap.docs) {
-        const sarfiyat = d.data().sarfiyat;
+        const data = d.data();
+        const sarfiyat = data.sarfiyat;
         if (sarfiyat && Array.isArray(sarfiyat)) {
           for (const item of sarfiyat) {
             const key = item.parcaAdi || item.stokKodu || "Bilinmeyen";
@@ -288,11 +333,18 @@ export default function AdminDashboard() {
           }
         }
       }
-      const formatted = Object.entries(counts).map(([part, failure]) => ({
-        part: String(part),
-        failure: Number(failure)
-      })).sort((a, b) => b.failure - a.failure).slice(0, 5);
-      setCorrData(formatted);
+      
+      const formatted = [];
+      const entries = Object.entries(counts);
+      for (const entry of entries) {
+        formatted.push({
+          part: String(entry[0]),
+          failure: Number(entry[1])
+        });
+      }
+      
+      formatted.sort((a, b) => b.failure - a.failure);
+      setCorrData(formatted.slice(0, 5));
     } catch (err) {
       console.error("Nexus Sync Error:", err);
     }
@@ -302,13 +354,19 @@ export default function AdminDashboard() {
   const fetchNexusData = async () => {
     try {
       const { collection, query, orderBy, limit, getDocs } = await import("firebase/firestore");
-      const pSnap = await getDocs(query(collection(db, "personel"), orderBy("xp", "desc"), limit(5)));
-      setPersonelList(pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       
+      // Personel Verisi
+      const pSnap = await getDocs(query(collection(db, "personel"), orderBy("xp", "desc"), limit(5)));
+      const pArr = pSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setPersonelList(pArr);
+      
+      // Bakım Verisi
       const bSnap = await getDocs(collection(db, "bakimlar"));
       const counts: any = {};
+      
       for (const d of bSnap.docs) {
-        const sarfiyat = d.data().sarfiyat;
+        const data = d.data();
+        const sarfiyat = data.sarfiyat;
         if (sarfiyat && Array.isArray(sarfiyat)) {
           for (const item of sarfiyat) {
             const key = item.parcaAdi || item.stokKodu || "Bilinmeyen";
@@ -316,11 +374,18 @@ export default function AdminDashboard() {
           }
         }
       }
-      const formatted = Object.entries(counts).map(([part, failure]) => ({
-        part: String(part),
-        failure: Number(failure)
-      })).sort((a, b) => b.failure - a.failure).slice(0, 5);
-      setCorrData(formatted);
+      
+      const formatted = [];
+      const entries = Object.entries(counts);
+      for (const entry of entries) {
+        formatted.push({
+          part: String(entry[0]),
+          failure: Number(entry[1])
+        });
+      }
+      
+      formatted.sort((a, b) => b.failure - a.failure);
+      setCorrData(formatted.slice(0, 5));
     } catch (err) {
       console.error("Nexus Sync Error:", err);
     }
@@ -353,11 +418,10 @@ export default function AdminDashboard() {
   if (loading) return (
     <div className="min-h-screen bg-[#020617] flex flex-col justify-center items-center overflow-hidden font-sans">
 
-        {/* NEXUS ANALİTİK PANEL */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 w-full max-w-7xl">
           <div className="bg-white/5 border border-indigo-500/20 p-6 rounded-2xl relative backdrop-blur-md shadow-xl overflow-hidden group">
             <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500 shadow-[0_0_15px_#6366f1]"></div>
-            <button onClick={() => setShowLeagueInfo(true)} className="absolute top-4 right-4 text-indigo-400 text-[10px] border border-indigo-500/30 px-2 py-1 rounded hover:bg-indigo-500/20 font-bold uppercase transition-all tracking-tighter">Algoritma ?</button>
+            <button onClick={() => setShowLeagueInfo(true)} className="absolute top-4 right-4 text-indigo-400 text-[10px] border border-indigo-500/30 px-2 py-1 rounded hover:bg-indigo-500/20 font-bold uppercase transition-all tracking-widest italic tracking-tighter shadow-sm shadow-indigo-500/10">Algoritma ?</button>
             <h3 className="text-indigo-400 text-sm font-bold mb-6 italic tracking-widest uppercase flex items-center">
               <span className="w-2 h-2 bg-indigo-500 mr-2 rounded-full animate-pulse shadow-[0_0_8px_#6366f1]"></span> Bakım Ligi (Top XP)
             </h3>
@@ -372,7 +436,7 @@ export default function AdminDashboard() {
           </div>
           <div className="bg-white/5 border border-emerald-500/20 p-6 rounded-2xl relative backdrop-blur-md shadow-xl overflow-hidden group">
             <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 shadow-[0_0_15px_#10b981]"></div>
-            <button onClick={() => setShowCorrInfo(true)} className="absolute top-4 right-4 text-emerald-400 text-[10px] border border-emerald-500/30 px-2 py-1 rounded hover:bg-emerald-500/20 font-bold uppercase transition-all tracking-tighter">Metodoloji ?</button>
+            <button onClick={() => setShowCorrInfo(true)} className="absolute top-4 right-4 text-emerald-400 text-[10px] border border-emerald-500/30 px-2 py-1 rounded hover:bg-emerald-500/20 font-bold uppercase transition-all tracking-widest italic tracking-tighter shadow-sm shadow-emerald-500/10">Metodoloji ?</button>
             <h3 className="text-emerald-400 text-sm font-bold mb-6 italic tracking-widest uppercase flex items-center">
               <span className="w-2 h-2 bg-emerald-500 mr-2 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span> Kritik Parça Analizi
             </h3>
@@ -408,11 +472,10 @@ export default function AdminDashboard() {
   );
   if (!isAdmin) return <div className="min-h-screen bg-[#020617] text-red-500 flex justify-center items-center font-bold text-xl uppercase italic tracking-tighter">
 
-        {/* NEXUS ANALİTİK PANEL */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 w-full max-w-7xl">
           <div className="bg-white/5 border border-indigo-500/20 p-6 rounded-2xl relative backdrop-blur-md shadow-xl overflow-hidden group">
             <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500 shadow-[0_0_15px_#6366f1]"></div>
-            <button onClick={() => setShowLeagueInfo(true)} className="absolute top-4 right-4 text-indigo-400 text-[10px] border border-indigo-500/30 px-2 py-1 rounded hover:bg-indigo-500/20 font-bold uppercase transition-all tracking-tighter">Algoritma ?</button>
+            <button onClick={() => setShowLeagueInfo(true)} className="absolute top-4 right-4 text-indigo-400 text-[10px] border border-indigo-500/30 px-2 py-1 rounded hover:bg-indigo-500/20 font-bold uppercase transition-all tracking-widest italic tracking-tighter shadow-sm shadow-indigo-500/10">Algoritma ?</button>
             <h3 className="text-indigo-400 text-sm font-bold mb-6 italic tracking-widest uppercase flex items-center">
               <span className="w-2 h-2 bg-indigo-500 mr-2 rounded-full animate-pulse shadow-[0_0_8px_#6366f1]"></span> Bakım Ligi (Top XP)
             </h3>
@@ -427,7 +490,7 @@ export default function AdminDashboard() {
           </div>
           <div className="bg-white/5 border border-emerald-500/20 p-6 rounded-2xl relative backdrop-blur-md shadow-xl overflow-hidden group">
             <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 shadow-[0_0_15px_#10b981]"></div>
-            <button onClick={() => setShowCorrInfo(true)} className="absolute top-4 right-4 text-emerald-400 text-[10px] border border-emerald-500/30 px-2 py-1 rounded hover:bg-emerald-500/20 font-bold uppercase transition-all tracking-tighter">Metodoloji ?</button>
+            <button onClick={() => setShowCorrInfo(true)} className="absolute top-4 right-4 text-emerald-400 text-[10px] border border-emerald-500/30 px-2 py-1 rounded hover:bg-emerald-500/20 font-bold uppercase transition-all tracking-widest italic tracking-tighter shadow-sm shadow-emerald-500/10">Metodoloji ?</button>
             <h3 className="text-emerald-400 text-sm font-bold mb-6 italic tracking-widest uppercase flex items-center">
               <span className="w-2 h-2 bg-emerald-500 mr-2 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span> Kritik Parça Analizi
             </h3>
@@ -446,11 +509,10 @@ export default function AdminDashboard() {
 YETKİSİZ ERİŞİM!</div>;return (
     <div className="min-h-screen bg-[#020617] text-white p-4 md:p-8 font-sans overflow-x-hidden">
 
-        {/* NEXUS ANALİTİK PANEL */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 w-full max-w-7xl">
           <div className="bg-white/5 border border-indigo-500/20 p-6 rounded-2xl relative backdrop-blur-md shadow-xl overflow-hidden group">
             <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500 shadow-[0_0_15px_#6366f1]"></div>
-            <button onClick={() => setShowLeagueInfo(true)} className="absolute top-4 right-4 text-indigo-400 text-[10px] border border-indigo-500/30 px-2 py-1 rounded hover:bg-indigo-500/20 font-bold uppercase transition-all tracking-tighter">Algoritma ?</button>
+            <button onClick={() => setShowLeagueInfo(true)} className="absolute top-4 right-4 text-indigo-400 text-[10px] border border-indigo-500/30 px-2 py-1 rounded hover:bg-indigo-500/20 font-bold uppercase transition-all tracking-widest italic tracking-tighter shadow-sm shadow-indigo-500/10">Algoritma ?</button>
             <h3 className="text-indigo-400 text-sm font-bold mb-6 italic tracking-widest uppercase flex items-center">
               <span className="w-2 h-2 bg-indigo-500 mr-2 rounded-full animate-pulse shadow-[0_0_8px_#6366f1]"></span> Bakım Ligi (Top XP)
             </h3>
@@ -465,7 +527,7 @@ YETKİSİZ ERİŞİM!</div>;return (
           </div>
           <div className="bg-white/5 border border-emerald-500/20 p-6 rounded-2xl relative backdrop-blur-md shadow-xl overflow-hidden group">
             <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 shadow-[0_0_15px_#10b981]"></div>
-            <button onClick={() => setShowCorrInfo(true)} className="absolute top-4 right-4 text-emerald-400 text-[10px] border border-emerald-500/30 px-2 py-1 rounded hover:bg-emerald-500/20 font-bold uppercase transition-all tracking-tighter">Metodoloji ?</button>
+            <button onClick={() => setShowCorrInfo(true)} className="absolute top-4 right-4 text-emerald-400 text-[10px] border border-emerald-500/30 px-2 py-1 rounded hover:bg-emerald-500/20 font-bold uppercase transition-all tracking-widest italic tracking-tighter shadow-sm shadow-emerald-500/10">Metodoloji ?</button>
             <h3 className="text-emerald-400 text-sm font-bold mb-6 italic tracking-widest uppercase flex items-center">
               <span className="w-2 h-2 bg-emerald-500 mr-2 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span> Kritik Parça Analizi
             </h3>
@@ -702,29 +764,28 @@ YETKİSİZ ERİŞİM!</div>;return (
         </div>
       )}
     
-      {/* NEXUS MODALLARI */}
       {showLeagueInfo && (
         <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans">
           <div className="bg-[#020617] border-2 border-indigo-500/50 p-8 rounded-3xl max-w-lg w-full shadow-[0_0_50px_rgba(99,102,241,0.2)]">
-            <h4 className="text-indigo-400 font-bold mb-6 text-xl italic border-b border-indigo-500/20 pb-2 uppercase text-center tracking-tighter italic">XP & Seviye Sistemi Matrisi</h4>
+            <h4 className="text-indigo-400 font-bold mb-6 text-xl italic border-b border-indigo-500/20 pb-2 uppercase text-center tracking-tighter italic shadow-[0_10px_10px_-10px_rgba(99,102,241,0.5)]">XP & Seviye Sistemi Matrisi</h4>
             <div className="space-y-4 text-sm text-gray-300 leading-relaxed font-mono italic">
               <p>→ <strong>Arıza Müdahale:</strong> +150 XP.</p>
               <p>→ <strong>İSG & EKED:</strong> +200 XP Bonus.</p>
               <p>→ <strong>Seviye:</strong> Her 1000 XP bir kademe.</p>
             </div>
-            <button onClick={() => setShowLeagueInfo(false)} className="mt-8 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic shadow-lg shadow-indigo-500/30">Anlaşıldı</button>
+            <button onClick={() => setShowLeagueInfo(false)} className="mt-8 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic tracking-widest shadow-lg shadow-indigo-500/30">Anlaşıldı</button>
           </div>
         </div>
       )}
       {showCorrInfo && (
         <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans">
           <div className="bg-[#020617] border-2 border-emerald-500/50 p-8 rounded-3xl max-w-lg w-full shadow-[0_0_50px_rgba(16,185,129,0.2)]">
-            <h4 className="text-emerald-400 font-bold mb-6 text-xl italic border-b border-emerald-500/20 pb-2 uppercase text-center tracking-tighter italic">Korelasyon Hesaplama Metodu</h4>
+            <h4 className="text-emerald-400 font-bold mb-6 text-xl italic border-b border-emerald-500/20 pb-2 uppercase text-center tracking-tighter italic shadow-[0_10px_10px_-10px_rgba(16,185,129,0.5)]">Korelasyon Hesaplama Metodu</h4>
             <div className="space-y-4 text-sm text-gray-300 leading-relaxed font-mono italic">
               <p>→ <strong>Veri Kaynağı:</strong> Firestore 'bakimlar' koleksiyonu.</p>
               <p>→ <strong>İşlem:</strong> Parça frekans korelasyonu.</p>
             </div>
-            <button onClick={() => setShowCorrInfo(false)} className="mt-8 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic shadow-lg shadow-emerald-500/30">Anlaşıldı</button>
+            <button onClick={() => setShowCorrInfo(false)} className="mt-8 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic tracking-widest shadow-lg shadow-emerald-500/30">Anlaşıldı</button>
           </div>
         </div>
       )}

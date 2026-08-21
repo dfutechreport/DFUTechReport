@@ -1,8 +1,6 @@
 "use client";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-
 import { useEffect, useState } from "react";
-import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, writeBatch, setDoc, serverTimestamp } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, writeBatch, setDoc, serverTimestamp, limit } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../../lib/firebase"; 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid, LabelList, PieChart, Pie, Cell } from 'recharts';
@@ -14,12 +12,12 @@ export default function AdminDashboard() {
   const [userName, setUserName] = useState(""); 
   const [userEmail, setUserEmail] = useState(""); 
   const [loading, setLoading] = useState(true);
-  // NEXUS V24 ANALİTİK EKLENTİLERİ
+  // NEXUS V25 ANALİTİK EKLENTİLERİ
   const [showLeagueInfo, setShowLeagueInfo] = useState(false);
   const [showCorrInfo, setShowCorrInfo] = useState(false);
   const [personelList, setPersonelList] = useState<any[]>([]);
   const [corrData, setCorrData] = useState<any[]>([]);
-    
+
   
   // DATA STATES
   const [rawLogs, setRawLogs] = useState<any[]>([]);
@@ -83,7 +81,6 @@ export default function AdminDashboard() {
   
   const fetchNexusData = async () => {
     try {
-      const { collection, query, orderBy, limit, getDocs } = await import("firebase/firestore");
       const pSnap = await getDocs(query(collection(db, "personel"), orderBy("xp", "desc"), limit(5)));
       setPersonelList(pSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       const bSnap = await getDocs(collection(db, "bakimlar"));
@@ -98,7 +95,7 @@ export default function AdminDashboard() {
       setCorrData(Object.entries(c).map(([part, failure]) => ({ part, failure })).sort((a:any, b:any) => b.failure - a.failure).slice(0, 5));
     } catch (e) { console.error("Nexus Error:", e); }
   };
-    
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -109,8 +106,7 @@ export default function AdminDashboard() {
           const userData = userSnap.data();
           setUserRole(userData.role); setUserName(userData.name);
           if (["admin", "operator", "uretim", "isg", "teknisyen"].includes(userData.role)) {
-            fetchNexusData();
-            setIsAdmin(true); fetchInitialData(); fetchRcaData();
+            setIsAdmin(true); fetchInitialData(); fetchRcaData(); fetchNexusData();
           } else { window.location.href = "/dashboard"; }
         }
       } else { window.location.href = "/"; }
@@ -163,7 +159,6 @@ export default function AdminDashboard() {
   
   const fetchNexusData = async () => {
     try {
-      const { collection, query, orderBy, limit, getDocs } = await import("firebase/firestore");
       const pSnap = await getDocs(query(collection(db, "personel"), orderBy("xp", "desc"), limit(5)));
       setPersonelList(pSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       const bSnap = await getDocs(collection(db, "bakimlar"));
@@ -178,7 +173,7 @@ export default function AdminDashboard() {
       setCorrData(Object.entries(c).map(([part, failure]) => ({ part, failure })).sort((a:any, b:any) => b.failure - a.failure).slice(0, 5));
     } catch (e) { console.error("Nexus Error:", e); }
   };
-    
+
   useEffect(() => {
     if (rawLogs.length === 0) return;
     let isC=0, suC=0, duC=0;
@@ -222,7 +217,6 @@ export default function AdminDashboard() {
   
   const fetchNexusData = async () => {
     try {
-      const { collection, query, orderBy, limit, getDocs } = await import("firebase/firestore");
       const pSnap = await getDocs(query(collection(db, "personel"), orderBy("xp", "desc"), limit(5)));
       setPersonelList(pSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       const bSnap = await getDocs(collection(db, "bakimlar"));
@@ -237,7 +231,7 @@ export default function AdminDashboard() {
       setCorrData(Object.entries(c).map(([part, failure]) => ({ part, failure })).sort((a:any, b:any) => b.failure - a.failure).slice(0, 5));
     } catch (e) { console.error("Nexus Error:", e); }
   };
-    
+
   useEffect(() => {
     if (rawMeterLogs.length === 0) return;
     const elS = new Set<string>(), gzS = new Set<string>(), suS = new Set<string>();
@@ -264,11 +258,12 @@ export default function AdminDashboard() {
 
   if (loading) return (
     <div className="min-h-screen bg-[#020617] flex flex-col justify-center items-center overflow-hidden font-sans">
-        {/* --- NEXUS V24 ANALİTİK PANEL --- */}
+
+        {/* --- NEXUS V25 ANALİTİK PANEL (YAN YANA) --- */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 w-full max-w-7xl">
           <div className="bg-white/5 border border-indigo-500/20 p-6 rounded-2xl relative backdrop-blur-md shadow-xl overflow-hidden group">
             <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500 shadow-[0_0_15px_#6366f1]"></div>
-            <button onClick={() => setShowLeagueInfo(true)} className="absolute top-4 right-4 text-indigo-400 text-[10px] border border-indigo-500/30 px-2 py-1 rounded hover:bg-indigo-500/20 font-bold uppercase transition-all tracking-widest italic tracking-tighter shadow-sm shadow-indigo-500/10">Algoritma ?</button>
+            <button onClick={() => setShowLeagueInfo(true)} className="absolute top-4 right-4 text-indigo-400 text-[10px] border border-indigo-500/30 px-2 py-1 rounded hover:bg-indigo-500/20 font-bold uppercase transition-all tracking-widest italic tracking-tighter">Algoritma ?</button>
             <h3 className="text-indigo-400 text-sm font-bold mb-6 italic tracking-widest uppercase flex items-center">
               <span className="w-2 h-2 bg-indigo-500 mr-2 rounded-full animate-pulse shadow-[0_0_8px_#6366f1]"></span> Bakım Ligi (Top XP)
             </h3>
@@ -283,7 +278,7 @@ export default function AdminDashboard() {
           </div>
           <div className="bg-white/5 border border-emerald-500/20 p-6 rounded-2xl relative backdrop-blur-md shadow-xl overflow-hidden group">
             <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 shadow-[0_0_15px_#10b981]"></div>
-            <button onClick={() => setShowCorrInfo(true)} className="absolute top-4 right-4 text-emerald-400 text-[10px] border border-emerald-500/30 px-2 py-1 rounded hover:bg-emerald-500/20 font-bold uppercase transition-all tracking-widest italic tracking-tighter shadow-sm shadow-emerald-500/10">Metodoloji ?</button>
+            <button onClick={() => setShowCorrInfo(true)} className="absolute top-4 right-4 text-emerald-400 text-[10px] border border-emerald-500/30 px-2 py-1 rounded hover:bg-emerald-500/20 font-bold uppercase transition-all tracking-widest italic tracking-tighter">Metodoloji ?</button>
             <h3 className="text-emerald-400 text-sm font-bold mb-6 italic tracking-widest uppercase flex items-center">
               <span className="w-2 h-2 bg-emerald-500 mr-2 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span> Kritik Parça Analizi
             </h3>
@@ -299,7 +294,7 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
-    
+
       <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(#4f46e5 0.5px, transparent 0.5px)', backgroundSize: '30px 30px' }}></div>
       <div className="relative mb-20 scale-110">
         <div className="absolute inset-0 bg-indigo-600/20 blur-[150px] rounded-full animate-pulse"></div>
@@ -318,11 +313,12 @@ export default function AdminDashboard() {
     </div>
   );
   if (!isAdmin) return <div className="min-h-screen bg-[#020617] text-red-500 flex justify-center items-center font-bold text-xl uppercase italic tracking-tighter">
-        {/* --- NEXUS V24 ANALİTİK PANEL --- */}
+
+        {/* --- NEXUS V25 ANALİTİK PANEL (YAN YANA) --- */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 w-full max-w-7xl">
           <div className="bg-white/5 border border-indigo-500/20 p-6 rounded-2xl relative backdrop-blur-md shadow-xl overflow-hidden group">
             <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500 shadow-[0_0_15px_#6366f1]"></div>
-            <button onClick={() => setShowLeagueInfo(true)} className="absolute top-4 right-4 text-indigo-400 text-[10px] border border-indigo-500/30 px-2 py-1 rounded hover:bg-indigo-500/20 font-bold uppercase transition-all tracking-widest italic tracking-tighter shadow-sm shadow-indigo-500/10">Algoritma ?</button>
+            <button onClick={() => setShowLeagueInfo(true)} className="absolute top-4 right-4 text-indigo-400 text-[10px] border border-indigo-500/30 px-2 py-1 rounded hover:bg-indigo-500/20 font-bold uppercase transition-all tracking-widest italic tracking-tighter">Algoritma ?</button>
             <h3 className="text-indigo-400 text-sm font-bold mb-6 italic tracking-widest uppercase flex items-center">
               <span className="w-2 h-2 bg-indigo-500 mr-2 rounded-full animate-pulse shadow-[0_0_8px_#6366f1]"></span> Bakım Ligi (Top XP)
             </h3>
@@ -337,7 +333,7 @@ export default function AdminDashboard() {
           </div>
           <div className="bg-white/5 border border-emerald-500/20 p-6 rounded-2xl relative backdrop-blur-md shadow-xl overflow-hidden group">
             <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 shadow-[0_0_15px_#10b981]"></div>
-            <button onClick={() => setShowCorrInfo(true)} className="absolute top-4 right-4 text-emerald-400 text-[10px] border border-emerald-500/30 px-2 py-1 rounded hover:bg-emerald-500/20 font-bold uppercase transition-all tracking-widest italic tracking-tighter shadow-sm shadow-emerald-500/10">Metodoloji ?</button>
+            <button onClick={() => setShowCorrInfo(true)} className="absolute top-4 right-4 text-emerald-400 text-[10px] border border-emerald-500/30 px-2 py-1 rounded hover:bg-emerald-500/20 font-bold uppercase transition-all tracking-widest italic tracking-tighter">Metodoloji ?</button>
             <h3 className="text-emerald-400 text-sm font-bold mb-6 italic tracking-widest uppercase flex items-center">
               <span className="w-2 h-2 bg-emerald-500 mr-2 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span> Kritik Parça Analizi
             </h3>
@@ -353,13 +349,14 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
-    YETKİSİZ ERİŞİM!</div>;return (
+YETKİSİZ ERİŞİM!</div>;return (
     <div className="min-h-screen bg-[#020617] text-white p-4 md:p-8 font-sans overflow-x-hidden">
-        {/* --- NEXUS V24 ANALİTİK PANEL --- */}
+
+        {/* --- NEXUS V25 ANALİTİK PANEL (YAN YANA) --- */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 w-full max-w-7xl">
           <div className="bg-white/5 border border-indigo-500/20 p-6 rounded-2xl relative backdrop-blur-md shadow-xl overflow-hidden group">
             <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500 shadow-[0_0_15px_#6366f1]"></div>
-            <button onClick={() => setShowLeagueInfo(true)} className="absolute top-4 right-4 text-indigo-400 text-[10px] border border-indigo-500/30 px-2 py-1 rounded hover:bg-indigo-500/20 font-bold uppercase transition-all tracking-widest italic tracking-tighter shadow-sm shadow-indigo-500/10">Algoritma ?</button>
+            <button onClick={() => setShowLeagueInfo(true)} className="absolute top-4 right-4 text-indigo-400 text-[10px] border border-indigo-500/30 px-2 py-1 rounded hover:bg-indigo-500/20 font-bold uppercase transition-all tracking-widest italic tracking-tighter">Algoritma ?</button>
             <h3 className="text-indigo-400 text-sm font-bold mb-6 italic tracking-widest uppercase flex items-center">
               <span className="w-2 h-2 bg-indigo-500 mr-2 rounded-full animate-pulse shadow-[0_0_8px_#6366f1]"></span> Bakım Ligi (Top XP)
             </h3>
@@ -374,7 +371,7 @@ export default function AdminDashboard() {
           </div>
           <div className="bg-white/5 border border-emerald-500/20 p-6 rounded-2xl relative backdrop-blur-md shadow-xl overflow-hidden group">
             <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 shadow-[0_0_15px_#10b981]"></div>
-            <button onClick={() => setShowCorrInfo(true)} className="absolute top-4 right-4 text-emerald-400 text-[10px] border border-emerald-500/30 px-2 py-1 rounded hover:bg-emerald-500/20 font-bold uppercase transition-all tracking-widest italic tracking-tighter shadow-sm shadow-emerald-500/10">Metodoloji ?</button>
+            <button onClick={() => setShowCorrInfo(true)} className="absolute top-4 right-4 text-emerald-400 text-[10px] border border-emerald-500/30 px-2 py-1 rounded hover:bg-emerald-500/20 font-bold uppercase transition-all tracking-widest italic tracking-tighter">Metodoloji ?</button>
             <h3 className="text-emerald-400 text-sm font-bold mb-6 italic tracking-widest uppercase flex items-center">
               <span className="w-2 h-2 bg-emerald-500 mr-2 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span> Kritik Parça Analizi
             </h3>
@@ -390,7 +387,7 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
-    
+
       <div className="max-w-7xl mx-auto">
         
         {/* HEADER */}
@@ -616,11 +613,11 @@ export default function AdminDashboard() {
         </div>
       )}
     
-      {/* NEXUS ALGORİTMA MODALLARI */}
+      {/* NEXUS V25 ALGORİTMA MODALLARI */}
       {showLeagueInfo && (
-        <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans">
-          <div className="bg-[#020617] border-2 border-indigo-500/50 p-8 rounded-3xl max-w-lg w-full shadow-[0_0_50px_rgba(99,102,241,0.2)]">
-            <h4 className="text-indigo-400 font-bold mb-6 text-xl italic border-b border-indigo-500/20 pb-2 uppercase text-center tracking-tighter italic shadow-[0_10px_10px_-10px_rgba(99,102,241,0.5)]">XP & Seviye Sistemi Matrisi</h4>
+        <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6">
+          <div className="bg-[#020617] border-2 border-indigo-500/50 p-8 rounded-3xl max-w-lg w-full shadow-[0_0_50px_rgba(99,102,241,0.2)] text-sans">
+            <h4 className="text-indigo-400 font-bold mb-6 text-xl italic border-b border-indigo-500/20 pb-2 uppercase text-center tracking-tighter italic">XP & Seviye Sistemi Matrisi</h4>
             <div className="space-y-4 text-sm text-gray-300 leading-relaxed font-mono italic">
               <p><span className="text-indigo-500">{" >> "}</span> <strong>Arıza Müdahale:</strong> +150 XP.</p>
               <p><span className="text-indigo-500">{" >> "}</span> <strong>İSG & EKED:</strong> +200 XP Bonus.</p>
@@ -631,18 +628,18 @@ export default function AdminDashboard() {
         </div>
       )}
       {showCorrInfo && (
-        <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans">
-          <div className="bg-[#020617] border-2 border-emerald-500/50 p-8 rounded-3xl max-w-lg w-full shadow-[0_0_50px_rgba(16,185,129,0.2)]">
-            <h4 className="text-emerald-400 font-bold mb-6 text-xl italic border-b border-emerald-500/20 pb-2 uppercase text-center tracking-tighter italic shadow-[0_10px_10px_-10px_rgba(16,185,129,0.5)]">Korelasyon Hesaplama Metodu</h4>
+        <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6">
+          <div className="bg-[#020617] border-2 border-emerald-500/50 p-8 rounded-3xl max-w-lg w-full shadow-[0_0_50px_rgba(16,185,129,0.2)] text-sans">
+            <h4 className="text-emerald-400 font-bold mb-6 text-xl italic border-b border-emerald-500/20 pb-2 uppercase text-center tracking-tighter italic">Korelasyon Hesaplama Metodu</h4>
             <div className="space-y-4 text-sm text-gray-300 leading-relaxed font-mono italic">
               <p><span className="text-emerald-500">{" >> "}</span> <strong>Veri Kaynağı:</strong> Firestore 'bakimlar' koleksiyonu.</p>
-              <p><span className="text-emerald-500">{" >> "}</span> <strong>Analiz:</strong> Kronik arıza tespiti.</p>
+              <p><span className="text-emerald-500">{" >> "}</span> <strong>İşlem:</strong> Parça frekans korelasyonu.</p>
             </div>
             <button onClick={() => setShowCorrInfo(false)} className="mt-8 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic tracking-widest shadow-lg shadow-emerald-500/30">Anlaşıldı</button>
           </div>
         </div>
       )}
-    
+
     </div>
   );
 }

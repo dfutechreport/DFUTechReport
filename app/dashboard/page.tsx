@@ -1,4 +1,5 @@
 "use client";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, Cell } from "recharts";
 import { useEffect, useState, Suspense } from "react";
 import { collection, getDocs, doc, getDoc, query, where, orderBy, setDoc, updateDoc, serverTimestamp, increment, addDoc, limit } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
@@ -14,7 +15,6 @@ interface MaintenanceFormData {
 }
 
 function DashboardIcerik() {
-  // NEXUS ANALİTİK EKLENTİLERİ
   const [showLeagueInfo, setShowLeagueInfo] = useState(false);
   const [showCorrInfo, setShowCorrInfo] = useState(false);
   const [personelList, setPersonelList] = useState<any[]>([]);
@@ -31,13 +31,13 @@ function DashboardIcerik() {
         const s = d.data().sarfiyat;
         if (s && Array.isArray(s)) {
           for (const item of s) {
-            const k = item.parcaAdi || item.stokKodu || "Bilinmeyen Parça";
+            const k = item.parcaAdi || item.stokKodu || "Bilinmeyen";
             counts[k] = (counts[k] || 0) + 1;
           }
         }
       }
       setCorrData(Object.entries(counts).map(([part, count]) => ({ part: String(part), failure: Number(count) }))
-        .sort((a, b) => b.failure - a.failure).slice(0, 5));
+        .sort((a:any, b:any) => b.failure - a.failure).slice(0, 5));
     } catch (err) { console.error("Nexus Error:", err); }
   };
 
@@ -375,12 +375,14 @@ function DashboardIcerik() {
           </div>
         </div>
       )}
-
-        {["teknisyen", "admin", "operator"].includes(userRole) && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8 w-full">
+    </div>
+  );
+}
+export default function Page() { return (<Suspense fallback={<div>Yükleniyor...
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8 w-full">
             <div className="bg-white/5 border border-indigo-500/20 p-5 rounded-[2.5rem] relative backdrop-blur-md shadow-lg overflow-hidden group">
               <button type="button" onClick={() => setShowLeagueInfo(true)} className="absolute top-4 right-4 text-indigo-400 text-[10px] border border-indigo-500/30 px-2 py-1 rounded hover:bg-indigo-500/20 font-black uppercase transition-all">XP ?</button>
-              <h3 className="text-indigo-400 text-xs font-black mb-4 italic tracking-[0.2em] uppercase flex items-center gap-2 underline underline-offset-4">🏆 Bakım Ligi</h3>
+              <h3 className="text-indigo-400 text-xs font-black mb-4 italic tracking-[0.2em] uppercase flex items-center gap-2 underline underline-offset-4">🏆 Bakım Ligi Sıralaması</h3>
               <div className="space-y-2">
                 {personelList.map((p, i) => (
                   <div key={i} className="flex justify-between items-center bg-black/30 p-3 rounded-2xl border border-white/5 text-[11px] font-bold">
@@ -392,7 +394,7 @@ function DashboardIcerik() {
             </div>
             <div className="bg-white/5 border border-emerald-500/20 p-5 rounded-[2.5rem] relative backdrop-blur-md shadow-lg overflow-hidden group">
               <button type="button" onClick={() => setShowCorrInfo(true)} className="absolute top-4 right-4 text-emerald-400 text-[10px] border border-emerald-500/30 px-2 py-1 rounded hover:bg-emerald-500/20 font-black uppercase transition-all">Analiz ?</button>
-              <h3 className="text-emerald-400 text-xs font-black mb-4 italic tracking-[0.2em] uppercase flex items-center gap-2 underline underline-offset-4">📈 Kritik Arıza Analizi</h3>
+              <h3 className="text-emerald-400 text-xs font-black mb-4 italic tracking-[0.2em] uppercase flex items-center gap-2 underline underline-offset-4">📈 Kritik Parça Analizi</h3>
               <div className="h-32 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={corrData} layout="vertical">
@@ -403,30 +405,29 @@ function DashboardIcerik() {
                 </ResponsiveContainer>
               </div>
             </div>
-          </div>
-        )}
+        </div>
 
       {showLeagueInfo && (
-        <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans">
-          <div className="bg-[#020617] border-2 border-indigo-500/50 p-8 rounded-[40px] max-w-lg w-full shadow-3xl">
+        <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6">
+          <div className="bg-[#020617] border-2 border-indigo-500/50 p-8 rounded-3xl max-w-lg w-full shadow-3xl">
             <h4 className="text-indigo-400 font-black mb-6 text-xl italic border-b border-indigo-500/20 pb-2 uppercase text-center tracking-tighter">XP & Seviye Sistemi Matrisi</h4>
             <div className="space-y-4 text-sm text-gray-300 leading-relaxed font-mono italic">
               <p><span className="text-indigo-500">{" >> "}</span> <strong>Arıza Müdahale:</strong> +150 XP.</p>
               <p><span className="text-indigo-500">{" >> "}</span> <strong>İSG & EKED:</strong> +200 XP Bonus.</p>
             </div>
-            <button type="button" onClick={() => setShowLeagueInfo(false)} className="mt-8 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl transition-all uppercase italic shadow-lg shadow-indigo-500/30">Kapat</button>
+            <button type="button" onClick={() => setShowLeagueInfo(false)} className="mt-8 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic shadow-lg">Anlaşıldı</button>
           </div>
         </div>
       )}
       {showCorrInfo && (
         <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans">
-          <div className="bg-[#020617] border-2 border-emerald-500/50 p-8 rounded-[40px] max-w-lg w-full shadow-3xl">
+          <div className="bg-[#020617] border-2 border-emerald-500/50 p-8 rounded-3xl max-w-lg w-full shadow-3xl">
             <h4 className="text-emerald-400 font-black mb-6 text-xl italic border-b border-emerald-500/20 pb-2 uppercase text-center tracking-tighter">Korelasyon Hesaplama Metodu</h4>
             <div className="space-y-4 text-sm text-gray-300 leading-relaxed font-mono italic">
               <p><span className="text-emerald-500">{" >> "}</span> <strong>Veri Kaynağı:</strong> Firestore 'bakimlar' koleksiyonu.</p>
               <p><span className="text-emerald-500">{" >> "}</span> <strong>İşlem:</strong> Parça frekans analizi.</p>
             </div>
-            <button type="button" onClick={() => setShowCorrInfo(false)} className="mt-8 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-4 rounded-2xl transition-all uppercase italic shadow-lg shadow-emerald-500/30">Kapat</button>
+            <button type="button" onClick={() => setShowCorrInfo(false)} className="mt-8 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic shadow-lg">Anlaşıldı</button>
           </div>
         </div>
       )}

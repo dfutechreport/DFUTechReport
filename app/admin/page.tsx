@@ -29,7 +29,7 @@ export default function AdminDashboard() {
         const s = d.data().sarfiyat;
         if (s && Array.isArray(s)) {
           for (const item of s) {
-            const k = item.parcaAdi || item.stokKodu || "Bilinmeyen";
+            const k = item.parcaAdi || item.stokKodu || "Bilinmeyen Parça";
             counts[k] = (counts[k] || 0) + 1;
           }
         }
@@ -317,31 +317,32 @@ export default function AdminDashboard() {
            <div className="bg-red-500/[0.02] backdrop-blur-3xl border-2 border-red-900/40 p-6 rounded-[2.5rem] shadow-2xl">
               <h2 className="text-sm font-black text-red-500 mb-4 uppercase tracking-widest flex items-center gap-2 italic">🚒 İSG ALARMLARI ({aktifIsgAlarmlari.length})</h2>
               <div className="space-y-2 max-h-[180px] overflow-y-auto pr-2 custom-scrollbar text-[10px]">
-                {aktifIsgAlarmlari.map(a => (<div key={a.id} className="bg-red-950/20 p-2 rounded-xl flex justify-between">{a.ekipmanAdi} <button onClick={()=> {setSelectedVaka(a); setShowVakaModal(true);}} className="text-red-500 font-bold underline">DETAY</button></div>))}
+                {aktifIsgAlarmlari.map(a => (<div key={a.id} className="bg-red-950/20 border border-red-900/20 p-3 rounded-xl flex justify-between items-center">{a.ekipmanAdi} <button onClick={()=> {setSelectedVaka(a); setShowVakaModal(true);}} className="text-red-500 font-bold underline">DETAY</button></div>))}
               </div>
            </div>
            <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border-2 border-indigo-900/40 p-6 rounded-[2.5rem] shadow-2xl">
               <h2 className="text-sm font-black text-indigo-400 mb-4 uppercase tracking-widest italic">📢 SAHA BİLDİRİMLERİ ({aktifIsler.length})</h2>
               <div className="space-y-2 max-h-[180px] overflow-y-auto pr-2 custom-scrollbar text-[10px]">
-                {aktifIsler.map(is => (<div key={is.id} className="bg-indigo-950/20 p-2 rounded-xl flex justify-between">{is.ekipmanAdi} <button onClick={()=> {setSelectedVaka(is); setShowVakaModal(true);}} className="text-indigo-400 font-bold underline">İNCELE</button></div>))}
+                {aktifIsler.map(is => (<div key={is.id} className="bg-indigo-950/20 border border-indigo-900/20 p-3 rounded-xl flex justify-between items-center">{is.hatAdi} <button onClick={()=> {setSelectedVaka(is); setShowVakaModal(true);}} className="text-indigo-400 font-bold underline">İNCELE</button></div>))}
               </div>
            </div>
            <div className="bg-yellow-500/[0.02] backdrop-blur-3xl border-2 border-yellow-900/40 p-6 rounded-[2.5rem] shadow-2xl">
               <h2 className="text-sm font-black text-yellow-500 mb-4 uppercase tracking-widest italic">⚠️ EKED BİLDİRİMİ ({aktifEked.length})</h2>
               <div className="space-y-2 max-h-[180px] overflow-y-auto pr-2 custom-scrollbar text-[10px]">
-                {aktifEked.map(e => (<div key={e.id} className="bg-yellow-950/20 p-2 rounded-xl flex justify-between"><span>{e.ekipmanAdi}</span><span className="text-yellow-500 font-bold">{e.personel}</span></div>))}
+                {aktifEked.map(e => (<div key={e.id} className="bg-yellow-950/20 border border-yellow-900/20 p-3 rounded-2xl flex justify-between"><span>{e.ekipmanAdi}</span><span className="text-yellow-500 font-bold">{e.personel}</span></div>))}
               </div>
            </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12 w-full">
             <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border-2 border-indigo-900/40 p-7 rounded-[3rem] relative shadow-2xl overflow-hidden group">
+              <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500 shadow-[0_0_15px_#6366f1]"></div>
               <button type="button" onClick={() => setShowLeagueInfo(true)} className="absolute top-6 right-6 text-indigo-400 text-[10px] border border-indigo-500/30 px-3 py-1 rounded">XP ?</button>
               <h2 className="text-lg font-black text-indigo-400 mb-6 uppercase tracking-widest italic">🏆 BAKIM LİGİ</h2>
               <div className="space-y-3">
                 {personelList.map((p, i) => (
                   <div key={i} className="flex justify-between items-center bg-indigo-950/20 border border-indigo-900/30 p-4 rounded-2xl">
-                    <span className="text-gray-200 text-sm font-bold uppercase">{p.adSoyad || p.name}</span>
+                    <span className="text-gray-200 text-sm font-bold uppercase tracking-tighter italic">{p.adSoyad || p.name}</span>
                     <span className="text-emerald-400 font-mono text-sm font-bold">{p.xp || 0} XP</span>
                   </div>
                 ))}
@@ -493,25 +494,18 @@ export default function AdminDashboard() {
       )}
     
       {showLeagueInfo && (
-        <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans">
-          <div className="bg-[#020617] border-2 border-indigo-500/50 p-8 rounded-3xl max-w-lg w-full shadow-3xl text-center">
+        <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans text-center">
+          <div className="bg-[#020617] border-2 border-indigo-500/50 p-8 rounded-3xl max-w-lg w-full shadow-3xl">
             <h4 className="text-indigo-400 font-black mb-6 text-xl italic border-b border-indigo-500/20 pb-2 uppercase tracking-widest">XP & Seviye Sistemi</h4>
-            <div className="space-y-4 text-sm text-gray-300 font-bold tracking-tighter italic">
-              <p><span className="text-indigo-400">{" >> "}</span> <strong>Arıza Müdahale:</strong> +150 XP.</p>
-              <p><span className="text-indigo-400">{" >> "}</span> <strong>İSG & EKED:</strong> +200 XP Bonus.</p>
-            </div>
-            <button type="button" onClick={() => setShowLeagueInfo(false)} className="mt-8 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl">Anlaşıldı</button>
+            <button type="button" onClick={() => setShowLeagueInfo(false)} className="mt-8 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl">Kapat</button>
           </div>
         </div>
       )}
       {showCorrInfo && (
-        <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans">
-          <div className="bg-[#020617] border-2 border-emerald-500/50 p-8 rounded-3xl max-w-lg w-full shadow-3xl text-center">
-            <h4 className="text-emerald-400 font-black mb-6 text-xl italic border-b border-emerald-500/20 pb-2 uppercase tracking-widest">Stok Analiz Metodu</h4>
-            <div className="space-y-4 text-sm text-gray-300 font-bold tracking-tighter italic">
-              <p><span className="text-emerald-400">{" >> "}</span> <strong>Firestore Sarfiyat Analizi:</strong> Kronik arıza tespit motoru.</p>
-            </div>
-            <button type="button" onClick={() => setShowCorrInfo(false)} className="mt-8 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-4 rounded-2xl">Anlaşıldı</button>
+        <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans text-center">
+          <div className="bg-[#020617] border-2 border-emerald-500/50 p-8 rounded-3xl max-w-lg w-full shadow-3xl">
+            <h4 className="text-emerald-400 font-black mb-6 text-xl italic border-b border-emerald-500/20 pb-2 uppercase tracking-widest">Analiz Metodu</h4>
+            <button type="button" onClick={() => setShowCorrInfo(false)} className="mt-8 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-4 rounded-2xl">Kapat</button>
           </div>
         </div>
       )}

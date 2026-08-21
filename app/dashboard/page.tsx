@@ -32,7 +32,7 @@ function DashboardIcerik() {
         const s = d.data().sarfiyat;
         if (s && Array.isArray(s)) {
           for (const item of s) {
-            const k = item.parcaAdi || item.stokKodu || "Bilinmeyen";
+            const k = item.parcaAdi || item.stokKodu || "Bilinmeyen Parça";
             counts[k] = (counts[k] || 0) + 1;
           }
         }
@@ -376,30 +376,20 @@ function DashboardIcerik() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-export default function Page() { return (<Suspense fallback={<div>Yükleniyor...
+    
       {showLeagueInfo && (
-        <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans">
-          <div className="bg-[#020617] border-2 border-indigo-500/50 p-8 rounded-3xl max-w-lg w-full shadow-3xl text-center">
+        <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans text-center">
+          <div className="bg-[#020617] border-2 border-indigo-500/50 p-8 rounded-3xl max-w-lg w-full shadow-3xl">
             <h4 className="text-indigo-400 font-black mb-6 text-xl italic border-b border-indigo-500/20 pb-2 uppercase tracking-widest">XP & Seviye Sistemi</h4>
-            <div className="space-y-4 text-sm text-gray-300 font-bold tracking-tighter italic">
-              <p><span className="text-indigo-400">{" >> "}</span> <strong>Arıza Müdahale:</strong> +150 XP.</p>
-              <p><span className="text-indigo-400">{" >> "}</span> <strong>İSG & EKED:</strong> +200 XP Bonus.</p>
-            </div>
-            <button type="button" onClick={() => setShowLeagueInfo(false)} className="mt-8 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl">Anlaşıldı</button>
+            <button type="button" onClick={() => setShowLeagueInfo(false)} className="mt-8 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl">Kapat</button>
           </div>
         </div>
       )}
       {showCorrInfo && (
-        <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans">
-          <div className="bg-[#020617] border-2 border-emerald-500/50 p-8 rounded-3xl max-w-lg w-full shadow-3xl text-center">
-            <h4 className="text-emerald-400 font-black mb-6 text-xl italic border-b border-emerald-500/20 pb-2 uppercase tracking-widest">Stok Analiz Metodu</h4>
-            <div className="space-y-4 text-sm text-gray-300 font-bold tracking-tighter italic">
-              <p><span className="text-emerald-400">{" >> "}</span> <strong>Firestore Sarfiyat Analizi:</strong> Kronik arıza tespit motoru.</p>
-            </div>
-            <button type="button" onClick={() => setShowCorrInfo(false)} className="mt-8 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-4 rounded-2xl">Anlaşıldı</button>
+        <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans text-center">
+          <div className="bg-[#020617] border-2 border-emerald-500/50 p-8 rounded-3xl max-w-lg w-full shadow-3xl">
+            <h4 className="text-emerald-400 font-black mb-6 text-xl italic border-b border-emerald-500/20 pb-2 uppercase tracking-widest">Analiz Metodu</h4>
+            <button type="button" onClick={() => setShowCorrInfo(false)} className="mt-8 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-4 rounded-2xl">Kapat</button>
           </div>
         </div>
       )}

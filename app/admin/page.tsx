@@ -1,5 +1,4 @@
 "use client";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, Cell } from "recharts";
 import { useEffect, useState } from "react";
 import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, writeBatch, setDoc, serverTimestamp, limit } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
@@ -13,6 +12,7 @@ export default function AdminDashboard() {
   const [userName, setUserName] = useState(""); 
   const [userEmail, setUserEmail] = useState(""); 
   const [loading, setLoading] = useState(true);
+  // NEXUS ANALİTİKLER
   const [showLeagueInfo, setShowLeagueInfo] = useState(false);
   const [showCorrInfo, setShowCorrInfo] = useState(false);
   const [personelList, setPersonelList] = useState<any[]>([]);
@@ -314,51 +314,33 @@ export default function AdminDashboard() {
 
            
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 w-full">
-           {/* ISG ALARMLARI */}
-           <div className="bg-red-500/[0.02] backdrop-blur-3xl border-2 border-red-900/40 p-6 rounded-[2.5rem] shadow-2xl overflow-hidden">
+           <div className="bg-red-500/[0.02] backdrop-blur-3xl border-2 border-red-900/40 p-6 rounded-[2.5rem] shadow-2xl">
               <h2 className="text-sm font-black text-red-500 mb-4 uppercase tracking-widest flex items-center gap-2">🚒 İSG ALARMLARI ({aktifIsgAlarmlari.length})</h2>
-              <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
-                {aktifIsgAlarmlari.map(a => (
-                  <div key={a.id} className="bg-red-950/20 border border-red-900/30 p-3 rounded-2xl flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-gray-200">{a.ekipmanAdi}</span>
-                    <button onClick={()=> {setSelectedVaka(a); setShowVakaModal(true);}} className="bg-red-600 text-[9px] px-3 py-1 rounded-lg">Detay</button>
-                  </div>
-                ))}
+              <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar text-[10px]">
+                {aktifIsgAlarmlari.map(a => (<div key={a.id} className="bg-red-950/20 p-2 rounded-xl flex justify-between">{a.ekipmanAdi} <button onClick={()=> {setSelectedVaka(a); setShowVakaModal(true);}} className="text-red-500">Detay</button></div>))}
               </div>
            </div>
-           {/* SAHA BİLDİRİMLERİ */}
-           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border-2 border-indigo-900/40 p-6 rounded-[2.5rem] shadow-2xl overflow-hidden">
+           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border-2 border-indigo-900/40 p-6 rounded-[2.5rem] shadow-2xl">
               <h2 className="text-sm font-black text-indigo-400 mb-4 uppercase tracking-widest">📢 SAHA BİLDİRİMLERİ ({aktifIsler.length})</h2>
-              <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
-                {aktifIsler.map(is => (
-                  <div key={is.id} className="bg-indigo-950/20 border border-indigo-900/30 p-3 rounded-2xl flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-gray-200">{is.ekipmanAdi}</span>
-                    <button onClick={()=> {setSelectedVaka(is); setShowVakaModal(true);}} className="bg-indigo-600 text-[9px] px-3 py-1 rounded-lg">İncele</button>
-                  </div>
-                ))}
+              <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar text-[10px]">
+                {aktifIsler.map(is => (<div key={is.id} className="bg-indigo-950/20 p-2 rounded-xl flex justify-between">{is.ekipmanAdi} <button onClick={()=> {setSelectedVaka(is); setShowVakaModal(true);}} className="text-indigo-400">İncele</button></div>))}
               </div>
            </div>
-           {/* EKED BİLDİRİMİ */}
-           <div className="bg-yellow-500/[0.02] backdrop-blur-3xl border-2 border-yellow-900/40 p-6 rounded-[2.5rem] shadow-2xl overflow-hidden">
+           <div className="bg-yellow-500/[0.02] backdrop-blur-3xl border-2 border-yellow-900/40 p-6 rounded-[2.5rem] shadow-2xl">
               <h2 className="text-sm font-black text-yellow-500 mb-4 uppercase tracking-widest">⚠️ EKED BİLDİRİMİ ({aktifEked.length})</h2>
-              <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
-                {aktifEked.map(e => (
-                   <div key={e.id} className="bg-yellow-950/20 border border-yellow-900/30 p-3 rounded-2xl flex justify-between items-center text-[10px]">
-                      <span>{e.ekipmanAdi}</span><span className="text-yellow-500">{e.personel}</span>
-                   </div>
-                ))}
+              <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar text-[10px]">
+                {aktifEked.map(e => (<div key={e.id} className="bg-yellow-950/20 p-2 rounded-xl flex justify-between"><span>{e.ekipmanAdi}</span><span className="text-yellow-500">{e.personel}</span></div>))}
               </div>
            </div>
         </div>
 
-        {/* NEXUS ANALİTİKLER (ALT SIRA) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12 w-full">
-            <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border-2 border-indigo-900/40 p-7 rounded-[3rem] relative shadow-2xl overflow-hidden">
-              <button onClick={() => setShowLeagueInfo(true)} className="absolute top-6 right-6 text-indigo-400 text-[10px] border border-indigo-500/30 px-3 py-1 rounded font-black uppercase tracking-tighter">XP ?</button>
-              <h2 className="text-lg font-black text-indigo-400 mb-6 uppercase tracking-[0.2em]">🏆 BAKIM LİGİ</h2>
+            <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border-2 border-indigo-900/40 p-7 rounded-[3rem] relative shadow-2xl">
+              <button onClick={() => setShowLeagueInfo(true)} className="absolute top-4 right-4 text-indigo-400 text-[10px] border border-indigo-500/30 px-2 py-1 rounded">XP ?</button>
+              <h2 className="text-lg font-black text-indigo-400 mb-6 uppercase tracking-widest italic tracking-tighter shadow-indigo-500/10">🏆 Bakım Ligi</h2>
               <div className="space-y-3">
                 {personelList.map((p, i) => (
-                  <div key={i} className="bg-indigo-950/20 border border-indigo-900/30 p-4 rounded-2xl flex justify-between items-center">
+                  <div key={i} className="flex justify-between items-center bg-indigo-950/20 p-4 rounded-2xl border border-white/5">
                     <span className="text-gray-200 text-sm font-bold uppercase">{p.adSoyad || p.name}</span>
                     <span className="text-emerald-400 font-mono text-sm font-bold">{p.xp || 0} XP</span>
                   </div>
@@ -366,14 +348,14 @@ export default function AdminDashboard() {
               </div>
             </div>
             <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border-2 border-indigo-900/40 p-7 rounded-[3rem] relative shadow-2xl">
-              <button onClick={() => setShowCorrInfo(true)} className="absolute top-6 right-6 text-emerald-400 text-[10px] border border-emerald-500/30 px-3 py-1 rounded font-black uppercase tracking-tighter">Analiz ?</button>
-              <h2 className="text-lg font-black text-emerald-400 mb-6 uppercase tracking-[0.2em]">📊 KRİTİK PARÇA ANALİZİ</h2>
-              <div className="h-48 w-full mt-2">
+              <button onClick={() => setShowCorrInfo(true)} className="absolute top-4 right-4 text-emerald-400 text-[10px] border border-emerald-500/30 px-2 py-1 rounded">Analiz ?</button>
+              <h2 className="text-lg font-black text-emerald-400 mb-6 uppercase tracking-widest italic tracking-tighter shadow-emerald-500/10">📊 Kritik Parça Analizi</h2>
+              <div className="h-44 w-full mt-2">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={corrData} layout="vertical">
                     <XAxis type="number" hide /><YAxis dataKey="part" type="category" width={100} stroke="#64748b" fontSize={10} />
                     <Tooltip contentStyle={{backgroundColor: '#020617', border: '1px solid #10b981'}} />
-                    <Bar dataKey="failure" fill="#10b981" radius={[0, 4, 4, 0]} barSize={20} />
+                    <Bar dataKey="failure" fill="#10b981" radius={[0, 4, 4, 0]} barSize={18} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -512,25 +494,25 @@ export default function AdminDashboard() {
     
       {showLeagueInfo && (
         <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6">
-          <div className="bg-[#020617] border-2 border-indigo-500/50 p-8 rounded-3xl max-w-lg w-full shadow-3xl">
-            <h4 className="text-indigo-400 font-black mb-6 text-xl italic border-b border-indigo-500/20 pb-2 uppercase text-center tracking-tighter">XP & Seviye Sistemi Matrisi</h4>
+          <div className="bg-[#020617] border-2 border-indigo-500/50 p-8 rounded-3xl max-w-lg w-full">
+            <h4 className="text-indigo-400 font-black mb-6 text-xl italic border-b border-indigo-500/20 pb-2 uppercase text-center tracking-tighter shadow-indigo-500/10">XP & Seviye Sistemi Matrisi</h4>
             <div className="space-y-4 text-sm text-gray-300 leading-relaxed font-mono italic">
               <p><span className="text-indigo-500">{" >> "}</span> <strong>Arıza Müdahale:</strong> +150 XP.</p>
               <p><span className="text-indigo-500">{" >> "}</span> <strong>İSG & EKED:</strong> +200 XP Bonus.</p>
             </div>
-            <button type="button" onClick={() => setShowLeagueInfo(false)} className="mt-8 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic shadow-lg">Anlaşıldı</button>
+            <button type="button" onClick={() => setShowLeagueInfo(false)} className="mt-8 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-2xl uppercase shadow-lg shadow-indigo-500/30 transition-all italic tracking-widest">Anlaşıldı</button>
           </div>
         </div>
       )}
       {showCorrInfo && (
         <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans">
-          <div className="bg-[#020617] border-2 border-emerald-500/50 p-8 rounded-3xl max-w-lg w-full shadow-3xl">
-            <h4 className="text-emerald-400 font-black mb-6 text-xl italic border-b border-emerald-500/20 pb-2 uppercase text-center tracking-tighter">Korelasyon Hesaplama Metodu</h4>
+          <div className="bg-[#020617] border-2 border-emerald-500/50 p-8 rounded-3xl max-w-lg w-full">
+            <h4 className="text-emerald-400 font-bold mb-6 text-xl italic border-b border-emerald-500/20 pb-2 uppercase text-center tracking-tighter shadow-emerald-500/10">Korelasyon Hesaplama Metodu</h4>
             <div className="space-y-4 text-sm text-gray-300 leading-relaxed font-mono italic">
               <p><span className="text-emerald-500">{" >> "}</span> <strong>Veri Kaynağı:</strong> Firestore 'bakimlar' koleksiyonu.</p>
               <p><span className="text-emerald-500">{" >> "}</span> <strong>İşlem:</strong> Parça frekans analizi.</p>
             </div>
-            <button type="button" onClick={() => setShowCorrInfo(false)} className="mt-8 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic shadow-lg">Anlaşıldı</button>
+            <button onClick={() => setShowCorrInfo(false)} className="mt-8 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic tracking-widest shadow-lg shadow-emerald-500/30">Anlaşıldı</button>
           </div>
         </div>
       )}

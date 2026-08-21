@@ -1,5 +1,5 @@
 "use client";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 import { useEffect, useState } from "react";
 import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, writeBatch, setDoc, serverTimestamp } from "firebase/firestore";
@@ -13,7 +13,6 @@ export default function AdminDashboard() {
   const [userName, setUserName] = useState(""); 
   const [userEmail, setUserEmail] = useState(""); 
   const [loading, setLoading] = useState(true);
-  // NEXUS ANALİTİK STATE'LERİ
   const [showLeagueInfo, setShowLeagueInfo] = useState(false);
   const [showCorrInfo, setShowCorrInfo] = useState(false);
   const [personelList, setPersonelList] = useState<any[]>([]);
@@ -80,59 +79,38 @@ export default function AdminDashboard() {
   ];
 
   
-  
-      
-      bSnap.docs.forEach((doc) => {
-        const data = doc.data();
-        const sarfiyat = data.sarfiyat;
-        if (sarfiyat && Array.isArray(sarfiyat)) {
-          sarfiyat.forEach((item: any) => {
-            const key = item.parcaAdi || item.stokKodu || "Bilinmeyen";
-            counts[key] = (counts[key] || 0) + 1;
-          });
-        }
-      });
-
-      const formatted = Object.entries(counts).map(([part, failure]) => ({
-        part: String(part),
-        failure: Number(failure)
-      }));
-      
-      formatted.sort((a, b) => b.failure - a.failure);
-      setCorrData(formatted.slice(0, 5));
-    } catch (err) {
-      console.error("Nexus Sync Error:", err);
-    }
-  };
-
-  
   const fetchNexusData = async () => {
     try {
       const { collection, query, orderBy, limit, getDocs } = await import("firebase/firestore");
       
+      // Personel Verisi
       const pSnap = await getDocs(query(collection(db, "personel"), orderBy("xp", "desc"), limit(5)));
-      setPersonelList(pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const pArr = [];
+      for (const doc of pSnap.docs) {
+        pArr.push({ id: doc.id, ...doc.data() });
+      }
+      setPersonelList(pArr);
       
+      // Bakım Verisi
       const bSnap = await getDocs(collection(db, "bakimlar"));
       const counts: any = {};
       
-      bSnap.docs.forEach((doc) => {
-        const data = doc.data();
-        const sarfiyat = data.sarfiyat;
-        if (sarfiyat && Array.isArray(sarfiyat)) {
-          sarfiyat.forEach((item: any) => {
+      for (const d of bSnap.docs) {
+        const data = d.data();
+        if (data.sarfiyat && Array.isArray(data.sarfiyat)) {
+          for (const item of data.sarfiyat) {
             const key = item.parcaAdi || item.stokKodu || "Bilinmeyen";
             counts[key] = (counts[key] || 0) + 1;
-          });
+          }
         }
-      });
-
-      const formatted = Object.entries(counts).map(([part, failure]) => ({
-        part: String(part),
-        failure: Number(failure)
-      }));
+      }
       
-      formatted.sort((a, b) => b.failure - a.failure);
+      const formatted = [];
+      for (const [part, failure] of Object.entries(counts)) {
+        formatted.push({ part: String(part), failure: Number(failure) });
+      }
+      
+      formatted.sort((a, b) => { return b.failure - a.failure; });
       setCorrData(formatted.slice(0, 5));
     } catch (err) {
       console.error("Nexus Sync Error:", err);
@@ -200,59 +178,38 @@ export default function AdminDashboard() {
 
   // --- CALCULATION ENGINE ---
   
-  
-      
-      bSnap.docs.forEach((doc) => {
-        const data = doc.data();
-        const sarfiyat = data.sarfiyat;
-        if (sarfiyat && Array.isArray(sarfiyat)) {
-          sarfiyat.forEach((item: any) => {
-            const key = item.parcaAdi || item.stokKodu || "Bilinmeyen";
-            counts[key] = (counts[key] || 0) + 1;
-          });
-        }
-      });
-
-      const formatted = Object.entries(counts).map(([part, failure]) => ({
-        part: String(part),
-        failure: Number(failure)
-      }));
-      
-      formatted.sort((a, b) => b.failure - a.failure);
-      setCorrData(formatted.slice(0, 5));
-    } catch (err) {
-      console.error("Nexus Sync Error:", err);
-    }
-  };
-
-  
   const fetchNexusData = async () => {
     try {
       const { collection, query, orderBy, limit, getDocs } = await import("firebase/firestore");
       
+      // Personel Verisi
       const pSnap = await getDocs(query(collection(db, "personel"), orderBy("xp", "desc"), limit(5)));
-      setPersonelList(pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const pArr = [];
+      for (const doc of pSnap.docs) {
+        pArr.push({ id: doc.id, ...doc.data() });
+      }
+      setPersonelList(pArr);
       
+      // Bakım Verisi
       const bSnap = await getDocs(collection(db, "bakimlar"));
       const counts: any = {};
       
-      bSnap.docs.forEach((doc) => {
-        const data = doc.data();
-        const sarfiyat = data.sarfiyat;
-        if (sarfiyat && Array.isArray(sarfiyat)) {
-          sarfiyat.forEach((item: any) => {
+      for (const d of bSnap.docs) {
+        const data = d.data();
+        if (data.sarfiyat && Array.isArray(data.sarfiyat)) {
+          for (const item of data.sarfiyat) {
             const key = item.parcaAdi || item.stokKodu || "Bilinmeyen";
             counts[key] = (counts[key] || 0) + 1;
-          });
+          }
         }
-      });
-
-      const formatted = Object.entries(counts).map(([part, failure]) => ({
-        part: String(part),
-        failure: Number(failure)
-      }));
+      }
       
-      formatted.sort((a, b) => b.failure - a.failure);
+      const formatted = [];
+      for (const [part, failure] of Object.entries(counts)) {
+        formatted.push({ part: String(part), failure: Number(failure) });
+      }
+      
+      formatted.sort((a, b) => { return b.failure - a.failure; });
       setCorrData(formatted.slice(0, 5));
     } catch (err) {
       console.error("Nexus Sync Error:", err);
@@ -300,59 +257,38 @@ export default function AdminDashboard() {
   }, [rawLogs, filterYil, filterAy, filterHat, filterPerfVardiya, filterPerfPersonel, filterPerfSiralama, filterPerfDurus]);
 
   
-  
-      
-      bSnap.docs.forEach((doc) => {
-        const data = doc.data();
-        const sarfiyat = data.sarfiyat;
-        if (sarfiyat && Array.isArray(sarfiyat)) {
-          sarfiyat.forEach((item: any) => {
-            const key = item.parcaAdi || item.stokKodu || "Bilinmeyen";
-            counts[key] = (counts[key] || 0) + 1;
-          });
-        }
-      });
-
-      const formatted = Object.entries(counts).map(([part, failure]) => ({
-        part: String(part),
-        failure: Number(failure)
-      }));
-      
-      formatted.sort((a, b) => b.failure - a.failure);
-      setCorrData(formatted.slice(0, 5));
-    } catch (err) {
-      console.error("Nexus Sync Error:", err);
-    }
-  };
-
-  
   const fetchNexusData = async () => {
     try {
       const { collection, query, orderBy, limit, getDocs } = await import("firebase/firestore");
       
+      // Personel Verisi
       const pSnap = await getDocs(query(collection(db, "personel"), orderBy("xp", "desc"), limit(5)));
-      setPersonelList(pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const pArr = [];
+      for (const doc of pSnap.docs) {
+        pArr.push({ id: doc.id, ...doc.data() });
+      }
+      setPersonelList(pArr);
       
+      // Bakım Verisi
       const bSnap = await getDocs(collection(db, "bakimlar"));
       const counts: any = {};
       
-      bSnap.docs.forEach((doc) => {
-        const data = doc.data();
-        const sarfiyat = data.sarfiyat;
-        if (sarfiyat && Array.isArray(sarfiyat)) {
-          sarfiyat.forEach((item: any) => {
+      for (const d of bSnap.docs) {
+        const data = d.data();
+        if (data.sarfiyat && Array.isArray(data.sarfiyat)) {
+          for (const item of data.sarfiyat) {
             const key = item.parcaAdi || item.stokKodu || "Bilinmeyen";
             counts[key] = (counts[key] || 0) + 1;
-          });
+          }
         }
-      });
-
-      const formatted = Object.entries(counts).map(([part, failure]) => ({
-        part: String(part),
-        failure: Number(failure)
-      }));
+      }
       
-      formatted.sort((a, b) => b.failure - a.failure);
+      const formatted = [];
+      for (const [part, failure] of Object.entries(counts)) {
+        formatted.push({ part: String(part), failure: Number(failure) });
+      }
+      
+      formatted.sort((a, b) => { return b.failure - a.failure; });
       setCorrData(formatted.slice(0, 5));
     } catch (err) {
       console.error("Nexus Sync Error:", err);
@@ -624,17 +560,16 @@ export default function AdminDashboard() {
         </div>
       )}
     
-      {/* NEXUS MODALLARI */}
       {showLeagueInfo && (
         <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans">
           <div className="bg-[#020617] border-2 border-indigo-500/50 p-8 rounded-3xl max-w-lg w-full shadow-[0_0_50px_rgba(99,102,241,0.2)]">
             <h4 className="text-indigo-400 font-bold mb-6 text-xl italic border-b border-indigo-500/20 pb-2 uppercase text-center tracking-tighter italic">XP & Seviye Sistemi Matrisi</h4>
             <div className="space-y-4 text-sm text-gray-300 leading-relaxed font-mono italic">
-              <p><span className="text-indigo-500">{" >> "}</span> <strong>Arıza Müdahale:</strong> +150 XP.</p>
-              <p><span className="text-indigo-500">{" >> "}</span> <strong>İSG & EKED:</strong> +200 XP Bonus.</p>
-              <p><span className="text-indigo-500">{" >> "}</span> <strong>Seviye:</strong> Her 1000 XP bir kademe.</p>
+              <p>→ <strong>Arıza Müdahale:</strong> +150 XP.</p>
+              <p>→ <strong>İSG & EKED:</strong> +200 XP Bonus.</p>
+              <p>→ <strong>Seviye:</strong> Her 1000 XP bir kademe.</p>
             </div>
-            <button onClick={() => setShowLeagueInfo(false)} className="mt-8 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic tracking-widest">Kapat</button>
+            <button onClick={() => setShowLeagueInfo(false)} className="mt-8 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic tracking-widest shadow-lg shadow-indigo-500/30">Anlaşıldı</button>
           </div>
         </div>
       )}
@@ -643,10 +578,10 @@ export default function AdminDashboard() {
           <div className="bg-[#020617] border-2 border-emerald-500/50 p-8 rounded-3xl max-w-lg w-full shadow-[0_0_50px_rgba(16,185,129,0.2)]">
             <h4 className="text-emerald-400 font-bold mb-6 text-xl italic border-b border-emerald-500/20 pb-2 uppercase text-center tracking-tighter italic">Korelasyon Hesaplama Metodu</h4>
             <div className="space-y-4 text-sm text-gray-300 leading-relaxed font-mono italic">
-              <p><span className="text-emerald-500">{" >> "}</span> <strong>Veri Kaynağı:</strong> Firestore 'bakimlar' koleksiyonu.</p>
-              <p><span className="text-emerald-500">{" >> "}</span> <strong>İşlem:</strong> Parça frekans korelasyonu.</p>
+              <p>→ <strong>Veri Kaynağı:</strong> Firestore 'bakimlar' koleksiyonu.</p>
+              <p>→ <strong>İşlem:</strong> Parça frekans korelasyonu.</p>
             </div>
-            <button onClick={() => setShowCorrInfo(false)} className="mt-8 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic tracking-widest">Kapat</button>
+            <button onClick={() => setShowCorrInfo(false)} className="mt-8 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic tracking-widest shadow-lg shadow-emerald-500/30">Anlaşıldı</button>
           </div>
         </div>
       )}

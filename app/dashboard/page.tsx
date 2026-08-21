@@ -15,7 +15,7 @@ interface MaintenanceFormData {
 }
 
 function DashboardIcerik() {
-  // --- NEXUS ENGINE v45 ---
+  // NEXUS STABLE States
   const [showLeagueInfo, setShowLeagueInfo] = useState(false);
   const [showCorrInfo, setShowCorrInfo] = useState(false);
   const [personelList, setPersonelList] = useState<any[]>([]);
@@ -38,7 +38,7 @@ function DashboardIcerik() {
         }
       }
       setCorrData(Object.entries(counts).map(([part, count]) => ({ part: String(part), failure: Number(count) }))
-        .sort((a:any, b:any) => b.failure - a.failure).slice(0, 5));
+        .sort((a, b) => b.failure - a.failure).slice(0, 5));
     } catch (err) { console.error("Nexus Error:", err); }
   };
 
@@ -380,22 +380,26 @@ function DashboardIcerik() {
   );
 }
 export default function Page() { return (<Suspense fallback={<div>Yükleniyor...
-      {/* NEXUS MODALS */}
       {showLeagueInfo && (
         <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans">
-          <div className="bg-[#020617] border-2 border-indigo-500/50 p-8 rounded-[40px] max-w-lg w-full shadow-3xl text-center">
-            <h4 className="text-indigo-400 font-black mb-6 text-xl italic border-b border-indigo-500/20 pb-2 uppercase text-center tracking-widest">XP Algoritması</h4>
-            <p className="text-sm text-gray-300 font-bold tracking-tighter leading-relaxed">Müdahale hızı ve planlı bakım başarısı üzerinden XP tanımlanır. <span className="text-indigo-400">{" >> "}</span> 1000 XP bir üst teknik seviyeyi temsil eder.</p>
-            <button type="button" onClick={() => setShowLeagueInfo(false)} className="mt-8 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl transition">Kapat</button>
+          <div className="bg-[#020617] border-2 border-indigo-500/50 p-8 rounded-3xl max-w-lg w-full shadow-3xl text-center">
+            <h4 className="text-indigo-400 font-black mb-6 text-xl italic border-b border-indigo-500/20 pb-2 uppercase tracking-widest">XP & Seviye Sistemi</h4>
+            <div className="space-y-4 text-sm text-gray-300 font-bold tracking-tighter italic">
+              <p><span className="text-indigo-400">{" >> "}</span> <strong>Arıza Müdahale:</strong> +150 XP.</p>
+              <p><span className="text-indigo-400">{" >> "}</span> <strong>İSG & EKED:</strong> +200 XP Bonus.</p>
+            </div>
+            <button type="button" onClick={() => setShowLeagueInfo(false)} className="mt-8 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl">Anlaşıldı</button>
           </div>
         </div>
       )}
       {showCorrInfo && (
         <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans">
-          <div className="bg-[#020617] border-2 border-emerald-500/50 p-8 rounded-[40px] max-w-lg w-full shadow-3xl text-center">
-            <h4 className="text-emerald-400 font-black mb-6 text-xl italic border-b border-emerald-500/20 pb-2 uppercase text-center tracking-widest">Stok Analiz Metodu</h4>
-            <p className="text-sm text-gray-300 font-bold tracking-tighter leading-relaxed">Firestore sarfiyat verileri taranarak en sık arıza yaratan kronik parçalar tespit edilir. <span className="text-emerald-400">{" >> "}</span> Veri setimiz üretim güvenliğini artırmayı hedefler.</p>
-            <button type="button" onClick={() => setShowCorrInfo(false)} className="mt-8 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-4 rounded-2xl transition">Kapat</button>
+          <div className="bg-[#020617] border-2 border-emerald-500/50 p-8 rounded-3xl max-w-lg w-full shadow-3xl text-center">
+            <h4 className="text-emerald-400 font-black mb-6 text-xl italic border-b border-emerald-500/20 pb-2 uppercase tracking-widest">Stok Analiz Metodu</h4>
+            <div className="space-y-4 text-sm text-gray-300 font-bold tracking-tighter italic">
+              <p><span className="text-emerald-400">{" >> "}</span> <strong>Firestore Sarfiyat Analizi:</strong> Kronik arıza tespit motoru.</p>
+            </div>
+            <button type="button" onClick={() => setShowCorrInfo(false)} className="mt-8 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-4 rounded-2xl">Anlaşıldı</button>
           </div>
         </div>
       )}

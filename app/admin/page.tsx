@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, writeBatch, setDoc, serverTimestamp } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, writeBatch, setDoc, serverTimestamp, limit } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../../lib/firebase"; 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid, LabelList, PieChart, Pie, Cell } from 'recharts';
@@ -12,6 +12,41 @@ export default function AdminDashboard() {
   const [userName, setUserName] = useState(""); 
   const [userEmail, setUserEmail] = useState(""); 
   const [loading, setLoading] = useState(true);
+  // NEXUS v53 STABLE STATES
+  const [showLeagueInfo, setShowLeagueInfo] = useState(false);
+  const [showCorrInfo, setShowCorrInfo] = useState(false);
+  const [personelList, setPersonelList] = useState<any[]>([]);
+  const [corrData, setCorrData] = useState<any[]>([]);
+
+  const fetchNexusData = async () => {
+    try {
+      const { collection, query, orderBy, limit, getDocs } = await import("firebase/firestore");
+      const uSnap = await getDocs(query(collection(db, "users"), limit(50)));
+      const pData = uSnap.docs.map(doc => {
+        const d = doc.data();
+        const score = d.xp || d.performance || d.performanceScore || d.puan || d.score || 0;
+        return { 
+          id: doc.id, 
+          ad: d.name || d.displayName || d.adSoyad || "İsimsiz",
+          val: Number(score)
+        };
+      });
+      setPersonelList(pData.sort((a, b) => b.val - a.val).slice(0, 5));
+      const bSnap = await getDocs(collection(db, "bakimlar"));
+      const c: any = {};
+      for (const d of bSnap.docs) {
+        const s = d.data().sarfiyat;
+        if (s && Array.isArray(s)) {
+          for (const item of s) {
+            const k = item.parcaAdi || item.stokKodu || "Bilinmeyen";
+            c[k] = (c[k] || 0) + 1;
+          }
+        }
+      }
+      setCorrData(Object.entries(c).map(([p, f]) => ({ part: p, failure: f })).sort((a:any, b:any) => b.failure - a.failure).slice(0, 5));
+    } catch (e) { console.error("Nexus Sync Error:", e); }
+  };
+
   
   // DATA STATES
   const [rawLogs, setRawLogs] = useState<any[]>([]);
@@ -82,7 +117,7 @@ export default function AdminDashboard() {
           const userData = userSnap.data();
           setUserRole(userData.role); setUserName(userData.name);
           if (["admin", "operator", "uretim", "isg", "teknisyen"].includes(userData.role)) {
-            setIsAdmin(true); fetchInitialData(); fetchRcaData();
+            setIsAdmin(true); fetchNexusData(); fetchInitialData(); fetchRcaData();
           } else { window.location.href = "/dashboard"; }
         }
       } else { window.location.href = "/"; }
@@ -313,6 +348,37 @@ export default function AdminDashboard() {
               </div>
            </div>
         </div>
+        {/* --- NEXUS ANALİTİK SATIRI (v53 FINAL) --- */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12 w-full">
+            <div className="bg-white/5 backdrop-blur-3xl border-2 border-indigo-900/40 p-10 rounded-[4rem] relative shadow-3xl overflow-hidden group hover:border-indigo-500/50 transition-all">
+              <div className="absolute top-0 left-0 w-2 h-full bg-indigo-500 shadow-[0_0_20px_#6366f1]"></div>
+              <button type="button" onClick={() => setShowLeagueInfo(true)} className="absolute top-6 right-6 text-indigo-400 text-[10px] border border-indigo-500/30 px-3 py-1 rounded font-black uppercase">Algoritma ?</button>
+              <h2 className="text-xl font-black text-indigo-400 mb-10 uppercase tracking-widest italic text-center underline underline-offset-8 decoration-indigo-500/30">🏆 BAKIM LİGİ SIRALAMASI</h2>
+              <div className="space-y-4">
+                {personelList.map((p, i) => (
+                  <div key={i} className="bg-indigo-950/20 border border-indigo-900/20 p-5 rounded-3xl flex justify-between items-center transition hover:bg-indigo-500/40 shadow-inner">
+                    <span className="text-gray-200 font-black uppercase tracking-widest text-sm italic">{p.ad}</span>
+                    <span className="text-emerald-400 font-mono text-xl font-black shadow-[0_0_15px_rgba(16,185,129,0.4)]">{p.val} XP</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="bg-white/5 backdrop-blur-3xl border-2 border-emerald-900/40 p-10 rounded-[4rem] relative shadow-3xl overflow-hidden group hover:border-emerald-500/50 transition-all">
+              <div className="absolute top-0 left-0 w-2 h-full bg-emerald-500 shadow-[0_0_20px_#10b981]"></div>
+              <button type="button" onClick={() => setShowCorrInfo(true)} className="absolute top-6 right-6 text-emerald-400 text-[10px] border border-emerald-500/30 px-3 py-1 rounded font-black uppercase">Metodoloji ?</button>
+              <h2 className="text-xl font-black text-emerald-400 mb-10 uppercase tracking-widest italic text-center underline underline-offset-8 decoration-emerald-500/30">📊 STOK ANALİZ MOTORU</h2>
+              <div className="h-72 w-full mt-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={corrData} layout="vertical">
+                    <XAxis type="number" hide /><YAxis dataKey="part" type="category" width={140} stroke="#94a3b8" fontSize={13} fontStyle="italic" fontWeight="bold" />
+                    <Tooltip contentStyle={{backgroundColor: '#020617', border: '1px solid #10b981', borderRadius: '20px'}} />
+                    <Bar dataKey="failure" fill="#10b981" radius={[0, 15, 15, 0]} barSize={30} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+        </div>
+
 {userRole !== "isg" && (
   <>
         {/* RCA TASK LIST */}
@@ -441,6 +507,24 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+    
+      {showLeagueInfo && (
+        <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans text-center">
+          <div className="bg-[#020617] border-2 border-indigo-500/50 p-10 rounded-[3rem] max-w-lg w-full shadow-3xl">
+            <h4 className="text-indigo-400 font-black mb-6 text-xl italic border-b border-indigo-500/20 pb-4 uppercase tracking-widest">Performans Algoritması</h4>
+            <button type="button" onClick={() => setShowLeagueInfo(false)} className="mt-4 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl shadow-xl transition-all uppercase">Anlaşıldı</button>
+          </div>
+        </div>
+      )}
+      {showCorrInfo && (
+        <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans text-center">
+          <div className="bg-[#020617] border-2 border-emerald-500/50 p-10 rounded-[3rem] max-w-lg w-full shadow-3xl">
+            <h4 className="text-emerald-400 font-black mb-6 text-xl italic border-b border-emerald-500/20 pb-4 uppercase tracking-widest">Stok Analiz Metodu</h4>
+            <button type="button" onClick={() => setShowCorrInfo(false)} className="mt-4 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-4 rounded-2xl shadow-xl transition-all uppercase">Kapat</button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

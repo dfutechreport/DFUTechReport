@@ -12,12 +12,10 @@ export default function AdminDashboard() {
   const [userName, setUserName] = useState(""); 
   const [userEmail, setUserEmail] = useState(""); 
   const [loading, setLoading] = useState(true);
-  // NEXUS ANALİTİK STATE'LERİ
   const [showLeagueInfo, setShowLeagueInfo] = useState(false);
   const [showCorrInfo, setShowCorrInfo] = useState(false);
   const [personelList, setPersonelList] = useState<any[]>([]);
   const [corrData, setCorrData] = useState<any[]>([]);
-
   
   // DATA STATES
   const [rawLogs, setRawLogs] = useState<any[]>([]);
@@ -82,33 +80,24 @@ export default function AdminDashboard() {
   const fetchNexusData = async () => {
     try {
       const { collection, query, orderBy, limit, getDocs } = await import("firebase/firestore");
-      
       const pSnap = await getDocs(query(collection(db, "personel"), orderBy("xp", "desc"), limit(5)));
-      const pData = pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setPersonelList(pData);
-      
+      setPersonelList(pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       const bSnap = await getDocs(collection(db, "bakimlar"));
       const counts: any = {};
       for (const d of bSnap.docs) {
-        const data = d.data();
-        if (data.sarfiyat && Array.isArray(data.sarfiyat)) {
-          for (const item of data.sarfiyat) {
+        const sarfiyat = d.data().sarfiyat;
+        if (sarfiyat && Array.isArray(sarfiyat)) {
+          for (const item of sarfiyat) {
             const key = item.parcaAdi || item.stokKodu || "Bilinmeyen";
             counts[key] = (counts[key] || 0) + 1;
           }
         }
       }
-      
       const formatted = Object.entries(counts).map(([part, count]) => ({
-        part: String(part),
-        failure: Number(count)
-      }));
-      
-      formatted.sort((a, b) => { return b.failure - a.failure; });
-      setCorrData(formatted.slice(0, 5));
-    } catch (err) {
-      console.error("Nexus Error:", err);
-    }
+        part: String(part), failure: Number(count)
+      })).sort((a, b) => b.failure - a.failure).slice(0, 5);
+      setCorrData(formatted);
+    } catch (err) { console.error("Nexus Error:", err); }
   };
 
   useEffect(() => {
@@ -175,33 +164,24 @@ export default function AdminDashboard() {
   const fetchNexusData = async () => {
     try {
       const { collection, query, orderBy, limit, getDocs } = await import("firebase/firestore");
-      
       const pSnap = await getDocs(query(collection(db, "personel"), orderBy("xp", "desc"), limit(5)));
-      const pData = pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setPersonelList(pData);
-      
+      setPersonelList(pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       const bSnap = await getDocs(collection(db, "bakimlar"));
       const counts: any = {};
       for (const d of bSnap.docs) {
-        const data = d.data();
-        if (data.sarfiyat && Array.isArray(data.sarfiyat)) {
-          for (const item of data.sarfiyat) {
+        const sarfiyat = d.data().sarfiyat;
+        if (sarfiyat && Array.isArray(sarfiyat)) {
+          for (const item of sarfiyat) {
             const key = item.parcaAdi || item.stokKodu || "Bilinmeyen";
             counts[key] = (counts[key] || 0) + 1;
           }
         }
       }
-      
       const formatted = Object.entries(counts).map(([part, count]) => ({
-        part: String(part),
-        failure: Number(count)
-      }));
-      
-      formatted.sort((a, b) => { return b.failure - a.failure; });
-      setCorrData(formatted.slice(0, 5));
-    } catch (err) {
-      console.error("Nexus Error:", err);
-    }
+        part: String(part), failure: Number(count)
+      })).sort((a, b) => b.failure - a.failure).slice(0, 5);
+      setCorrData(formatted);
+    } catch (err) { console.error("Nexus Error:", err); }
   };
 
   useEffect(() => {
@@ -248,33 +228,24 @@ export default function AdminDashboard() {
   const fetchNexusData = async () => {
     try {
       const { collection, query, orderBy, limit, getDocs } = await import("firebase/firestore");
-      
       const pSnap = await getDocs(query(collection(db, "personel"), orderBy("xp", "desc"), limit(5)));
-      const pData = pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setPersonelList(pData);
-      
+      setPersonelList(pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       const bSnap = await getDocs(collection(db, "bakimlar"));
       const counts: any = {};
       for (const d of bSnap.docs) {
-        const data = d.data();
-        if (data.sarfiyat && Array.isArray(data.sarfiyat)) {
-          for (const item of data.sarfiyat) {
+        const sarfiyat = d.data().sarfiyat;
+        if (sarfiyat && Array.isArray(sarfiyat)) {
+          for (const item of sarfiyat) {
             const key = item.parcaAdi || item.stokKodu || "Bilinmeyen";
             counts[key] = (counts[key] || 0) + 1;
           }
         }
       }
-      
       const formatted = Object.entries(counts).map(([part, count]) => ({
-        part: String(part),
-        failure: Number(count)
-      }));
-      
-      formatted.sort((a, b) => { return b.failure - a.failure; });
-      setCorrData(formatted.slice(0, 5));
-    } catch (err) {
-      console.error("Nexus Error:", err);
-    }
+        part: String(part), failure: Number(count)
+      })).sort((a, b) => b.failure - a.failure).slice(0, 5);
+      setCorrData(formatted);
+    } catch (err) { console.error("Nexus Error:", err); }
   };
 
   useEffect(() => {
@@ -308,12 +279,10 @@ export default function AdminDashboard() {
           <div className="bg-white/5 border border-indigo-500/20 p-6 rounded-2xl relative backdrop-blur-md shadow-xl overflow-hidden group">
             <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500 shadow-[0_0_15px_#6366f1]"></div>
             <button onClick={() => setShowLeagueInfo(true)} className="absolute top-4 right-4 text-indigo-400 text-[10px] border border-indigo-500/30 px-2 py-1 rounded hover:bg-indigo-500/20 font-bold uppercase transition-all tracking-tighter shadow-sm shadow-indigo-500/10">Algoritma ?</button>
-            <h3 className="text-indigo-400 text-sm font-bold mb-6 italic tracking-widest uppercase flex items-center">
-              <span className="w-2 h-2 bg-indigo-500 mr-2 rounded-full animate-pulse shadow-[0_0_8px_#6366f1]"></span> Bakım Ligi (Top XP)
-            </h3>
+            <h3 className="text-indigo-400 text-sm font-bold mb-6 italic tracking-widest uppercase flex items-center shadow-indigo-500/10"><span className="w-2 h-2 bg-indigo-500 mr-2 rounded-full animate-pulse shadow-[0_0_8px_#6366f1]"></span> Bakım Ligi (Top XP)</h3>
             <div className="space-y-3">
               {personelList.map((p, i) => (
-                <div key={i} className="flex justify-between items-center bg-white/5 p-4 rounded-xl border border-white/5 hover:border-indigo-500/30 transition-all">
+                <div key={i} className="flex justify-between items-center bg-white/5 p-4 rounded-xl border border-white/5 hover:border-indigo-500/30 transition-all text-xs">
                   <span className="text-gray-200 text-sm font-bold uppercase tracking-tighter italic">{p.adSoyad || p.name}</span>
                   <span className="text-emerald-400 font-mono text-sm font-bold shadow-[0_0_10px_rgba(16,185,129,0.2)]">{p.xp || 0} XP</span>
                 </div>
@@ -322,17 +291,13 @@ export default function AdminDashboard() {
           </div>
           <div className="bg-white/5 border border-emerald-500/20 p-6 rounded-2xl relative backdrop-blur-md shadow-xl overflow-hidden group">
             <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 shadow-[0_0_15px_#10b981]"></div>
-            <button onClick={() => setShowCorrInfo(true)} className="absolute top-4 right-4 text-emerald-400 text-[10px] border border-emerald-500/30 px-2 py-1 rounded hover:bg-emerald-500/20 font-bold uppercase transition-all tracking-widest italic tracking-tighter shadow-sm shadow-emerald-500/10">Metodoloji ?</button>
-            <h3 className="text-emerald-400 text-sm font-bold mb-6 italic tracking-widest uppercase flex items-center">
-              <span className="w-2 h-2 bg-emerald-500 mr-2 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span> Kritik Parça Analizi
-            </h3>
+            <button onClick={() => setShowCorrInfo(true)} className="absolute top-4 right-4 text-emerald-400 text-[10px] border border-emerald-500/30 px-2 py-1 rounded hover:bg-emerald-500/20 font-bold uppercase transition-all tracking-tighter shadow-sm shadow-emerald-500/10">Metodoloji ?</button>
+            <h3 className="text-emerald-400 text-sm font-bold mb-6 italic tracking-widest uppercase flex items-center shadow-emerald-500/10"><span className="w-2 h-2 bg-emerald-500 mr-2 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span> Kritik Parça Analizi</h3>
             <div className="h-44 w-full mt-2">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={corrData} layout="vertical">
-                  <XAxis type="number" hide />
-                  <YAxis dataKey="part" type="category" width={100} stroke="#64748b" fontSize={10} />
-                  <Tooltip contentStyle={{backgroundColor: '#020617', border: '1px solid #10b981', color: '#fff'}} />
-                  <Bar dataKey="failure" fill="#10b981" radius={[0, 4, 4, 0]} barSize={18} />
+                  <XAxis type="number" hide /><YAxis dataKey="part" type="category" width={100} stroke="#64748b" fontSize={10} />
+                  <Tooltip contentStyle={{backgroundColor: '#020617', border: '1px solid #10b981'}} /><Bar dataKey="failure" fill="#10b981" radius={[0, 4, 4, 0]} barSize={18} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -362,12 +327,10 @@ export default function AdminDashboard() {
           <div className="bg-white/5 border border-indigo-500/20 p-6 rounded-2xl relative backdrop-blur-md shadow-xl overflow-hidden group">
             <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500 shadow-[0_0_15px_#6366f1]"></div>
             <button onClick={() => setShowLeagueInfo(true)} className="absolute top-4 right-4 text-indigo-400 text-[10px] border border-indigo-500/30 px-2 py-1 rounded hover:bg-indigo-500/20 font-bold uppercase transition-all tracking-tighter shadow-sm shadow-indigo-500/10">Algoritma ?</button>
-            <h3 className="text-indigo-400 text-sm font-bold mb-6 italic tracking-widest uppercase flex items-center">
-              <span className="w-2 h-2 bg-indigo-500 mr-2 rounded-full animate-pulse shadow-[0_0_8px_#6366f1]"></span> Bakım Ligi (Top XP)
-            </h3>
+            <h3 className="text-indigo-400 text-sm font-bold mb-6 italic tracking-widest uppercase flex items-center shadow-indigo-500/10"><span className="w-2 h-2 bg-indigo-500 mr-2 rounded-full animate-pulse shadow-[0_0_8px_#6366f1]"></span> Bakım Ligi (Top XP)</h3>
             <div className="space-y-3">
               {personelList.map((p, i) => (
-                <div key={i} className="flex justify-between items-center bg-white/5 p-4 rounded-xl border border-white/5 hover:border-indigo-500/30 transition-all">
+                <div key={i} className="flex justify-between items-center bg-white/5 p-4 rounded-xl border border-white/5 hover:border-indigo-500/30 transition-all text-xs">
                   <span className="text-gray-200 text-sm font-bold uppercase tracking-tighter italic">{p.adSoyad || p.name}</span>
                   <span className="text-emerald-400 font-mono text-sm font-bold shadow-[0_0_10px_rgba(16,185,129,0.2)]">{p.xp || 0} XP</span>
                 </div>
@@ -376,17 +339,13 @@ export default function AdminDashboard() {
           </div>
           <div className="bg-white/5 border border-emerald-500/20 p-6 rounded-2xl relative backdrop-blur-md shadow-xl overflow-hidden group">
             <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 shadow-[0_0_15px_#10b981]"></div>
-            <button onClick={() => setShowCorrInfo(true)} className="absolute top-4 right-4 text-emerald-400 text-[10px] border border-emerald-500/30 px-2 py-1 rounded hover:bg-emerald-500/20 font-bold uppercase transition-all tracking-widest italic tracking-tighter shadow-sm shadow-emerald-500/10">Metodoloji ?</button>
-            <h3 className="text-emerald-400 text-sm font-bold mb-6 italic tracking-widest uppercase flex items-center">
-              <span className="w-2 h-2 bg-emerald-500 mr-2 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span> Kritik Parça Analizi
-            </h3>
+            <button onClick={() => setShowCorrInfo(true)} className="absolute top-4 right-4 text-emerald-400 text-[10px] border border-emerald-500/30 px-2 py-1 rounded hover:bg-emerald-500/20 font-bold uppercase transition-all tracking-tighter shadow-sm shadow-emerald-500/10">Metodoloji ?</button>
+            <h3 className="text-emerald-400 text-sm font-bold mb-6 italic tracking-widest uppercase flex items-center shadow-emerald-500/10"><span className="w-2 h-2 bg-emerald-500 mr-2 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span> Kritik Parça Analizi</h3>
             <div className="h-44 w-full mt-2">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={corrData} layout="vertical">
-                  <XAxis type="number" hide />
-                  <YAxis dataKey="part" type="category" width={100} stroke="#64748b" fontSize={10} />
-                  <Tooltip contentStyle={{backgroundColor: '#020617', border: '1px solid #10b981', color: '#fff'}} />
-                  <Bar dataKey="failure" fill="#10b981" radius={[0, 4, 4, 0]} barSize={18} />
+                  <XAxis type="number" hide /><YAxis dataKey="part" type="category" width={100} stroke="#64748b" fontSize={10} />
+                  <Tooltip contentStyle={{backgroundColor: '#020617', border: '1px solid #10b981'}} /><Bar dataKey="failure" fill="#10b981" radius={[0, 4, 4, 0]} barSize={18} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -399,12 +358,10 @@ YETKİSİZ ERİŞİM!</div>;return (
           <div className="bg-white/5 border border-indigo-500/20 p-6 rounded-2xl relative backdrop-blur-md shadow-xl overflow-hidden group">
             <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500 shadow-[0_0_15px_#6366f1]"></div>
             <button onClick={() => setShowLeagueInfo(true)} className="absolute top-4 right-4 text-indigo-400 text-[10px] border border-indigo-500/30 px-2 py-1 rounded hover:bg-indigo-500/20 font-bold uppercase transition-all tracking-tighter shadow-sm shadow-indigo-500/10">Algoritma ?</button>
-            <h3 className="text-indigo-400 text-sm font-bold mb-6 italic tracking-widest uppercase flex items-center">
-              <span className="w-2 h-2 bg-indigo-500 mr-2 rounded-full animate-pulse shadow-[0_0_8px_#6366f1]"></span> Bakım Ligi (Top XP)
-            </h3>
+            <h3 className="text-indigo-400 text-sm font-bold mb-6 italic tracking-widest uppercase flex items-center shadow-indigo-500/10"><span className="w-2 h-2 bg-indigo-500 mr-2 rounded-full animate-pulse shadow-[0_0_8px_#6366f1]"></span> Bakım Ligi (Top XP)</h3>
             <div className="space-y-3">
               {personelList.map((p, i) => (
-                <div key={i} className="flex justify-between items-center bg-white/5 p-4 rounded-xl border border-white/5 hover:border-indigo-500/30 transition-all">
+                <div key={i} className="flex justify-between items-center bg-white/5 p-4 rounded-xl border border-white/5 hover:border-indigo-500/30 transition-all text-xs">
                   <span className="text-gray-200 text-sm font-bold uppercase tracking-tighter italic">{p.adSoyad || p.name}</span>
                   <span className="text-emerald-400 font-mono text-sm font-bold shadow-[0_0_10px_rgba(16,185,129,0.2)]">{p.xp || 0} XP</span>
                 </div>
@@ -413,17 +370,13 @@ YETKİSİZ ERİŞİM!</div>;return (
           </div>
           <div className="bg-white/5 border border-emerald-500/20 p-6 rounded-2xl relative backdrop-blur-md shadow-xl overflow-hidden group">
             <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 shadow-[0_0_15px_#10b981]"></div>
-            <button onClick={() => setShowCorrInfo(true)} className="absolute top-4 right-4 text-emerald-400 text-[10px] border border-emerald-500/30 px-2 py-1 rounded hover:bg-emerald-500/20 font-bold uppercase transition-all tracking-widest italic tracking-tighter shadow-sm shadow-emerald-500/10">Metodoloji ?</button>
-            <h3 className="text-emerald-400 text-sm font-bold mb-6 italic tracking-widest uppercase flex items-center">
-              <span className="w-2 h-2 bg-emerald-500 mr-2 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span> Kritik Parça Analizi
-            </h3>
+            <button onClick={() => setShowCorrInfo(true)} className="absolute top-4 right-4 text-emerald-400 text-[10px] border border-emerald-500/30 px-2 py-1 rounded hover:bg-emerald-500/20 font-bold uppercase transition-all tracking-tighter shadow-sm shadow-emerald-500/10">Metodoloji ?</button>
+            <h3 className="text-emerald-400 text-sm font-bold mb-6 italic tracking-widest uppercase flex items-center shadow-emerald-500/10"><span className="w-2 h-2 bg-emerald-500 mr-2 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span> Kritik Parça Analizi</h3>
             <div className="h-44 w-full mt-2">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={corrData} layout="vertical">
-                  <XAxis type="number" hide />
-                  <YAxis dataKey="part" type="category" width={100} stroke="#64748b" fontSize={10} />
-                  <Tooltip contentStyle={{backgroundColor: '#020617', border: '1px solid #10b981', color: '#fff'}} />
-                  <Bar dataKey="failure" fill="#10b981" radius={[0, 4, 4, 0]} barSize={18} />
+                  <XAxis type="number" hide /><YAxis dataKey="part" type="category" width={100} stroke="#64748b" fontSize={10} />
+                  <Tooltip contentStyle={{backgroundColor: '#020617', border: '1px solid #10b981'}} /><Bar dataKey="failure" fill="#10b981" radius={[0, 4, 4, 0]} barSize={18} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -655,7 +608,7 @@ YETKİSİZ ERİŞİM!</div>;return (
         </div>
       )}
     
-      {/* --- NEXUS ALGORİTMA MODALLARI --- */}
+      {/* NEXUS ALGORİTMA MODALLARI */}
       {showLeagueInfo && (
         <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans">
           <div className="bg-[#020617] border-2 border-indigo-500/50 p-8 rounded-3xl max-w-lg w-full shadow-[0_0_50px_rgba(99,102,241,0.2)]">

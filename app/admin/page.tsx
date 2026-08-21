@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, writeBatch, setDoc, serverTimestamp, limit } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../../lib/firebase"; 
-import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid, LabelList, PieChart, Pie, Cell } from 'recharts';
 import Link from "next/link";
 
 export default function AdminDashboard() {
@@ -83,21 +82,23 @@ export default function AdminDashboard() {
       const { collection, query, orderBy, limit, getDocs } = await import("firebase/firestore");
       const pSnap = await getDocs(query(collection(db, "personel"), orderBy("xp", "desc"), limit(5)));
       setPersonelList(pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      
       const bSnap = await getDocs(collection(db, "bakimlar"));
       const counts: any = {};
-      for (const d of bSnap.docs) {
-        const s = d.data().sarfiyat;
-        if (s && Array.isArray(s)) {
-          for (const item of s) {
-            const key = item.parcaAdi || item.stokKodu || "Bilinmeyen";
-            counts[key] = (counts[key] || 0) + 1;
-          }
+      bSnap.docs.forEach((d) => {
+        const data = d.data();
+        const sarfiyat = data.sarfiyat;
+        if (sarfiyat && Array.isArray(sarfiyat)) {
+          sarfiyat.forEach((item: any) => {
+            const k = item.parcaAdi || item.stokKodu || "Bilinmeyen Parça";
+            counts[k] = (counts[k] || 0) + 1;
+          });
         }
-      }
+      });
       const formatted = Object.entries(counts).map(([part, count]) => ({ part: String(part), failure: Number(count) }))
         .sort((a, b) => b.failure - a.failure).slice(0, 5);
       setCorrData(formatted);
-    } catch (err) { console.error("Nexus Error:", err); }
+    } catch (err) { console.error("Nexus Sync Error:", err); }
   };
 
   useEffect(() => {
@@ -332,34 +333,36 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12 w-full">
             <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border-2 border-indigo-900/40 p-7 rounded-[3rem] relative shadow-2xl overflow-hidden group">
               <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500 shadow-[0_0_15px_#6366f1]"></div>
-              <button onClick={() => setShowLeagueInfo(true)} className="absolute top-6 right-6 text-indigo-400 text-[10px] border border-indigo-500/30 px-3 py-1 rounded hover:bg-indigo-500/20 font-black uppercase transition-all tracking-widest italic tracking-tighter">XP Algoritma ?</button>
-              <h2 className="text-lg font-black text-indigo-400 mb-6 flex items-center gap-3 uppercase tracking-[0.2em]">🏆 Bakım Ligi Liderleri</h2>
+              <button onClick={() => setShowLeagueInfo(true)} className="absolute top-6 right-6 text-indigo-400 text-[10px] border border-indigo-500/30 px-3 py-1 rounded hover:bg-indigo-500/20 font-black uppercase transition-all tracking-widest italic tracking-tighter">Algoritma ?</button>
+              <h2 className="text-lg font-black text-indigo-400 mb-6 flex items-center gap-3 uppercase tracking-[0.2em]">🏆 BAKIM LİGİ (PERFORMANS)</h2>
               <div className="space-y-3">
-                {personelList.map((p, i) => (
+                {personelList.length > 0 ? personelList.map((p, i) => (
                   <div key={i} className="bg-indigo-950/20 border border-indigo-900/30 p-4 rounded-2xl flex justify-between items-center transition group hover:bg-indigo-900/30">
                     <span className="text-gray-200 text-sm font-bold uppercase tracking-tighter italic">{p.adSoyad || p.name}</span>
                     <span className="text-emerald-400 font-mono text-sm font-bold shadow-[0_0_10px_rgba(16,185,129,0.2)]">{p.xp || 0} XP</span>
                   </div>
-                ))}
+                )) : <p className="text-center py-10 text-gray-600 text-xs italic">Veri yükleniyor...</p>}
               </div>
             </div>
             <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border-2 border-indigo-900/40 p-7 rounded-[3rem] relative shadow-2xl overflow-hidden group">
               <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 shadow-[0_0_15px_#10b981]"></div>
-              <button onClick={() => setShowCorrInfo(true)} className="absolute top-6 right-6 text-emerald-400 text-[10px] border border-emerald-500/30 px-3 py-1 rounded hover:bg-emerald-500/20 font-black uppercase transition-all tracking-widest italic tracking-tighter">Analiz Metot ?</button>
-              <h2 className="text-lg font-black text-emerald-400 mb-6 flex items-center gap-3 uppercase tracking-[0.2em]">📊 Kritik Parça Analizi</h2>
+              <button onClick={() => setShowCorrInfo(true)} className="absolute top-6 right-6 text-emerald-400 text-[10px] border border-emerald-500/30 px-3 py-1 rounded hover:bg-emerald-500/20 font-black uppercase transition-all tracking-widest italic tracking-tighter">Metodoloji ?</button>
+              <h2 className="text-lg font-black text-emerald-400 mb-6 flex items-center gap-3 uppercase tracking-[0.2em]">📊 KRİTİK PARÇA ANALİZİ</h2>
               <div className="h-48 w-full mt-2">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={corrData} layout="vertical">
-                    <XAxis type="number" hide /><YAxis dataKey="part" type="category" width={100} stroke="#64748b" fontSize={10} />
-                    <Tooltip contentStyle={{backgroundColor: '#020617', border: '1px solid #10b981'}} />
-                    <Bar dataKey="failure" fill="#10b981" radius={[0, 4, 4, 0]} barSize={20} />
-                  </BarChart>
-                </ResponsiveContainer>
+                {corrData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={corrData} layout="vertical">
+                      <XAxis type="number" hide /><YAxis dataKey="part" type="category" width={100} stroke="#64748b" fontSize={10} />
+                      <Tooltip contentStyle={{backgroundColor: '#020617', border: '1px solid #10b981'}} />
+                      <Bar dataKey="failure" fill="#10b981" radius={[0, 4, 4, 0]} barSize={20} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : <p className="text-center py-20 text-gray-600 text-xs italic">Analiz edilecek sarfiyat bulunamadı.</p>}
               </div>
             </div>
           </div>
         )}
-{/* SAHA BİLDİRİMLERİ */}
+{/* SAHA BİLDİRİMLERİ (Moved) %}
            <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border-2 border-indigo-900/40 p-7 rounded-[3rem] shadow-2xl">
               <h2 className="text-lg font-black text-indigo-400 mb-6 flex items-center gap-3 uppercase tracking-[0.2em]">📢 SAHA BİLDİRİMLERİ</h2>
               <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
@@ -404,17 +407,14 @@ export default function AdminDashboard() {
           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border border-gray-800 p-6 rounded-[30px] shadow-xl">
              <h2 className="text-xs font-bold text-yellow-400 mb-4 uppercase tracking-widest underline underline-offset-8">⚡ Elektrik (kWh)</h2>
              <select value={filterElekSayac} onChange={e=>setFilterElekSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-2xl p-2 text-[10px] mb-4 text-white uppercase"><option value="">Tüm Sayaçlar</option>{elekSayacList.map(s=><option key={s} value={s}>{s}</option>)}</select>
-             <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikElek}><XAxis dataKey="ay" tick={{fontSize:10}}/><Tooltip/><Bar dataKey="tuketim" fill="#EAB308" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div>
           </div>
           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border border-gray-800 p-6 rounded-[30px] shadow-xl">
              <h2 className="text-xs font-bold text-red-400 mb-4 uppercase tracking-widest underline underline-offset-8">🔥 Doğalgaz (m³)</h2>
              <select value={filterGazSayac} onChange={e=>setFilterGazSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-2xl p-2 text-[10px] mb-4 text-white uppercase"><option value="">Tüm Sayaçlar</option>{gazSayacList.map(s=><option key={s} value={s}>{s}</option>)}</select>
-             <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikGaz}><XAxis dataKey="ay" tick={{fontSize:10}}/><Tooltip/><Bar dataKey="tuketim" fill="#EF4444" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div>
           </div>
           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border border-gray-800 p-6 rounded-[30px] shadow-xl">
              <h2 className="text-xs font-bold text-blue-400 mb-4 uppercase tracking-widest underline underline-offset-8">💧 Su (m³)</h2>
              <select value={filterSuSayac} onChange={e=>setFilterSuSayac(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-2xl p-2 text-[10px] mb-4 text-white uppercase"><option value="">Tüm Sayaçlar</option>{suSayacList.map(s=><option key={s} value={s}>{s}</option>)}</select>
-             <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikSu}><XAxis dataKey="ay" tick={{fontSize:10}}/><Tooltip/><Bar dataKey="tuketim" fill="#3B82F6" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div>
           </div>
         </div>
 
@@ -433,11 +433,9 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
            <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border border-gray-800 p-6 rounded-[35px] shadow-2xl">
              <h2 className="text-sm font-black text-indigo-400 mb-6 uppercase tracking-widest text-center tracking-[0.2em]">📊 RCA Pareto Analizi</h2>
-             <div className="h-64 w-full"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={RCA_CATEGORIES.map(c=>({ name:c.label, value: rcaLogs.filter(r=>r.category===c.id).length, color: c.color })).filter(d=>d.value>0)} cx="50%" cy="50%" innerRadius={60} outerRadius={80} dataKey="value">{RCA_CATEGORIES.map((e,i)=><Cell key={i} fill={e.color} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></div>
            </div>
            <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border border-gray-800 p-6 rounded-[35px] shadow-2xl">
              <h2 className="text-sm font-black text-teal-400 mb-6 uppercase tracking-widest text-center tracking-[0.2em]">⚡ Hat Bazlı İş Yoğunluğu</h2>
-             <div className="h-64 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikIsHatti}><XAxis dataKey="isim" tick={{fontSize:10, fill:'#6B7280'}} /><YAxis tick={{fontSize:10}} /><Tooltip /><Bar dataKey="adet" fill="#10B981" radius={[6,6,0,0]} /></BarChart></ResponsiveContainer></div>
            </div>
         </div>
   </>
@@ -503,27 +501,26 @@ export default function AdminDashboard() {
       )}
     
       {showLeagueInfo && (
-        <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans">
-          <div className="bg-[#020617] border-2 border-indigo-500/50 p-8 rounded-3xl max-w-lg w-full shadow-[0_0_50px_rgba(99,102,241,0.2)]">
-            <h4 className="text-indigo-400 font-bold mb-6 text-xl italic border-b border-indigo-500/20 pb-2 uppercase text-center tracking-tighter shadow-[0_10px_10px_-10px_rgba(99,102,241,0.5)]">XP & Seviye Sistemi Matrisi</h4>
+        <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6">
+          <div className="bg-[#020617] border-2 border-indigo-500/50 p-8 rounded-3xl max-w-lg w-full shadow-3xl">
+            <h4 className="text-indigo-400 font-black mb-6 text-xl italic border-b border-indigo-500/20 pb-2 uppercase text-center tracking-tighter">XP & Seviye Sistemi Matrisi</h4>
             <div className="space-y-4 text-sm text-gray-300 leading-relaxed font-mono italic">
               <p><span className="text-indigo-500">{" >> "}</span> <strong>Arıza Müdahale:</strong> +150 XP.</p>
               <p><span className="text-indigo-500">{" >> "}</span> <strong>İSG & EKED:</strong> +200 XP Bonus.</p>
-              <p><span className="text-indigo-500">{" >> "}</span> <strong>Seviye:</strong> Her 1000 XP bir kademe.</p>
             </div>
-            <button onClick={() => setShowLeagueInfo(false)} className="mt-8 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic shadow-lg shadow-indigo-500/30">Anlaşıldı</button>
+            <button onClick={() => setShowLeagueInfo(false)} className="mt-8 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-2xl uppercase shadow-lg shadow-indigo-500/30">Kapat</button>
           </div>
         </div>
       )}
       {showCorrInfo && (
-        <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans">
-          <div className="bg-[#020617] border-2 border-emerald-500/50 p-8 rounded-3xl max-w-lg w-full shadow-[0_0_50px_rgba(16,185,129,0.2)]">
-            <h4 className="text-emerald-400 font-bold mb-6 text-xl italic border-b border-emerald-500/20 pb-2 uppercase text-center tracking-tighter shadow-[0_10px_10px_-10px_rgba(16,185,129,0.5)]">Korelasyon Hesaplama Metodu</h4>
+        <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6">
+          <div className="bg-[#020617] border-2 border-emerald-500/50 p-8 rounded-3xl max-w-lg w-full shadow-3xl">
+            <h4 className="text-emerald-400 font-bold mb-6 text-xl italic border-b border-emerald-500/20 pb-2 uppercase text-center tracking-tighter">Korelasyon Hesaplama Metodu</h4>
             <div className="space-y-4 text-sm text-gray-300 leading-relaxed font-mono italic">
               <p><span className="text-emerald-500">{" >> "}</span> <strong>Veri Kaynağı:</strong> Firestore 'bakimlar' koleksiyonu.</p>
-              <p><span className="text-emerald-500">{" >> "}</span> <strong>İşlem:</strong> Parça frekans analizi.</p>
+              <p><span className="text-emerald-500">{" >> "}</span> <strong>İşlem:</strong> Parça frekans korelasyonu.</p>
             </div>
-            <button onClick={() => setShowCorrInfo(false)} className="mt-8 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic shadow-lg shadow-emerald-500/30">Anlaşıldı</button>
+            <button onClick={() => setShowCorrInfo(false)} className="mt-8 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-2xl uppercase shadow-lg shadow-emerald-500/30">Kapat</button>
           </div>
         </div>
       )}

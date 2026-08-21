@@ -530,6 +530,9 @@ export default function AdminDashboard() {
             <h4 className="text-emerald-400 font-black mb-6 text-xl italic border-b border-emerald-500/20 pb-4 uppercase tracking-widest">Stok Analiz Metodu</h4>
             <button type="button" onClick={() => setShowCorrInfo(false)} className="mt-10 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-4 rounded-2xl uppercase tracking-widest">Kapat</button>
           </div>
-        </div>
-      )}
-\n    </div>\n  );\n}
+    </div>
+  )}
+
+    </div>
+  );
+}

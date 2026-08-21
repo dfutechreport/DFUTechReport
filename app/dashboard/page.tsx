@@ -382,12 +382,11 @@ function DashboardIcerik() {
 export default function Page() { return (<Suspense fallback={<div>Yükleniyor...
       {showLeagueInfo && (
         <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans">
-          <div className="bg-[#020617] border-2 border-indigo-500/50 p-8 rounded-3xl max-w-lg w-full shadow-[0_0_50px_rgba(99,102,241,0.2)]">
-            <h4 className="text-indigo-400 font-bold mb-6 text-xl italic border-b border-indigo-500/20 pb-2 uppercase text-center tracking-tighter shadow-[0_10px_10px_-10px_rgba(99,102,241,0.5)]">XP & Seviye Sistemi Matrisi</h4>
+          <div className="bg-[#020617] border-2 border-indigo-500/50 p-8 rounded-3xl max-w-lg w-full">
+            <h4 className="text-indigo-400 font-bold mb-6 text-xl italic border-b border-indigo-500/20 pb-2 uppercase text-center tracking-tighter">XP & Seviye Sistemi Matrisi</h4>
             <div className="space-y-4 text-sm text-gray-300 leading-relaxed font-mono italic">
               <p><span className="text-indigo-500">{" >> "}</span> <strong>Arıza Müdahale:</strong> +150 XP.</p>
-              <p><span className="text-indigo-500">{" >> "}</span> <strong>İSG & EKED:</strong> +200 XP Bonus.</p>
-              <p><span className="text-indigo-500">{" >> "}</span> <strong>Seviye:</strong> Her 1000 XP bir kademe.</p>
+              <p><span className="text-indigo-500">{" >> "}</span> <strong>Planlı Bakım:</strong> +100 XP.</p>
             </div>
             <button onClick={() => setShowLeagueInfo(false)} className="mt-8 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic shadow-lg shadow-indigo-500/30">Anlaşıldı</button>
           </div>
@@ -396,10 +395,10 @@ export default function Page() { return (<Suspense fallback={<div>Yükleniyor...
       {showCorrInfo && (
         <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans">
           <div className="bg-[#020617] border-2 border-emerald-500/50 p-8 rounded-3xl max-w-lg w-full shadow-[0_0_50px_rgba(16,185,129,0.2)]">
-            <h4 className="text-emerald-400 font-bold mb-6 text-xl italic border-b border-emerald-500/20 pb-2 uppercase text-center tracking-tighter shadow-[0_10px_10px_-10px_rgba(16,185,129,0.5)]">Korelasyon Hesaplama Metodu</h4>
+            <h4 className="text-emerald-400 font-bold mb-6 text-xl italic border-b border-emerald-500/20 pb-2 uppercase text-center tracking-tighter">Korelasyon Hesaplama Metodu</h4>
             <div className="space-y-4 text-sm text-gray-300 leading-relaxed font-mono italic">
               <p><span className="text-emerald-500">{" >> "}</span> <strong>Veri Kaynağı:</strong> Firestore 'bakimlar' koleksiyonu.</p>
-              <p><span className="text-emerald-500">{" >> "}</span> <strong>İşlem:</strong> Parça frekans korelasyonu.</p>
+              <p><span className="text-emerald-500">{" >> "}</span> <strong>İşlem:</strong> Parça frekans analizi.</p>
             </div>
             <button onClick={() => setShowCorrInfo(false)} className="mt-8 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic shadow-lg shadow-emerald-500/30">Anlaşıldı</button>
           </div>

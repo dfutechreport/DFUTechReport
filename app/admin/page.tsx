@@ -1,5 +1,5 @@
 "use client";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, Cell } from "recharts";
 
 import { useEffect, useState } from "react";
 import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, writeBatch, setDoc, serverTimestamp } from "firebase/firestore";
@@ -13,6 +13,7 @@ export default function AdminDashboard() {
   const [userName, setUserName] = useState(""); 
   const [userEmail, setUserEmail] = useState(""); 
   const [loading, setLoading] = useState(true);
+  // NEXUS ANALİTİK STATE'LERİ
   const [showLeagueInfo, setShowLeagueInfo] = useState(false);
   const [showCorrInfo, setShowCorrInfo] = useState(false);
   const [personelList, setPersonelList] = useState<any[]>([]);
@@ -81,25 +82,21 @@ export default function AdminDashboard() {
   
   
       
-      for (const d of bSnap.docs) {
-        const data = d.data();
+      bSnap.docs.forEach((doc) => {
+        const data = doc.data();
         const sarfiyat = data.sarfiyat;
         if (sarfiyat && Array.isArray(sarfiyat)) {
-          for (const item of sarfiyat) {
+          sarfiyat.forEach((item: any) => {
             const key = item.parcaAdi || item.stokKodu || "Bilinmeyen";
             counts[key] = (counts[key] || 0) + 1;
-          }
+          });
         }
-      }
-      
-      const formatted = [];
-      const entries = Object.entries(counts);
-      for (const entry of entries) {
-        formatted.push({
-          part: String(entry[0]),
-          failure: Number(entry[1])
-        });
-      }
+      });
+
+      const formatted = Object.entries(counts).map(([part, failure]) => ({
+        part: String(part),
+        failure: Number(failure)
+      }));
       
       formatted.sort((a, b) => b.failure - a.failure);
       setCorrData(formatted.slice(0, 5));
@@ -113,34 +110,27 @@ export default function AdminDashboard() {
     try {
       const { collection, query, orderBy, limit, getDocs } = await import("firebase/firestore");
       
-      // Personel Verisi
       const pSnap = await getDocs(query(collection(db, "personel"), orderBy("xp", "desc"), limit(5)));
-      const pArr = pSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setPersonelList(pArr);
+      setPersonelList(pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       
-      // Bakım Verisi
       const bSnap = await getDocs(collection(db, "bakimlar"));
       const counts: any = {};
       
-      for (const d of bSnap.docs) {
-        const data = d.data();
+      bSnap.docs.forEach((doc) => {
+        const data = doc.data();
         const sarfiyat = data.sarfiyat;
         if (sarfiyat && Array.isArray(sarfiyat)) {
-          for (const item of sarfiyat) {
+          sarfiyat.forEach((item: any) => {
             const key = item.parcaAdi || item.stokKodu || "Bilinmeyen";
             counts[key] = (counts[key] || 0) + 1;
-          }
+          });
         }
-      }
-      
-      const formatted = [];
-      const entries = Object.entries(counts);
-      for (const entry of entries) {
-        formatted.push({
-          part: String(entry[0]),
-          failure: Number(entry[1])
-        });
-      }
+      });
+
+      const formatted = Object.entries(counts).map(([part, failure]) => ({
+        part: String(part),
+        failure: Number(failure)
+      }));
       
       formatted.sort((a, b) => b.failure - a.failure);
       setCorrData(formatted.slice(0, 5));
@@ -159,7 +149,7 @@ export default function AdminDashboard() {
           const userData = userSnap.data();
           setUserRole(userData.role); setUserName(userData.name);
           if (["admin", "operator", "uretim", "isg", "teknisyen"].includes(userData.role)) {
-            setIsAdmin(true); fetchInitialData(); fetchNexusData(); fetchRcaData();
+            setIsAdmin(true); fetchNexusData(); fetchInitialData(); fetchRcaData();
           } else { window.location.href = "/dashboard"; }
         }
       } else { window.location.href = "/"; }
@@ -212,25 +202,21 @@ export default function AdminDashboard() {
   
   
       
-      for (const d of bSnap.docs) {
-        const data = d.data();
+      bSnap.docs.forEach((doc) => {
+        const data = doc.data();
         const sarfiyat = data.sarfiyat;
         if (sarfiyat && Array.isArray(sarfiyat)) {
-          for (const item of sarfiyat) {
+          sarfiyat.forEach((item: any) => {
             const key = item.parcaAdi || item.stokKodu || "Bilinmeyen";
             counts[key] = (counts[key] || 0) + 1;
-          }
+          });
         }
-      }
-      
-      const formatted = [];
-      const entries = Object.entries(counts);
-      for (const entry of entries) {
-        formatted.push({
-          part: String(entry[0]),
-          failure: Number(entry[1])
-        });
-      }
+      });
+
+      const formatted = Object.entries(counts).map(([part, failure]) => ({
+        part: String(part),
+        failure: Number(failure)
+      }));
       
       formatted.sort((a, b) => b.failure - a.failure);
       setCorrData(formatted.slice(0, 5));
@@ -244,34 +230,27 @@ export default function AdminDashboard() {
     try {
       const { collection, query, orderBy, limit, getDocs } = await import("firebase/firestore");
       
-      // Personel Verisi
       const pSnap = await getDocs(query(collection(db, "personel"), orderBy("xp", "desc"), limit(5)));
-      const pArr = pSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setPersonelList(pArr);
+      setPersonelList(pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       
-      // Bakım Verisi
       const bSnap = await getDocs(collection(db, "bakimlar"));
       const counts: any = {};
       
-      for (const d of bSnap.docs) {
-        const data = d.data();
+      bSnap.docs.forEach((doc) => {
+        const data = doc.data();
         const sarfiyat = data.sarfiyat;
         if (sarfiyat && Array.isArray(sarfiyat)) {
-          for (const item of sarfiyat) {
+          sarfiyat.forEach((item: any) => {
             const key = item.parcaAdi || item.stokKodu || "Bilinmeyen";
             counts[key] = (counts[key] || 0) + 1;
-          }
+          });
         }
-      }
-      
-      const formatted = [];
-      const entries = Object.entries(counts);
-      for (const entry of entries) {
-        formatted.push({
-          part: String(entry[0]),
-          failure: Number(entry[1])
-        });
-      }
+      });
+
+      const formatted = Object.entries(counts).map(([part, failure]) => ({
+        part: String(part),
+        failure: Number(failure)
+      }));
       
       formatted.sort((a, b) => b.failure - a.failure);
       setCorrData(formatted.slice(0, 5));
@@ -323,25 +302,21 @@ export default function AdminDashboard() {
   
   
       
-      for (const d of bSnap.docs) {
-        const data = d.data();
+      bSnap.docs.forEach((doc) => {
+        const data = doc.data();
         const sarfiyat = data.sarfiyat;
         if (sarfiyat && Array.isArray(sarfiyat)) {
-          for (const item of sarfiyat) {
+          sarfiyat.forEach((item: any) => {
             const key = item.parcaAdi || item.stokKodu || "Bilinmeyen";
             counts[key] = (counts[key] || 0) + 1;
-          }
+          });
         }
-      }
-      
-      const formatted = [];
-      const entries = Object.entries(counts);
-      for (const entry of entries) {
-        formatted.push({
-          part: String(entry[0]),
-          failure: Number(entry[1])
-        });
-      }
+      });
+
+      const formatted = Object.entries(counts).map(([part, failure]) => ({
+        part: String(part),
+        failure: Number(failure)
+      }));
       
       formatted.sort((a, b) => b.failure - a.failure);
       setCorrData(formatted.slice(0, 5));
@@ -355,34 +330,27 @@ export default function AdminDashboard() {
     try {
       const { collection, query, orderBy, limit, getDocs } = await import("firebase/firestore");
       
-      // Personel Verisi
       const pSnap = await getDocs(query(collection(db, "personel"), orderBy("xp", "desc"), limit(5)));
-      const pArr = pSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setPersonelList(pArr);
+      setPersonelList(pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       
-      // Bakım Verisi
       const bSnap = await getDocs(collection(db, "bakimlar"));
       const counts: any = {};
       
-      for (const d of bSnap.docs) {
-        const data = d.data();
+      bSnap.docs.forEach((doc) => {
+        const data = doc.data();
         const sarfiyat = data.sarfiyat;
         if (sarfiyat && Array.isArray(sarfiyat)) {
-          for (const item of sarfiyat) {
+          sarfiyat.forEach((item: any) => {
             const key = item.parcaAdi || item.stokKodu || "Bilinmeyen";
             counts[key] = (counts[key] || 0) + 1;
-          }
+          });
         }
-      }
-      
-      const formatted = [];
-      const entries = Object.entries(counts);
-      for (const entry of entries) {
-        formatted.push({
-          part: String(entry[0]),
-          failure: Number(entry[1])
-        });
-      }
+      });
+
+      const formatted = Object.entries(counts).map(([part, failure]) => ({
+        part: String(part),
+        failure: Number(failure)
+      }));
       
       formatted.sort((a, b) => b.failure - a.failure);
       setCorrData(formatted.slice(0, 5));
@@ -417,42 +385,6 @@ export default function AdminDashboard() {
 
   if (loading) return (
     <div className="min-h-screen bg-[#020617] flex flex-col justify-center items-center overflow-hidden font-sans">
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 w-full max-w-7xl">
-          <div className="bg-white/5 border border-indigo-500/20 p-6 rounded-2xl relative backdrop-blur-md shadow-xl overflow-hidden group">
-            <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500 shadow-[0_0_15px_#6366f1]"></div>
-            <button onClick={() => setShowLeagueInfo(true)} className="absolute top-4 right-4 text-indigo-400 text-[10px] border border-indigo-500/30 px-2 py-1 rounded hover:bg-indigo-500/20 font-bold uppercase transition-all tracking-widest italic tracking-tighter shadow-sm shadow-indigo-500/10">Algoritma ?</button>
-            <h3 className="text-indigo-400 text-sm font-bold mb-6 italic tracking-widest uppercase flex items-center">
-              <span className="w-2 h-2 bg-indigo-500 mr-2 rounded-full animate-pulse shadow-[0_0_8px_#6366f1]"></span> Bakım Ligi (Top XP)
-            </h3>
-            <div className="space-y-3">
-              {personelList.map((p, i) => (
-                <div key={i} className="flex justify-between items-center bg-white/5 p-4 rounded-xl border border-white/5 hover:border-indigo-500/30 transition-all">
-                  <span className="text-gray-200 text-sm font-bold uppercase tracking-tighter italic">{p.adSoyad || p.name}</span>
-                  <span className="text-emerald-400 font-mono text-sm font-bold shadow-[0_0_10px_rgba(16,185,129,0.2)]">{p.xp || 0} XP</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="bg-white/5 border border-emerald-500/20 p-6 rounded-2xl relative backdrop-blur-md shadow-xl overflow-hidden group">
-            <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 shadow-[0_0_15px_#10b981]"></div>
-            <button onClick={() => setShowCorrInfo(true)} className="absolute top-4 right-4 text-emerald-400 text-[10px] border border-emerald-500/30 px-2 py-1 rounded hover:bg-emerald-500/20 font-bold uppercase transition-all tracking-widest italic tracking-tighter shadow-sm shadow-emerald-500/10">Metodoloji ?</button>
-            <h3 className="text-emerald-400 text-sm font-bold mb-6 italic tracking-widest uppercase flex items-center">
-              <span className="w-2 h-2 bg-emerald-500 mr-2 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span> Kritik Parça Analizi
-            </h3>
-            <div className="h-44 w-full mt-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={corrData} layout="vertical">
-                  <XAxis type="number" hide />
-                  <YAxis dataKey="part" type="category" width={100} stroke="#64748b" fontSize={10} />
-                  <Tooltip contentStyle={{backgroundColor: '#020617', border: '1px solid #10b981', color: '#fff'}} />
-                  <Bar dataKey="failure" fill="#10b981" radius={[0, 4, 4, 0]} barSize={18} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-
       <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(#4f46e5 0.5px, transparent 0.5px)', backgroundSize: '30px 30px' }}></div>
       <div className="relative mb-20 scale-110">
         <div className="absolute inset-0 bg-indigo-600/20 blur-[150px] rounded-full animate-pulse"></div>
@@ -470,80 +402,8 @@ export default function AdminDashboard() {
       <style jsx>{` @keyframes ai_scan { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } } `}</style>
     </div>
   );
-  if (!isAdmin) return <div className="min-h-screen bg-[#020617] text-red-500 flex justify-center items-center font-bold text-xl uppercase italic tracking-tighter">
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 w-full max-w-7xl">
-          <div className="bg-white/5 border border-indigo-500/20 p-6 rounded-2xl relative backdrop-blur-md shadow-xl overflow-hidden group">
-            <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500 shadow-[0_0_15px_#6366f1]"></div>
-            <button onClick={() => setShowLeagueInfo(true)} className="absolute top-4 right-4 text-indigo-400 text-[10px] border border-indigo-500/30 px-2 py-1 rounded hover:bg-indigo-500/20 font-bold uppercase transition-all tracking-widest italic tracking-tighter shadow-sm shadow-indigo-500/10">Algoritma ?</button>
-            <h3 className="text-indigo-400 text-sm font-bold mb-6 italic tracking-widest uppercase flex items-center">
-              <span className="w-2 h-2 bg-indigo-500 mr-2 rounded-full animate-pulse shadow-[0_0_8px_#6366f1]"></span> Bakım Ligi (Top XP)
-            </h3>
-            <div className="space-y-3">
-              {personelList.map((p, i) => (
-                <div key={i} className="flex justify-between items-center bg-white/5 p-4 rounded-xl border border-white/5 hover:border-indigo-500/30 transition-all">
-                  <span className="text-gray-200 text-sm font-bold uppercase tracking-tighter italic">{p.adSoyad || p.name}</span>
-                  <span className="text-emerald-400 font-mono text-sm font-bold shadow-[0_0_10px_rgba(16,185,129,0.2)]">{p.xp || 0} XP</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="bg-white/5 border border-emerald-500/20 p-6 rounded-2xl relative backdrop-blur-md shadow-xl overflow-hidden group">
-            <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 shadow-[0_0_15px_#10b981]"></div>
-            <button onClick={() => setShowCorrInfo(true)} className="absolute top-4 right-4 text-emerald-400 text-[10px] border border-emerald-500/30 px-2 py-1 rounded hover:bg-emerald-500/20 font-bold uppercase transition-all tracking-widest italic tracking-tighter shadow-sm shadow-emerald-500/10">Metodoloji ?</button>
-            <h3 className="text-emerald-400 text-sm font-bold mb-6 italic tracking-widest uppercase flex items-center">
-              <span className="w-2 h-2 bg-emerald-500 mr-2 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span> Kritik Parça Analizi
-            </h3>
-            <div className="h-44 w-full mt-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={corrData} layout="vertical">
-                  <XAxis type="number" hide />
-                  <YAxis dataKey="part" type="category" width={100} stroke="#64748b" fontSize={10} />
-                  <Tooltip contentStyle={{backgroundColor: '#020617', border: '1px solid #10b981', color: '#fff'}} />
-                  <Bar dataKey="failure" fill="#10b981" radius={[0, 4, 4, 0]} barSize={18} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-YETKİSİZ ERİŞİM!</div>;return (
+  if (!isAdmin) return <div className="min-h-screen bg-[#020617] text-red-500 flex justify-center items-center font-bold text-xl uppercase italic tracking-tighter">YETKİSİZ ERİŞİM!</div>;return (
     <div className="min-h-screen bg-[#020617] text-white p-4 md:p-8 font-sans overflow-x-hidden">
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 w-full max-w-7xl">
-          <div className="bg-white/5 border border-indigo-500/20 p-6 rounded-2xl relative backdrop-blur-md shadow-xl overflow-hidden group">
-            <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500 shadow-[0_0_15px_#6366f1]"></div>
-            <button onClick={() => setShowLeagueInfo(true)} className="absolute top-4 right-4 text-indigo-400 text-[10px] border border-indigo-500/30 px-2 py-1 rounded hover:bg-indigo-500/20 font-bold uppercase transition-all tracking-widest italic tracking-tighter shadow-sm shadow-indigo-500/10">Algoritma ?</button>
-            <h3 className="text-indigo-400 text-sm font-bold mb-6 italic tracking-widest uppercase flex items-center">
-              <span className="w-2 h-2 bg-indigo-500 mr-2 rounded-full animate-pulse shadow-[0_0_8px_#6366f1]"></span> Bakım Ligi (Top XP)
-            </h3>
-            <div className="space-y-3">
-              {personelList.map((p, i) => (
-                <div key={i} className="flex justify-between items-center bg-white/5 p-4 rounded-xl border border-white/5 hover:border-indigo-500/30 transition-all">
-                  <span className="text-gray-200 text-sm font-bold uppercase tracking-tighter italic">{p.adSoyad || p.name}</span>
-                  <span className="text-emerald-400 font-mono text-sm font-bold shadow-[0_0_10px_rgba(16,185,129,0.2)]">{p.xp || 0} XP</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="bg-white/5 border border-emerald-500/20 p-6 rounded-2xl relative backdrop-blur-md shadow-xl overflow-hidden group">
-            <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 shadow-[0_0_15px_#10b981]"></div>
-            <button onClick={() => setShowCorrInfo(true)} className="absolute top-4 right-4 text-emerald-400 text-[10px] border border-emerald-500/30 px-2 py-1 rounded hover:bg-emerald-500/20 font-bold uppercase transition-all tracking-widest italic tracking-tighter shadow-sm shadow-emerald-500/10">Metodoloji ?</button>
-            <h3 className="text-emerald-400 text-sm font-bold mb-6 italic tracking-widest uppercase flex items-center">
-              <span className="w-2 h-2 bg-emerald-500 mr-2 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span> Kritik Parça Analizi
-            </h3>
-            <div className="h-44 w-full mt-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={corrData} layout="vertical">
-                  <XAxis type="number" hide />
-                  <YAxis dataKey="part" type="category" width={100} stroke="#64748b" fontSize={10} />
-                  <Tooltip contentStyle={{backgroundColor: '#020617', border: '1px solid #10b981', color: '#fff'}} />
-                  <Bar dataKey="failure" fill="#10b981" radius={[0, 4, 4, 0]} barSize={18} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-
       <div className="max-w-7xl mx-auto">
         
         {/* HEADER */}
@@ -764,28 +624,29 @@ YETKİSİZ ERİŞİM!</div>;return (
         </div>
       )}
     
+      {/* NEXUS MODALLARI */}
       {showLeagueInfo && (
         <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans">
           <div className="bg-[#020617] border-2 border-indigo-500/50 p-8 rounded-3xl max-w-lg w-full shadow-[0_0_50px_rgba(99,102,241,0.2)]">
-            <h4 className="text-indigo-400 font-bold mb-6 text-xl italic border-b border-indigo-500/20 pb-2 uppercase text-center tracking-tighter italic shadow-[0_10px_10px_-10px_rgba(99,102,241,0.5)]">XP & Seviye Sistemi Matrisi</h4>
+            <h4 className="text-indigo-400 font-bold mb-6 text-xl italic border-b border-indigo-500/20 pb-2 uppercase text-center tracking-tighter italic">XP & Seviye Sistemi Matrisi</h4>
             <div className="space-y-4 text-sm text-gray-300 leading-relaxed font-mono italic">
-              <p>→ <strong>Arıza Müdahale:</strong> +150 XP.</p>
-              <p>→ <strong>İSG & EKED:</strong> +200 XP Bonus.</p>
-              <p>→ <strong>Seviye:</strong> Her 1000 XP bir kademe.</p>
+              <p><span className="text-indigo-500">{" >> "}</span> <strong>Arıza Müdahale:</strong> +150 XP.</p>
+              <p><span className="text-indigo-500">{" >> "}</span> <strong>İSG & EKED:</strong> +200 XP Bonus.</p>
+              <p><span className="text-indigo-500">{" >> "}</span> <strong>Seviye:</strong> Her 1000 XP bir kademe.</p>
             </div>
-            <button onClick={() => setShowLeagueInfo(false)} className="mt-8 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic tracking-widest shadow-lg shadow-indigo-500/30">Anlaşıldı</button>
+            <button onClick={() => setShowLeagueInfo(false)} className="mt-8 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic tracking-widest">Kapat</button>
           </div>
         </div>
       )}
       {showCorrInfo && (
         <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans">
           <div className="bg-[#020617] border-2 border-emerald-500/50 p-8 rounded-3xl max-w-lg w-full shadow-[0_0_50px_rgba(16,185,129,0.2)]">
-            <h4 className="text-emerald-400 font-bold mb-6 text-xl italic border-b border-emerald-500/20 pb-2 uppercase text-center tracking-tighter italic shadow-[0_10px_10px_-10px_rgba(16,185,129,0.5)]">Korelasyon Hesaplama Metodu</h4>
+            <h4 className="text-emerald-400 font-bold mb-6 text-xl italic border-b border-emerald-500/20 pb-2 uppercase text-center tracking-tighter italic">Korelasyon Hesaplama Metodu</h4>
             <div className="space-y-4 text-sm text-gray-300 leading-relaxed font-mono italic">
-              <p>→ <strong>Veri Kaynağı:</strong> Firestore 'bakimlar' koleksiyonu.</p>
-              <p>→ <strong>İşlem:</strong> Parça frekans korelasyonu.</p>
+              <p><span className="text-emerald-500">{" >> "}</span> <strong>Veri Kaynağı:</strong> Firestore 'bakimlar' koleksiyonu.</p>
+              <p><span className="text-emerald-500">{" >> "}</span> <strong>İşlem:</strong> Parça frekans korelasyonu.</p>
             </div>
-            <button onClick={() => setShowCorrInfo(false)} className="mt-8 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic tracking-widest shadow-lg shadow-emerald-500/30">Anlaşıldı</button>
+            <button onClick={() => setShowCorrInfo(false)} className="mt-8 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic tracking-widest">Kapat</button>
           </div>
         </div>
       )}

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, Suspense } from "react";
-import { collection, getDocs, doc, getDoc, query, where, orderBy, setDoc, updateDoc, serverTimestamp, increment, addDoc } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, query, where, orderBy, setDoc, updateDoc, serverTimestamp, increment, addDoc, limit } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../../lib/firebase"; 
 import Link from "next/link";
@@ -14,6 +14,11 @@ interface MaintenanceFormData {
 }
 
 function DashboardIcerik() {
+  const [showLeagueInfo, setShowLeagueInfo] = useState(false);
+  const [showCorrInfo, setShowCorrInfo] = useState(false);
+  const [personelList, setPersonelList] = useState<any[]>([]);
+  const [corrData, setCorrData] = useState<any[]>([]);
+
   const { register, handleSubmit, setValue, watch, formState: { isSubmitting } } = useForm<MaintenanceFormData>({
     defaultValues: {
       baslangicTarihi: new Date().toISOString().split('T')[0],
@@ -35,11 +40,6 @@ function DashboardIcerik() {
   const [isDictating, setIsDictating] = useState(false);
   const [hesaplananSure, setHesaplananSure] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [showLeagueInfo, setShowLeagueInfo] = useState(false);
-  const [showCorrInfo, setShowCorrInfo] = useState(false);
-  const [personelList, setPersonelList] = useState<any[]>([]);
-  const [corrData, setCorrData] = useState<any[]>([]);
-
   const [selectedVaka, setSelectedVaka] = useState<any>(null);
   const [showVakaModal, setShowVakaModal] = useState(false);
 
@@ -79,7 +79,7 @@ function DashboardIcerik() {
         if (userSnap.exists()) { setUserName(userSnap.data().name || ""); setUserRole(userSnap.data().role || ""); }
         await fetchSystemData();
       } else { window.location.href = "/"; }
-      setLoading(false);
+      fetchNexusData(); setLoading(false);
     });
   }, []);
 
@@ -376,10 +376,7 @@ function DashboardIcerik() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-export default function Page() { return (<Suspense fallback={<div>Yükleniyor...
+    
       {showLeagueInfo && (
         <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans">
           <div className="bg-[#020617] border-2 border-indigo-500/50 p-8 rounded-3xl max-w-lg w-full">
@@ -388,7 +385,7 @@ export default function Page() { return (<Suspense fallback={<div>Yükleniyor...
               <p><span className="text-indigo-500">{" >> "}</span> <strong>Arıza Müdahale:</strong> +150 XP.</p>
               <p><span className="text-indigo-500">{" >> "}</span> <strong>Planlı Bakım:</strong> +100 XP.</p>
             </div>
-            <button onClick={() => setShowLeagueInfo(false)} className="mt-8 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic shadow-lg shadow-indigo-500/30">Anlaşıldı</button>
+            <button type="button" onClick={() => setShowLeagueInfo(false)} className="mt-8 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic shadow-lg shadow-indigo-500/30">Anlaşıldı</button>
           </div>
         </div>
       )}
@@ -400,11 +397,11 @@ export default function Page() { return (<Suspense fallback={<div>Yükleniyor...
               <p><span className="text-emerald-500">{" >> "}</span> <strong>Veri Kaynağı:</strong> Firestore 'bakimlar' koleksiyonu.</p>
               <p><span className="text-emerald-500">{" >> "}</span> <strong>İşlem:</strong> Parça frekans analizi.</p>
             </div>
-            <button onClick={() => setShowCorrInfo(false)} className="mt-8 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic shadow-lg shadow-emerald-500/30">Anlaşıldı</button>
+            <button type="button" onClick={() => setShowCorrInfo(false)} className="mt-8 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic shadow-lg shadow-emerald-500/30">Anlaşıldı</button>
           </div>
         </div>
       )}
-
-    </div>
+</div>
   );
 }
+export default function Page() { return (<Suspense fallback={<div>Yükleniyor...</div>}><DashboardIcerik /></Suspense>); }

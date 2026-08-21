@@ -12,7 +12,7 @@ export default function AdminDashboard() {
   const [userName, setUserName] = useState(""); 
   const [userEmail, setUserEmail] = useState(""); 
   const [loading, setLoading] = useState(true);
-  // NEXUS ANALİTİKLER
+  // NEXUS ANALİTİK SİSTEMİ
   const [showLeagueInfo, setShowLeagueInfo] = useState(false);
   const [showCorrInfo, setShowCorrInfo] = useState(false);
   const [personelList, setPersonelList] = useState<any[]>([]);
@@ -35,7 +35,7 @@ export default function AdminDashboard() {
         }
       }
       setCorrData(Object.entries(counts).map(([part, count]) => ({ part: String(part), failure: Number(count) }))
-        .sort((a:any, b:any) => b.failure - a.failure).slice(0, 5));
+        .sort((a, b) => b.failure - a.failure).slice(0, 5));
     } catch (err) { console.error("Nexus Error:", err); }
   };
 
@@ -313,34 +313,36 @@ export default function AdminDashboard() {
            </div>
 
            
+        {/* --- ÜST SIRA: SAHA / ISG / EKED --- */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 w-full">
-           <div className="bg-red-500/[0.02] backdrop-blur-3xl border-2 border-red-900/40 p-6 rounded-[2.5rem] shadow-2xl">
+           <div className="bg-red-500/[0.02] backdrop-blur-3xl border-2 border-red-900/40 p-6 rounded-[2.5rem] shadow-2xl overflow-hidden">
               <h2 className="text-sm font-black text-red-500 mb-4 uppercase tracking-widest flex items-center gap-2">🚒 İSG ALARMLARI ({aktifIsgAlarmlari.length})</h2>
-              <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar text-[10px]">
-                {aktifIsgAlarmlari.map(a => (<div key={a.id} className="bg-red-950/20 p-2 rounded-xl flex justify-between">{a.ekipmanAdi} <button onClick={()=> {setSelectedVaka(a); setShowVakaModal(true);}} className="text-red-500">Detay</button></div>))}
+              <div className="space-y-2 max-h-[180px] overflow-y-auto pr-2 custom-scrollbar text-[10px]">
+                {aktifIsgAlarmlari.map(a => (<div key={a.id} className="bg-red-950/20 border border-red-900/20 p-2 rounded-xl flex justify-between">{a.ekipmanAdi} <button onClick={()=> {setSelectedVaka(a); setShowVakaModal(true);}} className="text-red-500 font-bold">DETAY</button></div>))}
               </div>
            </div>
-           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border-2 border-indigo-900/40 p-6 rounded-[2.5rem] shadow-2xl">
+           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border-2 border-indigo-900/40 p-6 rounded-[2.5rem] shadow-2xl overflow-hidden">
               <h2 className="text-sm font-black text-indigo-400 mb-4 uppercase tracking-widest">📢 SAHA BİLDİRİMLERİ ({aktifIsler.length})</h2>
-              <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar text-[10px]">
-                {aktifIsler.map(is => (<div key={is.id} className="bg-indigo-950/20 p-2 rounded-xl flex justify-between">{is.ekipmanAdi} <button onClick={()=> {setSelectedVaka(is); setShowVakaModal(true);}} className="text-indigo-400">İncele</button></div>))}
+              <div className="space-y-2 max-h-[180px] overflow-y-auto pr-2 custom-scrollbar text-[10px]">
+                {aktifIsler.map(is => (<div key={is.id} className="bg-indigo-950/20 border border-indigo-900/20 p-2 rounded-xl flex justify-between">{is.ekipmanAdi} <button onClick={()=> {setSelectedVaka(is); setShowVakaModal(true);}} className="text-indigo-400 font-bold">İNCELE</button></div>))}
               </div>
            </div>
-           <div className="bg-yellow-500/[0.02] backdrop-blur-3xl border-2 border-yellow-900/40 p-6 rounded-[2.5rem] shadow-2xl">
+           <div className="bg-yellow-500/[0.02] backdrop-blur-3xl border-2 border-yellow-900/40 p-6 rounded-[2.5rem] shadow-2xl overflow-hidden">
               <h2 className="text-sm font-black text-yellow-500 mb-4 uppercase tracking-widest">⚠️ EKED BİLDİRİMİ ({aktifEked.length})</h2>
-              <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar text-[10px]">
-                {aktifEked.map(e => (<div key={e.id} className="bg-yellow-950/20 p-2 rounded-xl flex justify-between"><span>{e.ekipmanAdi}</span><span className="text-yellow-500">{e.personel}</span></div>))}
+              <div className="space-y-2 max-h-[180px] overflow-y-auto pr-2 custom-scrollbar text-[10px]">
+                {aktifEked.map(e => (<div key={e.id} className="bg-yellow-950/20 border border-yellow-900/20 p-2 rounded-xl flex justify-between"><span>{e.ekipmanAdi}</span><span className="text-yellow-500 font-bold">{e.personel}</span></div>))}
               </div>
            </div>
         </div>
 
+        {/* --- ALT SIRA: BAKIM LİGİ / STOK ANALİZİ --- */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12 w-full">
-            <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border-2 border-indigo-900/40 p-7 rounded-[3rem] relative shadow-2xl">
-              <button onClick={() => setShowLeagueInfo(true)} className="absolute top-4 right-4 text-indigo-400 text-[10px] border border-indigo-500/30 px-2 py-1 rounded">XP ?</button>
-              <h2 className="text-lg font-black text-indigo-400 mb-6 uppercase tracking-widest italic tracking-tighter shadow-indigo-500/10">🏆 Bakım Ligi</h2>
+            <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border-2 border-indigo-900/40 p-7 rounded-[3rem] relative shadow-2xl overflow-hidden">
+              <button type="button" onClick={() => setShowLeagueInfo(true)} className="absolute top-6 right-6 text-indigo-400 text-[10px] border border-indigo-500/30 px-3 py-1 rounded font-black uppercase">XP ?</button>
+              <h2 className="text-lg font-black text-indigo-400 mb-6 uppercase tracking-[0.2em] italic tracking-tighter">🏆 BAKIM LİGİ</h2>
               <div className="space-y-3">
                 {personelList.map((p, i) => (
-                  <div key={i} className="flex justify-between items-center bg-indigo-950/20 p-4 rounded-2xl border border-white/5">
+                  <div key={i} className="flex justify-between items-center bg-indigo-950/20 border border-indigo-900/30 p-4 rounded-2xl">
                     <span className="text-gray-200 text-sm font-bold uppercase">{p.adSoyad || p.name}</span>
                     <span className="text-emerald-400 font-mono text-sm font-bold">{p.xp || 0} XP</span>
                   </div>
@@ -348,14 +350,14 @@ export default function AdminDashboard() {
               </div>
             </div>
             <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border-2 border-indigo-900/40 p-7 rounded-[3rem] relative shadow-2xl">
-              <button onClick={() => setShowCorrInfo(true)} className="absolute top-4 right-4 text-emerald-400 text-[10px] border border-emerald-500/30 px-2 py-1 rounded">Analiz ?</button>
-              <h2 className="text-lg font-black text-emerald-400 mb-6 uppercase tracking-widest italic tracking-tighter shadow-emerald-500/10">📊 Kritik Parça Analizi</h2>
-              <div className="h-44 w-full mt-2">
+              <button type="button" onClick={() => setShowCorrInfo(true)} className="absolute top-6 right-6 text-emerald-400 text-[10px] border border-emerald-500/30 px-3 py-1 rounded font-black uppercase">ANALİZ ?</button>
+              <h2 className="text-lg font-black text-emerald-400 mb-6 uppercase tracking-[0.2em] italic tracking-tighter">📊 STOK ARIZA ANALİZİ</h2>
+              <div className="h-48 w-full mt-2">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={corrData} layout="vertical">
                     <XAxis type="number" hide /><YAxis dataKey="part" type="category" width={100} stroke="#64748b" fontSize={10} />
                     <Tooltip contentStyle={{backgroundColor: '#020617', border: '1px solid #10b981'}} />
-                    <Bar dataKey="failure" fill="#10b981" radius={[0, 4, 4, 0]} barSize={18} />
+                    <Bar dataKey="failure" fill="#10b981" radius={[0, 4, 4, 0]} barSize={20} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -492,27 +494,28 @@ export default function AdminDashboard() {
         </div>
       )}
     
+      {/* NEXUS MODALLARI */}
       {showLeagueInfo && (
-        <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6">
-          <div className="bg-[#020617] border-2 border-indigo-500/50 p-8 rounded-3xl max-w-lg w-full">
-            <h4 className="text-indigo-400 font-black mb-6 text-xl italic border-b border-indigo-500/20 pb-2 uppercase text-center tracking-tighter shadow-indigo-500/10">XP & Seviye Sistemi Matrisi</h4>
-            <div className="space-y-4 text-sm text-gray-300 leading-relaxed font-mono italic">
+        <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans">
+          <div className="bg-[#020617] border-2 border-indigo-500/50 p-8 rounded-[40px] max-w-lg w-full shadow-3xl text-center">
+            <h4 className="text-indigo-400 font-black mb-6 text-xl italic border-b border-indigo-500/20 pb-2 uppercase tracking-widest">XP & Seviye Sistemi</h4>
+            <div className="space-y-4 text-sm text-gray-300 leading-relaxed font-bold tracking-tighter">
               <p><span className="text-indigo-500">{" >> "}</span> <strong>Arıza Müdahale:</strong> +150 XP.</p>
-              <p><span className="text-indigo-500">{" >> "}</span> <strong>İSG & EKED:</strong> +200 XP Bonus.</p>
+              <p><span className="text-indigo-500">{" >> "}</span> <strong>Planlı Bakım:</strong> +100 XP.</p>
             </div>
-            <button type="button" onClick={() => setShowLeagueInfo(false)} className="mt-8 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-2xl uppercase shadow-lg shadow-indigo-500/30 transition-all italic tracking-widest">Anlaşıldı</button>
+            <button type="button" onClick={() => setShowLeagueInfo(false)} className="mt-8 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl transition shadow-xl shadow-indigo-600/20">Anlaşıldı</button>
           </div>
         </div>
       )}
       {showCorrInfo && (
         <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans">
-          <div className="bg-[#020617] border-2 border-emerald-500/50 p-8 rounded-3xl max-w-lg w-full">
-            <h4 className="text-emerald-400 font-bold mb-6 text-xl italic border-b border-emerald-500/20 pb-2 uppercase text-center tracking-tighter shadow-emerald-500/10">Korelasyon Hesaplama Metodu</h4>
-            <div className="space-y-4 text-sm text-gray-300 leading-relaxed font-mono italic">
-              <p><span className="text-emerald-500">{" >> "}</span> <strong>Veri Kaynağı:</strong> Firestore 'bakimlar' koleksiyonu.</p>
-              <p><span className="text-emerald-500">{" >> "}</span> <strong>İşlem:</strong> Parça frekans analizi.</p>
+          <div className="bg-[#020617] border-2 border-emerald-500/50 p-8 rounded-[40px] max-w-lg w-full shadow-3xl text-center">
+            <h4 className="text-emerald-400 font-black mb-6 text-xl italic border-b border-emerald-500/20 pb-2 uppercase tracking-widest">Metodoloji</h4>
+            <div className="space-y-4 text-sm text-gray-300 leading-relaxed font-bold tracking-tighter">
+              <p><span className="text-emerald-500">{" >> "}</span> <strong>Veri:</strong> 'bakimlar' koleksiyonu sarfiyatları.</p>
+              <p><span className="text-emerald-500">{" >> "}</span> <strong>Analiz:</strong> Kronik arıza tespit motoru.</p>
             </div>
-            <button onClick={() => setShowCorrInfo(false)} className="mt-8 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-2xl transition-all uppercase italic tracking-widest shadow-lg shadow-emerald-500/30">Anlaşıldı</button>
+            <button type="button" onClick={() => setShowCorrInfo(false)} className="mt-8 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-4 rounded-2xl transition shadow-xl shadow-emerald-600/20">Anlaşıldı</button>
           </div>
         </div>
       )}

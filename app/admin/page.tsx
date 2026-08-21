@@ -12,10 +12,41 @@ export default function AdminDashboard() {
   const [userName, setUserName] = useState(""); 
   const [userEmail, setUserEmail] = useState(""); 
   const [loading, setLoading] = useState(true);
+  // NEXUS ANALİTİK SİSTEMİ v48.1
   const [showLeagueInfo, setShowLeagueInfo] = useState(false);
   const [showCorrInfo, setShowCorrInfo] = useState(false);
   const [personelList, setPersonelList] = useState<any[]>([]);
   const [corrData, setCorrData] = useState<any[]>([]);
+
+  const fetchNexusData = async () => {
+    try {
+      const { collection, query, orderBy, limit, getDocs } = await import("firebase/firestore");
+      const pSnap = await getDocs(query(collection(db, "personel"), limit(10)));
+      const pData = pSnap.docs.map(doc => {
+        const d = doc.data();
+        return { 
+          id: doc.id, 
+          adSoyad: d.adSoyad || d.name || "İsimsiz",
+          displayValue: d.xp || d.mttr || d.puan || 0
+        };
+      });
+      setPersonelList(pData.sort((a, b) => Number(b.displayValue) - Number(a.displayValue)).slice(0, 5));
+      
+      const bSnap = await getDocs(collection(db, "bakimlar"));
+      const counts: any = {};
+      for (const d of bSnap.docs) {
+        const sarfiyat = d.data().sarfiyat;
+        if (sarfiyat && Array.isArray(sarfiyat)) {
+          for (const item of sarfiyat) {
+            const k = item.parcaAdi || item.stokKodu || "Bilinmeyen";
+            counts[k] = (counts[k] || 0) + 1;
+          }
+        }
+      }
+      setCorrData(Object.entries(counts).map(([part, count]) => ({ part: String(part), failure: Number(count) }))
+        .sort((a:any, b:any) => b.failure - a.failure).slice(0, 5));
+    } catch (err) { console.error("Nexus Error:", err); }
+  };
 
   
   // DATA STATES
@@ -77,40 +108,7 @@ export default function AdminDashboard() {
     { id: "ortam", label: "Ortam", color: "#8B5CF6" }
   ];
 
-  
-  const fetchNexusData = async () => {
-    try {
-      const { collection, query, orderBy, limit, getDocs } = await import("firebase/firestore");
-      
-      // Personel Verisi (xp veya mttr odaklı esnek çekim)
-      const pSnap = await getDocs(query(collection(db, "personel"), limit(5)));
-      const pData = pSnap.docs.map(doc => {
-        const d = doc.data();
-        return { 
-          id: doc.id, 
-          adSoyad: d.adSoyad || d.name || "İsimsiz",
-          displayValue: d.xp || d.mttr || d.puan || 0
-        };
-      });
-      setPersonelList(pData.sort((a, b) => (b.displayValue as any) - (a.displayValue as any)));
-      
-      // Stok Analiz Verisi
-      const bSnap = await getDocs(collection(db, "bakimlar"));
-      const counts: any = {};
-      bSnap.docs.forEach((d) => {
-        const sarfiyat = d.data().sarfiyat;
-        if (sarfiyat && Array.isArray(sarfiyat)) {
-          sarfiyat.forEach((item: any) => {
-            const k = item.parcaAdi || item.stokKodu || "Bilinmeyen Parça";
-            counts[k] = (counts[k] || 0) + 1;
-          });
-        }
-      });
-      setCorrData(Object.entries(counts).map(([part, count]) => ({ part: String(part), failure: Number(count) }))
-        .sort((a, b) => b.failure - a.failure).slice(0, 5));
-    } catch (err) { console.error("Nexus Sync Error:", err); }
-  };
-\n  useEffect(() => {
+  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUserEmail(user.email || "");
@@ -324,9 +322,8 @@ export default function AdminDashboard() {
            </div>
 
            
-        {/* --- SATIR 1: OPERASYONEL MERKEZ (GENİŞLETİLMİŞ) --- */}
+        {/* --- SATIR 1: OPERASYONEL PANEL (GENİŞLETİLMİŞ) --- */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8 w-full">
-           {/* AKTİF EKED (Genişletilmiş: col-span-5) */}
            <div className="lg:col-span-5 bg-indigo-500/[0.02] backdrop-blur-3xl border-2 border-indigo-900/40 p-8 rounded-[3.5rem] shadow-2xl relative overflow-hidden group hover:border-indigo-500/50 transition-all">
               <div className="absolute top-0 left-0 w-full h-1 bg-yellow-500 shadow-[0_0_15px_#eab308]"></div>
               <h2 className="text-xl font-black text-yellow-500 mb-6 flex items-center gap-3 uppercase tracking-widest italic">🔒 AKTİF EKED (LOTO)</h2>
@@ -340,19 +337,17 @@ export default function AdminDashboard() {
               </div>
            </div>
 
-           {/* ISG ALARMLARI (Genişletilmiş: col-span-3) */}
            <div className="lg:col-span-3 bg-red-500/[0.02] backdrop-blur-3xl border-2 border-red-900/40 p-8 rounded-[3.5rem] shadow-2xl overflow-hidden group hover:border-red-500/50 transition-all">
-              <h2 className="text-sm font-black text-red-500 mb-6 flex items-center gap-2 uppercase tracking-widest italic">🚒 İSG ALARMLARI ({aktifIsgAlarmlari.length})</h2>
+              <h2 className="text-sm font-black text-red-500 mb-6 flex items-center gap-2 uppercase tracking-widest italic text-center">🚒 İSG ALARMLARI ({aktifIsgAlarmlari.length})</h2>
               <div className="space-y-3 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
-                {aktifIsgAlarmlari.map(a => (<div key={a.id} className="bg-red-950/20 border border-red-900/30 p-4 rounded-2xl flex justify-between items-center">{a.ekipmanAdi} <button onClick={()=> {setSelectedVaka(a); setShowVakaModal(true);}} className="text-red-500 font-bold underline text-[10px]">DETAY</button></div>))}
+                {aktifIsgAlarmlari.map(a => (<div key={a.id} className="bg-red-950/20 border border-red-900/30 p-4 rounded-2xl flex justify-between items-center text-[10px] font-bold uppercase">{a.ekipmanAdi} <button onClick={()=> {setSelectedVaka(a); setShowVakaModal(true);}} className="text-red-500 underline">DETAY</button></div>))}
               </div>
            </div>
 
-           {/* SAHA BİLDİRİMLERİ (Genişletilmiş: col-span-4) */}
            <div className="lg:col-span-4 bg-indigo-500/[0.02] backdrop-blur-3xl border-2 border-indigo-900/40 p-8 rounded-[3.5rem] shadow-2xl overflow-hidden group hover:border-indigo-500/50 transition-all">
-              <h2 className="text-sm font-black text-indigo-400 mb-6 flex items-center gap-2 uppercase tracking-widest italic">📢 SAHA BİLDİRİMLERİ ({aktifIsler.length})</h2>
+              <h2 className="text-sm font-black text-indigo-400 mb-6 flex items-center gap-2 uppercase tracking-widest italic text-center">📢 SAHA BİLDİRİMLERİ ({aktifIsler.length})</h2>
               <div className="space-y-3 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
-                {aktifIsler.map(is => (<div key={is.id} className="bg-indigo-950/20 border border-indigo-900/30 p-4 rounded-2xl flex justify-between items-center text-xs font-bold">{is.hatAdi} <button onClick={()=> {setSelectedVaka(is); setShowVakaModal(true);}} className="text-indigo-400 font-bold underline text-[10px]">İNCELE</button></div>))}
+                {aktifIsler.map(is => (<div key={is.id} className="bg-indigo-950/20 border border-indigo-900/30 p-4 rounded-2xl flex justify-between items-center text-[10px] font-bold uppercase">{is.ekipmanAdi} <button onClick={()=> {setSelectedVaka(is); setShowVakaModal(true);}} className="text-indigo-400 underline">İNCELE</button></div>))}
               </div>
            </div>
         </div>
@@ -360,32 +355,30 @@ export default function AdminDashboard() {
         {/* --- SATIR 2: ANALİTİK PANEL (FULL WIDTH) --- */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12 w-full">
             <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border-2 border-indigo-900/40 p-10 rounded-[3rem] relative shadow-3xl overflow-hidden group hover:border-indigo-500/50 transition-all">
-              <div className="absolute top-0 left-0 w-2 h-full bg-indigo-500 shadow-[0_0_20px_#6366f1]"></div>
-              <button type="button" onClick={() => setShowLeagueInfo(true)} className="absolute top-6 right-6 text-indigo-400 text-[10px] border border-indigo-500/30 px-3 py-1 rounded font-black uppercase">Algoritma ?</button>
-              <h2 className="text-xl font-black text-indigo-400 mb-8 uppercase tracking-[0.2em] italic">🏆 BAKIM LİGİ SIRALAMASI</h2>
+              <div className="absolute top-0 left-0 w-2 h-full bg-indigo-500"></div>
+              <button type="button" onClick={() => setShowLeagueInfo(true)} className="absolute top-6 right-6 text-indigo-400 text-[10px] border border-indigo-500/30 px-3 py-1 rounded font-black uppercase">XP ?</button>
+              <h2 className="text-xl font-black text-indigo-400 mb-8 uppercase tracking-widest italic tracking-tighter">🏆 BAKIM LİGİ SIRALAMASI</h2>
               <div className="space-y-4">
-                {personelList.length > 0 ? personelList.map((p, i) => (
-                  <div key={i} className="bg-indigo-950/20 border border-indigo-900/20 p-5 rounded-[2rem] flex justify-between items-center">
+                {personelList.map((p, i) => (
+                  <div key={i} className="bg-indigo-950/20 border border-indigo-900/30 p-5 rounded-[2rem] flex justify-between items-center">
                     <span className="text-gray-200 font-bold uppercase tracking-widest">{p.adSoyad}</span>
-                    <span className="text-emerald-400 font-mono text-lg font-black shadow-[0_0_10px_rgba(16,185,129,0.3)]">{p.displayValue} {p.mttr ? 'dk' : 'XP'}</span>
+                    <span className="text-emerald-400 font-mono text-lg font-black">{p.displayValue}</span>
                   </div>
-                )) : <div className="text-center py-20 text-gray-700 italic">Veri akışı bekleniyor...</div>}
+                ))}
               </div>
             </div>
             <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border-2 border-indigo-900/40 p-10 rounded-[3rem] relative shadow-3xl overflow-hidden group hover:border-emerald-500/50 transition-all">
-              <div className="absolute top-0 left-0 w-2 h-full bg-emerald-500 shadow-[0_0_20px_#10b981]"></div>
-              <button type="button" onClick={() => setShowCorrInfo(true)} className="absolute top-6 right-6 text-emerald-400 text-[10px] border border-emerald-500/30 px-3 py-1 rounded font-black uppercase">Metodoloji ?</button>
-              <h2 className="text-xl font-black text-emerald-400 mb-8 uppercase tracking-[0.2em] italic">📊 STOK ARIZA ANALİZİ</h2>
-              <div className="h-64 w-full">
-                {corrData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={corrData} layout="vertical">
-                      <XAxis type="number" hide /><YAxis dataKey="part" type="category" width={120} stroke="#64748b" fontSize={12} fontStyle="italic" fontWeight="bold" />
-                      <Tooltip contentStyle={{backgroundColor: '#020617', border: '1px solid #10b981', borderRadius: '15px'}} />
-                      <Bar dataKey="failure" fill="#10b981" radius={[0, 10, 10, 0]} barSize={25} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : <div className="text-center py-20 text-gray-700 italic">Sarfiyat analizi yapılamıyor.</div>}
+              <div className="absolute top-0 left-0 w-2 h-full bg-emerald-500"></div>
+              <button type="button" onClick={() => setShowCorrInfo(true)} className="absolute top-6 right-6 text-emerald-400 text-[10px] border border-emerald-500/30 px-3 py-1 rounded font-black uppercase">METOD ?</button>
+              <h2 className="text-xl font-black text-emerald-400 mb-8 uppercase tracking-widest italic tracking-tighter">📊 STOK ANALİZ MOTORU</h2>
+              <div className="h-64 w-full mt-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={corrData} layout="vertical">
+                    <XAxis type="number" hide /><YAxis dataKey="part" type="category" width={120} stroke="#64748b" fontSize={12} fontStyle="italic" fontWeight="bold" />
+                    <Tooltip contentStyle={{backgroundColor: '#020617', border: '1px solid #10b981', borderRadius: '15px'}} />
+                    <Bar dataKey="failure" fill="#10b981" radius={[0, 10, 10, 0]} barSize={25} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
         </div>
@@ -520,25 +513,26 @@ export default function AdminDashboard() {
         </div>
       )}
     
+      {/* NEXUS MODALS */}
       {showLeagueInfo && (
         <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans text-center">
           <div className="bg-[#020617] border-2 border-indigo-500/50 p-10 rounded-[3rem] max-w-lg w-full shadow-3xl">
-            <h4 className="text-indigo-400 font-black mb-6 text-xl italic border-b border-indigo-500/20 pb-4 uppercase tracking-widest">Performans Algoritması</h4>
-            <div className="space-y-4 text-sm text-gray-300 font-bold tracking-tighter">
-              <p>→ <strong>Arıza Müdahale (MTTR):</strong> Hızlı çözüm bonusu.</p>
-              <p>→ <strong>Bakım XP:</strong> Tamamlanan periyodik işler.</p>
-            </div>
-            <button type="button" onClick={() => setShowLeagueInfo(false)} className="mt-10 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-600/20 transition-all">Anlaşıldı</button>
+            <h4 className="text-indigo-400 font-black mb-6 text-xl italic border-b border-indigo-500/20 pb-4 uppercase tracking-widest">XP Algoritması</h4>
+            <p className="text-gray-300 text-sm italic font-bold">Teknik personel performansı MTTR ve PM başarısına göre puanlanır.</p>
+            <button type="button" onClick={() => setShowLeagueInfo(false)} className="mt-10 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl shadow-xl">Anlaşıldı</button>
           </div>
         </div>
       )}
       {showCorrInfo && (
         <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans text-center">
           <div className="bg-[#020617] border-2 border-emerald-500/50 p-10 rounded-[3rem] max-w-lg w-full shadow-3xl">
-            <h4 className="text-emerald-400 font-black mb-6 text-xl italic border-b border-emerald-500/20 pb-4 uppercase tracking-widest">Stok Analiz Metodu</h4>
-            <p className="text-gray-300 text-sm font-bold tracking-tighter mb-8 leading-relaxed italic">Firestore sarfiyat verileri asenkron taranarak en sık duruş yaratan parçalar grafiklenir.</p>
-            <button type="button" onClick={() => setShowCorrInfo(false)} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-4 rounded-2xl shadow-xl shadow-emerald-600/20 transition-all text-sm">Kapat</button>
+            <h4 className="text-emerald-400 font-black mb-6 text-xl italic border-b border-emerald-500/20 pb-4 uppercase tracking-widest">Analiz Metodu</h4>
+            <p className="text-gray-300 text-sm italic font-bold">Kronik arıza odakları sarfiyat verileri üzerinden tespit edilir.</p>
+            <button type="button" onClick={() => setShowCorrInfo(false)} className="mt-10 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-4 rounded-2xl shadow-xl">Kapat</button>
           </div>
         </div>
       )}
-\n    </div>\n  );\n}
+
+    </div>
+  );
+}

@@ -21,47 +21,33 @@ export default function AdminDashboard() {
     try {
       const { collection, query, orderBy, limit, getDocs } = await import("firebase/firestore");
       
-      // --- 1. BAKIM LİGİ: USERS KOLEKSİYONU ÜZERİNDEN PERFORMANS ÇEKİMİ ---
-      const uSnap = await getDocs(query(collection(db, "users"), limit(100)));
+      // Personel Verisi
+      const uSnap = await getDocs(query(collection(db, "users"), limit(50)));
       const pData = uSnap.docs.map(doc => {
         const d = doc.data();
-        const score = d.xp || d.performance || d.performanceScore || d.puan || d.score || 0;
-        return { 
-          id: doc.id, 
-          ad: d.name || d.displayName || d.adSoyad || "İsimsiz Tekniker",
-          val: Number(score)
-        };
+        const score = d.xp || d.performance || d.puan || 0;
+        return { id: doc.id, ad: d.name || d.displayName || "İsimsiz", val: Number(score) };
       });
-      // Yüksekten düşüğe sırala ve ilk 5'i al
       setPersonelList(pData.sort((a, b) => b.val - a.val).slice(0, 5));
       
-      // --- 2. STOK ANALİZİ: HİBRİT TARAMA (Hem Sarfiyat Hem Bakımlar) ---
-      const combinedCounts: any = {};
+      // --- STOK ANALİZ MOTORU: YEDEK PARÇA & DEPO KAYNAĞINA (sarfiyat_logs) MÜHÜRLENDİ ---
+      const sSnap = await getDocs(collection(db, "sarfiyat_logs"));
+      const counts: any = {};
       
-      // A Kriteri: Bakımlar içindeki sarfiyat dizileri
-      const bSnap = await getDocs(collection(db, "bakimlar"));
-      bSnap.docs.forEach(doc => {
-        const s = doc.data().sarfiyat;
-        if (s && Array.isArray(s)) s.forEach((item: any) => {
-          const k = item.parcaAdi || item.stokKodu || "Tanımsız Parça";
-          combinedCounts[k] = (combinedCounts[k] || 0) + 1;
-        });
-      });
-
-      // B Kriteri: Bağımsız Sarfiyat koleksiyonu
-      const sSnap = await getDocs(collection(db, "sarfiyat"));
-      sSnap.docs.forEach(doc => {
+      sSnap.docs.forEach((doc) => {
         const d = doc.data();
-        const k = d.parcaAdi || d.malzemeAdi || d.stokKodu || "Tanımsız Parça";
-        combinedCounts[k] = (combinedCounts[k] || 0) + 1;
+        // Depo sayfasındaki malzeme ismi alanını (malzemeAdi veya parcaAdi) kullanıyoruz
+        const k = d.malzemeAdi || d.parcaAdi || d.stokKodu || "Tanımsız Malzeme";
+        counts[k] = (counts[k] || 0) + 1;
       });
 
-      const formatted = Object.entries(combinedCounts).map(([p, f]) => ({ 
-        part: p, failure: Number(f) 
-      })).sort((a:any, b:any) => b.failure - a.failure).slice(0, 5);
+      const formatted = Object.entries(counts).map(([part, count]) => ({
+        part: String(part),
+        failure: Number(count)
+      })).sort((a, b) => b.failure - a.failure).slice(0, 5);
       
       setCorrData(formatted);
-    } catch (e) { console.error("Nexus Sync Error:", e); }
+    } catch (err) { console.error("Nexus Sync Error:", err); }
   };
 
   
@@ -337,71 +323,73 @@ export default function AdminDashboard() {
               </div>
            </div>
 
-           {/* ISG ALARMLARI */}
-           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border-2 border-red-900/40 p-7 rounded-[3rem] shadow-2xl">
-              <h2 className="text-lg font-black text-red-500 mb-6 flex items-center gap-3 uppercase tracking-[0.2em]">🚒 İSG ALARMLARI</h2>
-              <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
-                {aktifIsgAlarmlari.map(a => (
-                  <div key={a.id} className="bg-red-950/20 border border-red-900/30 p-5 rounded-[25px] flex justify-between items-center transition group hover:bg-red-900/30">
-                    <div><p className="text-[10px] font-black text-red-400 uppercase tracking-widest">{a.hatAdi}</p><p className="text-sm font-bold text-gray-100">{a.ekipmanAdi}</p></div>
-                    <button onClick={()=> {setSelectedVaka(a); setShowVakaModal(true);}} className="bg-red-600 text-white text-[10px] font-black px-6 py-2.5 rounded-2xl shadow-lg transition uppercase tracking-widest">Detay</button>
+           
+        {/* --- SATIR 1: OPERASYONEL PANEL (3 SÜTUN) --- */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-10 w-full">
+           {/* AKTİF EKED */}
+           <div className="lg:col-span-6 bg-indigo-500/[0.02] backdrop-blur-3xl border-2 border-indigo-900/40 p-8 rounded-[4rem] shadow-2xl relative overflow-hidden group">
+              <div className="absolute top-0 left-0 w-full h-1 bg-yellow-500 shadow-[0_0_15px_#eab308]"></div>
+              <h2 className="text-xl font-black text-yellow-500 mb-6 flex items-center gap-3 uppercase tracking-widest italic underline underline-offset-8 decoration-yellow-500/30">🔒 AKTİF EKED (LOTO)</h2>
+              <div className="space-y-4">
+                {aktifEked.map(e => (
+                  <div key={e.id} className="bg-indigo-950/20 border border-yellow-900/20 p-5 rounded-[2.5rem] flex justify-between items-center transition hover:bg-yellow-900/10">
+                    <div><p className="text-[11px] font-black text-yellow-500 uppercase">{e.ekipmanAdi}</p><p className="text-sm font-bold text-gray-300 italic">{e.personel}</p></div>
+                    <span className="w-3 h-3 bg-yellow-500 rounded-full animate-ping"></span>
                   </div>
                 ))}
-                {aktifIsgAlarmlari.length === 0 && <p className="text-center py-10 text-gray-600 text-xs italic font-bold">Aktif İSG alarmı yok.</p>}
+                {aktifEked.length === 0 && <p className="text-center py-10 text-gray-600 text-xs italic font-bold">Aktif kilit bulunmuyor.</p>}
               </div>
            </div>
 
-           {/* SAHA BİLDİRİMLERİ */}
-           <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border border-indigo-500/10 shadow-[0_0_50px_rgba(30,58,138,0.1)] border-2 border-indigo-900/40 p-7 rounded-[3rem] shadow-2xl">
-              <h2 className="text-lg font-black text-indigo-400 mb-6 flex items-center gap-3 uppercase tracking-[0.2em]">📢 SAHA BİLDİRİMLERİ</h2>
-              <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
-                {aktifIsler.map(is => (
-                  <div key={is.id} className="bg-indigo-950/20 border border-indigo-900/30 p-5 rounded-[25px] flex justify-between items-center transition group hover:bg-indigo-900/30">
-                    <div><p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">{is.hatAdi}</p><p className="text-sm font-bold text-gray-100">{is.ekipmanAdi}</p></div>
-                    <button onClick={()=> {setSelectedVaka(is); setShowVakaModal(true);}} className="bg-indigo-600 text-white text-[10px] font-black px-6 py-2.5 rounded-2xl shadow-lg transition uppercase tracking-widest">İncele</button>
-                  </div>
-                ))}
-                {aktifIsler.length === 0 && <p className="text-center py-10 text-gray-600 text-xs italic font-bold">Bekleyen bildirim yok.</p>}
+           {/* ISG VE SAHA BİLDİRİMLERİ (SAĞDA YAN YANA) */}
+           <div className="lg:col-span-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="bg-red-500/[0.02] backdrop-blur-3xl border-2 border-red-900/40 p-8 rounded-[3.5rem] shadow-2xl overflow-hidden">
+                <h2 className="text-sm font-black text-red-500 mb-6 uppercase tracking-widest italic text-center underline underline-offset-4 decoration-red-500/30">🚒 İSG ALARMLARI ({aktifIsgAlarmlari.length})</h2>
+                <div className="space-y-2 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+                  {aktifIsgAlarmlari.map(a => (<div key={a.id} className="bg-red-950/20 border border-red-900/20 p-4 rounded-2xl flex justify-between items-center text-[10px] font-bold uppercase">{a.ekipmanAdi} <button onClick={()=> {setSelectedVaka(a); setShowVakaModal(true);}} className="text-red-500 underline">DETAY</button></div>))}
+                </div>
+              </div>
+              <div className="bg-indigo-500/[0.02] backdrop-blur-3xl border-2 border-indigo-900/40 p-8 rounded-[3.5rem] shadow-2xl overflow-hidden">
+                <h2 className="text-sm font-black text-indigo-400 mb-6 uppercase tracking-widest italic text-center underline underline-offset-4 decoration-indigo-500/30">📢 SAHA BİLDİRİMLERİ ({aktifIsler.length})</h2>
+                <div className="space-y-2 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+                  {aktifIsler.map(is => (<div key={is.id} className="bg-indigo-950/20 border border-indigo-900/20 p-4 rounded-2xl flex justify-between items-center text-[10px] font-bold uppercase">{is.ekipmanAdi} <button onClick={()=> {setSelectedVaka(is); setShowVakaModal(true);}} className="text-indigo-400 underline">İNCELE</button></div>))}
+                </div>
               </div>
            </div>
         </div>
-        {/* --- NEXUS ANALİTİK SATIRI (FULL WIDTH - v54) --- */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12 w-full">
+
+        {/* --- SATIR 2: ANALİTİK PANEL (FULL WIDTH) --- */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-12 w-full">
             <div className="bg-white/5 backdrop-blur-3xl border-2 border-indigo-900/40 p-10 rounded-[4rem] relative shadow-3xl overflow-hidden group hover:border-indigo-500/50 transition-all">
               <div className="absolute top-0 left-0 w-2 h-full bg-indigo-500 shadow-[0_0_20px_#6366f1]"></div>
-              <button type="button" onClick={() => setShowLeagueInfo(true)} className="absolute top-6 right-6 text-indigo-400 text-[10px] border border-indigo-500/30 px-3 py-1 rounded font-black uppercase tracking-widest hover:bg-indigo-500/20 transition-all">Algoritma ?</button>
-              <h2 className="text-xl font-black text-indigo-400 mb-10 uppercase tracking-widest italic text-center underline underline-offset-8 decoration-indigo-500/30">🏆 BAKIM LİGİ SIRALAMASI</h2>
-              <div className="space-y-4">
+              <button type="button" onClick={() => setShowLeagueInfo(true)} className="absolute top-6 right-6 text-indigo-400 text-[10px] border border-indigo-500/30 px-3 py-1 rounded font-black uppercase">Algoritma ?</button>
+              <h2 className="text-xl font-black text-indigo-400 mb-10 uppercase tracking-widest italic text-center underline underline-offset-8 decoration-indigo-500/30 text-indigo-400">🏆 BAKIM LİGİ SIRALAMASI</h2>
+              <div className="space-y-5">
                 {personelList.map((p, i) => (
                   <div key={i} className="bg-indigo-950/20 border border-indigo-900/20 p-6 rounded-[2.5rem] flex justify-between items-center transition hover:bg-indigo-500/40 shadow-inner">
                     <span className="text-gray-200 font-black uppercase tracking-widest text-sm italic">{p.ad}</span>
-                    <div className="flex flex-col items-end">
-                      <span className="text-emerald-400 font-mono text-2xl font-black shadow-[0_0_15px_rgba(16,185,129,0.4)]">{p.val}</span>
-                      <span className="text-[9px] text-gray-500 uppercase font-black tracking-tighter">Performans XP</span>
-                    </div>
+                    <span className="text-emerald-400 font-mono text-2xl font-black shadow-[0_0_15px_rgba(16,185,129,0.4)]">{p.val} XP</span>
                   </div>
                 ))}
-                {personelList.length === 0 && <p className="text-center py-20 text-gray-700 italic font-black uppercase tracking-widest">Veri Akışı Bekleniyor...</p>}
               </div>
             </div>
             <div className="bg-white/5 backdrop-blur-3xl border-2 border-emerald-900/40 p-10 rounded-[4rem] relative shadow-3xl overflow-hidden group hover:border-emerald-500/50 transition-all">
               <div className="absolute top-0 left-0 w-2 h-full bg-emerald-500 shadow-[0_0_20px_#10b981]"></div>
-              <button type="button" onClick={() => setShowCorrInfo(true)} className="absolute top-6 right-6 text-emerald-400 text-[10px] border border-emerald-500/30 px-3 py-1 rounded font-black uppercase tracking-widest hover:bg-emerald-500/20 transition-all">Metodoloji ?</button>
-              <h2 className="text-xl font-black text-emerald-400 mb-10 uppercase tracking-widest italic text-center underline underline-offset-8 decoration-emerald-500/30">📊 STOK ANALİZ MOTORU</h2>
+              <button type="button" onClick={() => setShowCorrInfo(true)} className="absolute top-6 right-6 text-emerald-400 text-[10px] border border-emerald-500/30 px-3 py-1 rounded font-black uppercase">Metodoloji ?</button>
+              <h2 className="text-xl font-black text-emerald-400 mb-10 uppercase tracking-widest italic text-center underline underline-offset-8 decoration-emerald-500/30 text-emerald-400">📊 STOK ANALİZ MOTORU</h2>
               <div className="h-72 w-full mt-2">
-                {corrData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={corrData} layout="vertical">
-                      <XAxis type="number" hide /><YAxis dataKey="part" type="category" width={140} stroke="#94a3b8" fontSize={13} fontStyle="italic" fontWeight="bold" />
-                      <Tooltip contentStyle={{backgroundColor: '#020617', border: '1px solid #10b981', borderRadius: '20px'}} />
-                      <Bar dataKey="failure" fill="#10b981" radius={[0, 15, 15, 0]} barSize={30} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : <div className="text-center py-20 text-gray-700 italic font-black uppercase tracking-widest border border-dashed border-gray-800 rounded-3xl">Sarfiyat Verisi Bulunamadı</div>}
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={corrData} layout="vertical">
+                    <XAxis type="number" hide /><YAxis dataKey="part" type="category" width={140} stroke="#94a3b8" fontSize={12} fontStyle="italic" fontWeight="bold" />
+                    <Tooltip contentStyle={{backgroundColor: '#020617', border: '1px solid #10b981', borderRadius: '20px'}} />
+                    <Bar dataKey="failure" fill="#10b981" radius={[0, 15, 15, 0]} barSize={30} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
         </div>
 
+        </div>
 {userRole !== "isg" && (
   <>
         {/* RCA TASK LIST */}
@@ -531,17 +519,17 @@ export default function AdminDashboard() {
         </div>
       )}
     
+      {/* NEXUS MODALLARI */}
       {showLeagueInfo && (
         <div className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-md flex items-center justify-center p-6 text-sans text-center">
           <div className="bg-[#020617] border-2 border-indigo-500/50 p-10 rounded-[3rem] max-w-2xl w-full shadow-3xl overflow-hidden relative">
             <div className="absolute top-0 left-0 w-full h-1 bg-indigo-500"></div>
             <h4 className="text-indigo-400 font-black mb-8 text-2xl italic border-b border-indigo-500/20 pb-4 uppercase tracking-widest">Performans Algoritma Matrisi</h4>
             <div className="space-y-6 text-left text-gray-300 font-medium tracking-tight">
-              <p className="flex items-start gap-3"><span className="text-indigo-500 font-black">01.</span> <strong>MTTR (Mean Time To Repair):</strong> Arıza başlangıcı ile bitişi arasındaki süre analiz edilir. Hedef sürenin altındaki her onarım için katsayılı XP tanımlanır.</p>
-              <p className="flex items-start gap-3"><span className="text-indigo-500 font-black">02.</span> <strong>Süreklilik:</strong> Planlı Bakım (PM) formlarının zamanında ve eksiksiz doldurulması temel puan kaynağıdır.</p>
-              <p className="flex items-start gap-3"><span className="text-indigo-500 font-black">03.</span> <strong>Veri Kaynağı:</strong> Sıralama, 'users' koleksiyonundaki XP ve performans verilerini baz alarak yüksekten düşüğe doğru ilk 5 personeli listeler.</p>
+              <p>→ <strong>MTTR (Mean Time To Repair):</strong> Arıza müdahale hızı en büyük puan çarpanıdır. Hedef süre altındaki onarımlar +150 XP kazandırır.</p>
+              <p>→ <strong>Veri Kaynağı:</strong> Sıralama, fabrikanın asıl 'users' koleksiyonu üzerinden gerçek zamanlı performans verilerini süzmektedir.</p>
             </div>
-            <button type="button" onClick={() => setShowLeagueInfo(false)} className="mt-10 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-5 rounded-[2rem] shadow-xl shadow-indigo-600/20 transition-all uppercase tracking-widest italic">Anlaşıldı, Operasyona Dön</button>
+            <button type="button" onClick={() => setShowLeagueInfo(false)} className="mt-10 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-5 rounded-2xl shadow-xl transition-all uppercase italic">Operasyona Dön</button>
           </div>
         </div>
       )}
@@ -551,11 +539,10 @@ export default function AdminDashboard() {
             <div className="absolute top-0 left-0 w-full h-1 bg-emerald-500"></div>
             <h4 className="text-emerald-400 font-black mb-8 text-2xl italic border-b border-emerald-500/20 pb-4 uppercase tracking-widest">Stok Analiz Metodolojisi</h4>
             <div className="space-y-6 text-left text-gray-300 font-medium tracking-tight">
-              <p className="flex items-start gap-3"><span className="text-emerald-500 font-black">01.</span> <strong>Hibrit Veri Madenciliği:</strong> Firestore 'bakimlar' ve 'sarfiyat' koleksiyonları asenkron olarak taranır, malzeme değişim frekansları hesaplanır.</p>
-              <p className="flex items-start gap-3"><span className="text-emerald-500 font-black">02.</span> <strong>Pareto (80/20) Analizi:</strong> Duruşların %80'ine neden olan %20'lik "Kritik Parça" grubu tespit edilerek grafikte önceliklendirilir.</p>
-              <p className="flex items-start gap-3"><span className="text-emerald-500 font-black">03.</span> <strong>Kritik Stok Uyumu:</strong> En yüksek bar, tesisin en kronik arıza kaynağını temsil eder ve satın alma stratejilerini optimize etmeyi hedefler.</p>
+              <p>→ <strong>Depo Kaynağı:</strong> Bu modül, 'Yedek Parça & Depo' sayfasının ana verisi olan 'sarfiyat_logs' koleksiyonundan beslenmektedir.</p>
+              <p>→ <strong>Frekans Analizi:</strong> Malzeme değişim sıklığı en yüksek olan 'Kronik Parçalar' tespit edilerek üretim duruş riski minimize edilir.</p>
             </div>
-            <button type="button" onClick={() => setShowCorrInfo(false)} className="mt-10 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-5 rounded-[2rem] shadow-xl shadow-emerald-600/20 transition-all uppercase tracking-widest italic">Anlaşıldı, Analizi Onayla</button>
+            <button type="button" onClick={() => setShowCorrInfo(false)} className="mt-10 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-5 rounded-2xl shadow-xl transition-all uppercase italic">Analizi Onayla</button>
           </div>
         </div>
       )}

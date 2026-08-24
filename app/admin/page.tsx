@@ -256,6 +256,7 @@ export default function AdminDashboard() {
               <Link href="/admin/mesai" className="bg-teal-600 p-3 rounded-2xl font-semibold text-xs text-center uppercase tracking-tighter">⏰ Mesai Raporları</Link>
               <Link href="/admin/tamamlanan-isler" className="bg-gray-700 p-3 rounded-2xl font-semibold text-xs text-center uppercase tracking-tighter">🗄️ Tamamlanan İşler</Link>
               <Link href="/admin/ekipmanlar" className="bg-blue-600 p-3 rounded-2xl font-semibold text-xs text-center uppercase tracking-tighter">⚙️ Hat/Makineler</Link>
+	      <Link href="/admin/bakim-ligi">  <a className="flex items-center gap-2 p-2 hover:bg-slate-100 rounded-lg">    <Trophy size={20} />    <span>Bakım Ligi</span>  </a> </Link>
               <Link href="/admin/duyurular" className="bg-orange-600 p-3 rounded-2xl font-semibold text-xs text-center uppercase tracking-tighter">📢 İSG Duyuru</Link>
               <button onClick={()=>{if(window.confirm("RESET?")){/*reset*/}}} className="bg-red-950 text-red-500 p-3 rounded-2xl text-[10px] font-black uppercase border border-red-900/30 transition">Reset</button>
             </>

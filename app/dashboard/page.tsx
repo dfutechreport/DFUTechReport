@@ -224,8 +224,7 @@ function DashboardIcerik() {
              <Link href="/dashboard/pano-listesi" className="bg-indigo-600 text-white text-[10px] font-black px-4 py-2.5 rounded-2xl shadow-lg uppercase transition tracking-widest hover:bg-indigo-500">🔌 Pano Temizliği</Link>
              <Link href="/dashboard/sayac" className="bg-blue-600 text-white text-[10px] font-black px-4 py-2.5 rounded-2xl shadow-lg uppercase transition tracking-widest hover:bg-blue-500">⚡ Sayaç Okuma</Link>
              <Link href="/dashboard/mesai" className="bg-amber-600 text-white text-[10px] font-black px-4 py-2.5 rounded-2xl shadow-lg uppercase transition tracking-widest">Mesai Yaz</Link>
-             <Link href="/admin/mesai" className="bg-gray-800 text-white text-[10px] font-black px-4 py-2.5 rounded-2xl border border-gray-700 uppercase transition tracking-widest">Mesailerim</Link> 
-            <Link href="/admin/bakim-ligi">  <a className="flex items-center gap-2 p-2 hover:bg-slate-100 rounded-lg">    <span className="text-lg">🏆</span>    <span className="text-[10px] font-black uppercase tracking-wider">Bakım Ligi</span>  </a> </Link>
+             <Link href="/admin/mesai" className="bg-gray-800 text-white text-[10px] font-black px-4 py-2.5 rounded-2xl border border-gray-700 uppercase transition tracking-widest">Mesailerim</Link>
              <button onClick={()=>auth.signOut()} className="bg-red-900/30 text-red-500 text-[10px] font-black px-4 py-2.5 rounded-2xl border border-red-900/30 transition">ÇIKIŞ</button>
            </div>
         </div>

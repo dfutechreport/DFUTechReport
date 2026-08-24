@@ -257,6 +257,19 @@ export default function AdminDashboard() {
               <Link href="/admin/tamamlanan-isler" className="bg-gray-700 p-3 rounded-2xl font-semibold text-xs text-center uppercase tracking-tighter">🗄️ Tamamlanan İşler</Link>
               <Link href="/admin/ekipmanlar" className="bg-blue-600 p-3 rounded-2xl font-semibold text-xs text-center uppercase tracking-tighter">⚙️ Hat/Makineler</Link>
               <Link href="/admin/duyurular" className="bg-orange-600 p-3 rounded-2xl font-semibold text-xs text-center uppercase tracking-tighter">📢 İSG Duyuru</Link>
+              {/* Bakım Ligi Kartı - Admin */}
+<Link href="/admin/bakim-ligi" className="group">
+  <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl hover:border-yellow-500/50 transition-all shadow-lg hover:shadow-yellow-500/5 relative overflow-hidden">
+    <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+      <svg viewBox="0 0 24 24" width="64" height="64" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>
+    </div>
+    <div className="text-yellow-500 mb-4">
+      <svg viewBox="0 0 24 24" width="32" height="32" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>
+    </div>
+    <h3 className="text-xl font-bold text-white mb-2">Bakım Ligi</h3>
+    <p className="text-slate-400 text-sm">Personel performans ve verimlilik sıralamasını yönetin.</p>
+  </div>
+</Link>
               <button onClick={()=>{if(window.confirm("RESET?")){/*reset*/}}} className="bg-red-950 text-red-500 p-3 rounded-2xl text-[10px] font-black uppercase border border-red-900/30 transition">Reset</button>
             </>
           )}

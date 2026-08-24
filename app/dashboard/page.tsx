@@ -225,6 +225,20 @@ function DashboardIcerik() {
              <Link href="/dashboard/sayac" className="bg-blue-600 text-white text-[10px] font-black px-4 py-2.5 rounded-2xl shadow-lg uppercase transition tracking-widest hover:bg-blue-500">⚡ Sayaç Okuma</Link>
              <Link href="/dashboard/mesai" className="bg-amber-600 text-white text-[10px] font-black px-4 py-2.5 rounded-2xl shadow-lg uppercase transition tracking-widest">Mesai Yaz</Link>
              <Link href="/admin/mesai" className="bg-gray-800 text-white text-[10px] font-black px-4 py-2.5 rounded-2xl border border-gray-700 uppercase transition tracking-widest">Mesailerim</Link>
+             {/* Bakım Ligi Butonu - Teknisyen */}
+<Link href="/admin/bakim-ligi" className="group">
+  <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl hover:border-blue-500/50 transition-all shadow-lg hover:shadow-blue-500/5 border-l-4 border-l-blue-500">
+    <div className="flex items-center justify-between">
+      <div>
+        <h3 className="text-lg font-bold text-white mb-1 tracking-tight">Bakım Ligi</h3>
+        <p className="text-slate-500 text-xs">Genel sıralamadaki yerinizi görün.</p>
+      </div>
+      <div className="text-blue-500 bg-blue-500/10 p-3 rounded-xl group-hover:scale-110 transition-transform">
+        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+      </div>
+    </div>
+  </div>
+</Link>
              <button onClick={()=>auth.signOut()} className="bg-red-900/30 text-red-500 text-[10px] font-black px-4 py-2.5 rounded-2xl border border-red-900/30 transition">ÇIKIŞ</button>
            </div>
         </div>

@@ -1,121 +1,146 @@
-// Dosya Yolu: app/admin/bakim-ligi/page.tsx
+"use client"; // Etkileşimli filtreler için gerekli
 
-import React from 'react';
-import { Trophy, Medal, Star, Clock, CheckCircle, AlertTriangle, TrendingUp } from 'lucide-react';
-
-// Mock Veri Yapısı
-const leaderboardData = [
-  { id: 1, name: "İlker B.", score: 960, jobs: 52, efficiency: 98, downtimeReduction: 15, avatar: "İB" },
-  { id: 2, name: "Ahmet Y.", score: 850, jobs: 45, efficiency: 92, downtimeReduction: 12, avatar: "AY" },
-  { id: 3, name: "Mehmet K.", score: 780, jobs: 38, efficiency: 88, downtimeReduction: 10, avatar: "MK" },
-  { id: 4, name: "Caner S.", score: 690, jobs: 30, efficiency: 85, downtimeReduction: 8, avatar: "CS" },
-  { id: 5, name: "Murat T.", score: 620, jobs: 28, efficiency: 80, downtimeReduction: 5, avatar: "MT" },
-];
+import React, { useState } from 'react';
+import Link from 'next/link';
 
 const BakimLigiPage = () => {
+  // Filtre durumları (State)
+  const [seciliYil, setSeciliYil] = useState("2026");
+  const [seciliAy, setSeciliAy] = useState("Ağustos");
+
+  // Mock Veri Yapısı
+  const leaderboardData = [
+    { id: 1, name: "İlker B.", score: 960, jobs: 52, efficiency: 98, downtime: 15, avatar: "İB" },
+    { id: 2, name: "Ahmet Y.", score: 850, jobs: 45, efficiency: 92, downtime: 12, avatar: "AY" },
+    { id: 3, name: "Mehmet K.", score: 780, jobs: 38, efficiency: 88, downtime: 10, avatar: "MK" },
+    { id: 4, name: "Caner S.", score: 690, jobs: 30, efficiency: 85, downtime: 8, avatar: "CS" },
+    { id: 5, name: "Murat T.", score: 620, jobs: 28, efficiency: 80, downtime: 5, avatar: "MT" },
+  ];
+
   return (
-    <div className="p-6 bg-slate-50 min-h-screen">
-      {/* Header Section */}
-      <div className="flex justify-between items-center mb-8">
+    <div className="p-4 md:p-8 bg-slate-50 min-h-screen font-sans">
+      
+      {/* Üst Navigasyon ve Başlık */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-teal-800 flex items-center gap-2">
-            <Trophy className="text-amber-500" size={32} />
-            Bakım Ligi & Performans Analizi
+          <Link href="/admin">
+            <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-all shadow-sm text-sm font-bold mb-4">
+              ⬅️ Dashboard'a Dön
+            </button>
+          </Link>
+          <h1 className="text-3xl font-black text-teal-800 flex items-center gap-3 uppercase tracking-tighter">
+            🏆 Bakım Ligi & Performans
           </h1>
-          <p className="text-slate-500 mt-1">Ağustos 2026 Dönemi Başarı Tablosu</p>
+          <p className="text-slate-500 text-sm font-medium">Teknisyen Başarı ve Verimlilik Analizi</p>
         </div>
-        <div className="bg-white p-2 rounded-lg shadow-sm border border-slate-200">
-          <span className="text-sm font-medium text-slate-600 px-3">Dönem: Ağustos 2026</span>
+
+        {/* Filtreleme Paneli */}
+        <div className="flex gap-2 bg-white p-3 rounded-2xl shadow-sm border border-slate-100">
+          <div className="flex flex-col">
+            <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">YIL</label>
+            <select 
+              value={seciliYil}
+              onChange={(e) => setSeciliYil(e.target.value)}
+              className="bg-transparent text-sm font-bold text-slate-700 outline-none cursor-pointer px-1"
+            >
+              <option value="2024">2024</option>
+              <option value="2025">2025</option>
+              <option value="2026">2026</option>
+            </select>
+          </div>
+          <div className="w-[1px] bg-slate-100 mx-2"></div>
+          <div className="flex flex-col">
+            <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">AY</label>
+            <select 
+              value={seciliAy}
+              onChange={(e) => setSeciliAy(e.target.value)}
+              className="bg-transparent text-sm font-bold text-slate-700 outline-none cursor-pointer px-1"
+            >
+              <option value="Haziran">Haziran</option>
+              <option value="Temmuz">Temmuz</option>
+              <option value="Ağustos">Ağustos</option>
+              <option value="Eylül">Eylül</option>
+            </select>
+          </div>
+          <button className="ml-2 bg-teal-600 text-white p-2 rounded-lg hover:bg-teal-700 transition-colors">
+            🔍
+          </button>
         </div>
       </div>
 
-      {/* Podyum - Top 3 */}
+      {/* Podyum - İlk 3 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
         {leaderboardData.slice(0, 3).map((user, index) => (
-          <div key={user.id} className={`relative p-6 rounded-2xl shadow-lg border-2 ${
-            index === 0 ? 'bg-gradient-to-br from-teal-700 to-teal-900 border-amber-400 scale-105' : 
-            'bg-white border-slate-100'
+          <div key={user.id} className={`relative p-6 rounded-3xl shadow-lg border-2 transition-all ${
+            index === 0 ? 'bg-teal-800 border-amber-400 scale-105 z-10' : 'bg-white border-slate-50'
           }`}>
-            {index === 0 && (
-              <div className="absolute -top-4 -right-4 bg-amber-400 text-white p-2 rounded-full shadow-lg">
-                <Star fill="white" size={24} />
-              </div>
-            )}
             <div className="flex flex-col items-center">
-              <div className={`w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold mb-4 ${
-                index === 0 ? 'bg-amber-400 text-teal-900' : 'bg-teal-100 text-teal-700'
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center text-xl font-black mb-4 ${
+                index === 0 ? 'bg-amber-400 text-teal-900' : 'bg-slate-100 text-slate-600'
               }`}>
                 {user.avatar}
               </div>
-              <h2 className={`text-xl font-bold ${index === 0 ? 'text-white' : 'text-slate-800'}`}>{user.name}</h2>
-              <div className={`text-sm mt-1 ${index === 0 ? 'text-teal-100' : 'text-slate-500'}`}>
-                {index + 1}. Sırada
+              <h2 className={`text-xl font-bold uppercase tracking-tight ${index === 0 ? 'text-white' : 'text-slate-800'}`}>
+                {user.name}
+              </h2>
+              <div className={`px-4 py-1 rounded-full text-[10px] font-black uppercase mt-2 ${
+                index === 0 ? 'bg-teal-700 text-teal-100' : 'bg-slate-50 text-slate-400'
+              }`}>
+                {index === 0 ? '🥇 Ayın Teknisyeni' : index === 1 ? '🥈 Gümüş Derece' : '🥉 Bronz Derece'}
               </div>
-              <div className="mt-4 text-3xl font-black text-amber-500">{user.score} <span className="text-xs uppercase">Puan</span></div>
+              <div className="mt-6 text-4xl font-black text-amber-500 tracking-tighter">
+                {user.score} <span className="text-xs text-slate-400 uppercase">Puan</span>
+              </div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Detaylı Liste ve Metrikler */}
-      <div className="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
-        <div className="p-4 border-b border-slate-100 bg-slate-50">
-          <h3 className="font-semibold text-slate-700">Tüm Teknisyen Performans Detayları</h3>
+      {/* Liste Görünümü */}
+      <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
+        <div className="p-6 border-b border-slate-50">
+          <h3 className="font-black text-slate-700 uppercase text-sm tracking-widest flex items-center gap-2">
+            📊 Detaylı Başarı Sıralaması ({seciliAy} {seciliYil})
+          </h3>
         </div>
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
-              <th className="p-4 font-medium text-center">Sıra</th>
-              <th className="p-4 font-medium text-left">Teknisyen</th>
-              <th className="p-4 font-medium text-center">İş Adedi</th>
-              <th className="p-4 font-medium text-center">Verimlilik</th>
-              <th className="p-4 font-medium text-center">Duruş Azaltma</th>
-              <th className="p-4 font-medium text-right">Toplam Puan</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {leaderboardData.map((user, index) => (
-              <tr key={user.id} className="hover:bg-slate-50 transition-colors">
-                <td className="p-4 text-center font-bold text-slate-400">#{index + 1}</td>
-                <td className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
-                      {user.avatar}
-                    </div>
-                    <span className="font-semibold text-slate-700">{user.name}</span>
-                  </div>
-                </td>
-                <td className="p-4 text-center">
-                  <div className="flex items-center justify-center gap-1 text-slate-600">
-                    <CheckCircle size={14} className="text-emerald-500" /> {user.jobs}
-                  </div>
-                </td>
-                <td className="p-4 text-center text-slate-600">%{user.efficiency}</td>
-                <td className="p-4 text-center text-slate-600 font-medium">
-                  <div className="flex items-center justify-center gap-1">
-                    <TrendingUp size={14} className="text-blue-500" /> {user.downtimeReduction} Saat
-                  </div>
-                </td>
-                <td className="p-4 text-right">
-                  <span className="bg-teal-50 text-teal-700 px-3 py-1 rounded-full font-bold">
-                    {user.score}
-                  </span>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-slate-50/50 text-slate-400 text-[10px] font-black uppercase tracking-widest">
+                <th className="p-6 text-center">Sıra</th>
+                <th className="p-6">Teknisyen</th>
+                <th className="p-6 text-center">İş (Adet)</th>
+                <th className="p-6 text-center">Verimlilik</th>
+                <th className="p-6 text-center">Duruş Kazancı</th>
+                <th className="p-6 text-right">Puan</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Algoritma Bilgilendirme Kartı */}
-      <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4 flex gap-4 items-start">
-        <AlertTriangle className="text-blue-600 flex-shrink-0" size={20} />
-        <div>
-          <h4 className="text-blue-800 font-bold text-sm">Puanlama Algoritması Hakkında</h4>
-          <p className="text-blue-700 text-xs mt-1 leading-relaxed">
-            Puanlar şu kritere göre hesaplanmaktadır: <strong>(İş Adedi × 10) + (Verimlilik Katsayısı × 5) + (Duruş Azaltma Süresi × 20)</strong>. 
-            Ayın ilk 3 teknisyeni, yönetim tarafından belirlenen performans ödüllerine hak kazanır.
-          </p>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {leaderboardData.map((user, index) => (
+                <tr key={user.id} className="hover:bg-slate-50/80 transition-all group">
+                  <td className="p-6 text-center font-black text-slate-300 group-hover:text-teal-600 transition-colors">
+                    #{index + 1}
+                  </td>
+                  <td className="p-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-xs font-black text-slate-500">
+                        {user.avatar}
+                      </div>
+                      <span className="font-bold text-slate-700 tracking-tight">{user.name}</span>
+                    </div>
+                  </td>
+                  <td className="p-6 text-center font-bold text-slate-600 italic">✅ {user.jobs}</td>
+                  <td className="p-6 text-center font-bold text-slate-600">%{user.efficiency}</td>
+                  <td className="p-6 text-center font-bold text-blue-600">🚀 {user.downtime} Sa</td>
+                  <td className="p-6 text-right">
+                    <span className="bg-slate-100 text-slate-700 px-4 py-2 rounded-xl font-black text-sm">
+                      {user.score}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

@@ -1,155 +1,98 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, getDocs, addDoc, doc, getDoc } from "firebase/firestore";
+import { collection, getDocs, addDoc, doc, getDoc, serverTimestamp } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../../../lib/firebase";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function IsEmriAc() {
   const [userName, setUserName] = useState("");
   const [userRole, setUserRole] = useState("");
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [assets, setAssets] = useState<any[]>([]);
-  const [seciliHat, setSeciliHat] = useState("");
+  const router = useRouter();
 
+  // Form States
   const [hatAdi, setHatAdi] = useState("");
   const [ekipmanAdi, setEkipmanAdi] = useState("");
-  const [sorunTipi, setSorunTipi] = useState("");
-  const [aciklama, setAciklama] = useState("");
-  const [isDuruslu, setIsDuruslu] = useState(false);
-
-  const [sistemSaati, setSistemSaati] = useState<Date | null>(null);
-  const [gosterilenSaatStr, setGosterilenSaatStr] = useState("");
+  const [arizaDetayi, setArizaDetayi] = useState("");
+  const [oncelik, setOncelik] = useState("Normal");
+  const [hatlar, setHatlar] = useState<string[]>([]);
 
   useEffect(() => {
-    const suAn = new Date();
-    setSistemSaati(suAn);
-    setGosterilenSaatStr(suAn.toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' }));
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const userRef = doc(db, "users", user.uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists() && userSnap.data().isApproved) {
-          const role = userSnap.data().role;
-          setUserRole(role);
-          setUserName(userSnap.data().name);
-          
-          if (role !== "admin" && role !== "uretim" && role !== "operator") window.location.href = "/";
-          
-          const snap = await getDocs(collection(db, "assets"));
-          setAssets(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        } else window.location.href = "/";
-      } else window.location.href = "/";
+        const uSnap = await getDoc(doc(db, "users", user.uid));
+        if (uSnap.exists()) {
+          setUserName(uSnap.data().name);
+          setUserRole(uSnap.data().role);
+          fetchAssets();
+        }
+      } else router.push("/");
       setLoading(false);
     });
-    return () => unsubscribe();
   }, []);
 
-  const benzersizHatlar = Array.from(new Set(assets.map(a => a.hatAdi)));
-  const filtrelenmisEkipmanlar = assets.filter(a => a.hatAdi === seciliHat);
+  const fetchAssets = async () => {
+    const aSnap = await getDocs(collection(db, "assets"));
+    const hSet = new Set<string>();
+    aSnap.forEach(d => { if(d.data().hatAdi) hSet.add(d.data().hatAdi); });
+    setHatlar(Array.from(hSet).sort());
+  };
+
+  const handleIptal = () => {
+    if (userRole === "uretim") {
+      router.push("/admin/tamamlanan-isler");
+    } else {
+      router.push("/admin");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!hatAdi || !ekipmanAdi || !sorunTipi || aciklama.length < 5) return alert("Lütfen tüm alanları doldurun.");
-
     setIsSubmitting(true);
     try {
       await addDoc(collection(db, "work_orders"), {
-        hatAdi, ekipmanAdi, sorunTipi, aciklama, isDuruslu,
+        hatAdi, ekipmanAdi, arizaDetayi, oncelik,
         bildirenKisi: userName,
-        durum: "Açık", 
-        kayitTarihi: sistemSaati, 
-        tamamlayanKisi: "",
-        tamamlanmaTarihi: null
+        durum: "Açık",
+        kayitTarihi: serverTimestamp()
       });
-      alert("İş Emri başarıyla açıldı! Teknisyenlerin ekranına yansıdı.");
-      window.location.href = userRole === "admin" ? "/admin" : "/admin/aktif-isler"; 
-    } catch (error) { alert("Hata oluştu."); } finally { setIsSubmitting(false); }
+      alert("İş emri başarıyla yayınlandı.");
+      handleIptal();
+    } catch (e) { alert("Hata: " + e); }
+    setIsSubmitting(false);
   };
 
-  if (loading) return (
-    <div className="min-h-screen bg-gray-950 flex flex-col justify-center items-center p-4">
-      <div className="relative mb-8">
-        <div className="absolute inset-0 bg-yellow-500/20 blur-3xl rounded-full animate-pulse"></div>
-        <img src="/dfulogo.png" className="h-24 w-auto relative z-10 animate-bounce" alt="DFU" />
-      </div>
-      <div className="w-64 h-1.5 bg-gray-800 rounded-full overflow-hidden mb-4 shadow-inner">
-        <div className="h-full bg-gradient-to-r from-yellow-600 via-yellow-400 to-yellow-600 w-full animate-[loading_1.5s_infinite_ease-in-out] origin-left"></div>
-      </div>
-      <p className="text-teal-400 font-black tracking-[0.3em] text-[10px] uppercase animate-pulse">{`YÜKLENİYOR...`}</p>
-      <style jsx>{`
-        @keyframes loading {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-      `}</style>
-    </div>
-  );
+  if (loading) return <div className="p-10 text-white italic text-center">YÜKLENİYOR...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8">
-      <div className="max-w-3xl mx-auto bg-gray-900 border border-red-500/50 rounded-2xl shadow-2xl p-8">
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
+      <div className="bg-slate-900 border border-slate-800 p-10 rounded-[3rem] w-full max-w-2xl shadow-2xl">
+        <h2 className="text-3xl font-black text-white mb-8 italic uppercase tracking-tighter">Yeni Üretim Bildirimi</h2>
         
-        <div className="flex justify-between items-center mb-8 border-b border-gray-800 pb-4">
-          <h1 className="text-2xl font-bold text-red-400 flex items-center gap-2">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-            Yeni Üretim Bildirimi (İş Emri)
-          </h1>
-          <Link href={userRole === "admin" ? "/admin" : "/admin/aktif-isler"} className="bg-gray-800 px-4 py-2 rounded-lg text-sm hover:bg-gray-700">İptal (Geri Dön)</Link>
-        </div>
-
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="bg-gray-800/50 p-4 rounded-xl border border-gray-700">
-            <label className="block text-sm font-bold text-gray-400 mb-2">Sistem Kayıt Saati (Kilitli)</label>
-            <input type="text" value={gosterilenSaatStr} disabled className="w-full bg-gray-900 border border-gray-600 rounded-lg p-3 text-red-400 font-bold opacity-70 cursor-not-allowed text-center text-lg tracking-wider" />
-          </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Sorun Yaşanan Hat</label>
-              <select value={hatAdi} onChange={(e) => { setHatAdi(e.target.value); setSeciliHat(e.target.value); setEkipmanAdi(""); }} className="w-full bg-gray-800 border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-red-500">
-                <option value="">-- Hat Seçiniz --</option>{benzersizHatlar.map(h => <option key={h} value={h}>{h}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Arızalı Ekipman</label>
-              <select value={ekipmanAdi} onChange={(e) => setEkipmanAdi(e.target.value)} disabled={!seciliHat} className="w-full bg-gray-800 border-gray-700 rounded-lg p-3 text-white disabled:opacity-50 focus:outline-none focus:border-red-500">
-                <option value="">{seciliHat ? "-- Ekipman Seçiniz --" : "-- Önce Hat Seçiniz --"}</option>
-                {filtrelenmisEkipmanlar.map(e => <option key={e.id} value={e.ekipmanAdi}>{e.ekipmanAdi}</option>)}
-              </select>
-            </div>
+            <select className="bg-slate-950 border border-slate-800 p-4 rounded-2xl text-white outline-none focus:border-blue-500" value={hatAdi} onChange={e=>setHatAdi(e.target.value)} required>
+              <option value="">Hat Seçiniz</option>
+              {hatlar.map(h => <option key={h} value={h}>{h}</option>)}
+            </select>
+            <input type="text" placeholder="Ekipman Adı" className="bg-slate-950 border border-slate-800 p-4 rounded-2xl text-white outline-none focus:border-blue-500" value={ekipmanAdi} onChange={e=>setEkipmanAdi(e.target.value)} required />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Sorun Tipi</label>
-              <select value={sorunTipi} onChange={(e) => setSorunTipi(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-red-500">
-                <option value="">-- Seçiniz --</option><option value="Mekanik">Mekanik</option><option value="Elektrik">Elektrik</option><option value="Otomasyon">Otomasyon</option><option value="Diğer">Diğer</option>
-              </select>
-            </div>
-            <div className="flex flex-col justify-center">
-              <label className="block text-sm font-medium text-gray-400 mb-3">Hat Duruşu Var Mı?</label>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" className="sr-only peer" checked={isDuruslu} onChange={(e) => setIsDuruslu(e.target.checked)} />
-                <div className="w-14 h-7 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-red-600"></div>
-                <span className="ml-3 text-sm font-medium text-gray-300">{isDuruslu ? <span className="text-red-400 font-bold">Evet, Hat Durdu (Kritik)</span> : "Hayır, Hat Çalışıyor"}</span>
-              </label>
-            </div>
-          </div>
+          <select className="w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl text-white outline-none focus:border-blue-500" value={oncelik} onChange={e=>setOncelik(e.target.value)}>
+            <option value="Normal">Öncelik: Normal</option>
+            <option value="Yüksek">Öncelik: Yüksek (Acil)</option>
+            <option value="Kritik">Öncelik: Kritik (Üretim Duruyor)</option>
+          </select>
 
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">Sorunun Detayı (Ne oldu?)</label>
-            <textarea value={aciklama} onChange={(e) => setAciklama(e.target.value)} rows={4} placeholder="Lütfen teknisyenin anlayacağı şekilde arızayı tarif ediniz..." className="w-full bg-gray-800 border-gray-700 rounded-lg p-3 text-white focus:outline-none focus:border-red-500" />
-          </div>
+          <textarea placeholder="Arıza / Bildirim Detayı" className="w-full bg-slate-950 border border-slate-800 p-6 rounded-2xl text-white outline-none focus:border-blue-500 h-32 resize-none" value={arizaDetayi} onChange={e=>setArizaDetayi(e.target.value)} required />
 
-          <button type="submit" disabled={isSubmitting} className="w-full bg-red-600 hover:bg-red-500 font-bold py-4 rounded-xl shadow-lg disabled:opacity-50 text-white transition-all">
-            {isSubmitting ? "Sisteme İletiliyor..." : "İş Emrini Gönder (Alarm Ver)"}
-          </button>
+          <div className="grid grid-cols-2 gap-4">
+            <button type="button" onClick={handleIptal} className="bg-slate-800 hover:bg-slate-700 text-slate-400 py-5 rounded-2xl font-black uppercase text-xs transition-all">İptal</button>
+            <button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-500 text-white py-5 rounded-2xl font-black uppercase text-xs shadow-xl transition-all">{isSubmitting ? "Yayınlanıyor..." : "Bildirimi Yayınla"}</button>
+          </div>
         </form>
       </div>
     </div>

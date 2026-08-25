@@ -1,66 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, getDocs, doc, getDoc, deleteDoc, updateDoc, query, where } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, query, where } from "firebase/firestore";
 import { auth, db } from "../../../lib/firebase"; 
 import Link from "next/link";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { useRouter } from "next/navigation";
 
 export default function TamamlananIsler() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState("");
-
-  const [uretimPersonelleri, setUretimPersonelleri] = useState<string[]>([]);
-  const [performansListesi, setPerformansListesi] = useState<any[]>([]);
-  
-  const [filterBildiren, setFilterBildiren] = useState("");
-  const [filterAy, setFilterAy] = useState("");
-
-  const fetchOrdersAndPerformans = async () => {
-    try {
-      const uQ = query(collection(db, "users"), where("role", "==", "uretim"));
-      const uSnap = await getDocs(uQ);
-      const uretimYetkilileriListesi = uSnap.docs.map(d => d.data().name);
-      setUretimPersonelleri(uretimYetkilileriListesi.sort());
-
-      const q = query(collection(db, "work_orders"), where("durum", "==", "Kapalı"));
-      const snap = await getDocs(q);
-      
-     const rawData: any[] = snap.docs.map(document => {
-        const d = document.data();
-        return {
-          id: document.id, ...d,
-          tarihFormatli: d.tamamlanmaTarihi ? d.tamamlanmaTarihi.toDate().toLocaleString('tr-TR') : "Bilinmiyor",
-          gercekZaman: d.tamamlanmaTarihi ? d.tamamlanmaTarihi.toDate().getTime() : 0,
-          kayitAyi: d.kayitTarihi ? (d.kayitTarihi.toDate().getMonth() + 1).toString() : ""
-        };
-      });
-
-      const filtrelenmisData = rawData.filter(d => {
-        if (filterBildiren && d.bildirenKisi !== filterBildiren) return false;
-        if (filterAy && d.kayitAyi !== filterAy) return false;
-        return true;
-      });
-      setOrders(filtrelenmisData.sort((a, b) => b.gercekZaman - a.gercekZaman));
-
-      const bildirimSayilari: Record<string, number> = {};
-      rawData.forEach(d => {
-        if (filterAy && d.kayitAyi !== filterAy) return;
-        const bildiren = d.bildirenKisi;
-        if (uretimYetkilileriListesi.includes(bildiren)) {
-          if (!bildirimSayilari[bildiren]) bildirimSayilari[bildiren] = 0;
-          bildirimSayilari[bildiren] += 1;
-        }
-      });
-
-      const siralama = Object.keys(bildirimSayilari).map(k => ({
-        isim: k, adet: bildirimSayilari[k]
-      })).sort((a, b) => b.adet - a.adet);
-
-      setPerformansListesi(siralama);
-    } catch (error) { console.error(error); } finally { setLoading(false); }
-  };
+  const [userName, setUserName] = useState("");
+  const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -69,127 +21,80 @@ export default function TamamlananIsler() {
         const userSnap = await getDoc(userRef);
         if (userSnap.exists() && userSnap.data().isApproved) {
           setUserRole(userSnap.data().role);
-          fetchOrdersAndPerformans();
-        } else window.location.href = "/";
-      } else window.location.href = "/";
+          setUserName(userSnap.data().name);
+          fetchOrders();
+        } else router.push("/");
+      } else router.push("/");
     });
     return () => unsubscribe();
-  }, [filterBildiren, filterAy]); 
+  }, []);
 
-  const handleSil = async (id: string) => {
-    if (!window.confirm("Bu arşiv kaydını kalıcı olarak silmek istediğinize emin misiniz?")) return;
-    try { await deleteDoc(doc(db, "work_orders", id)); fetchOrdersAndPerformans(); } catch (error) { alert("Hata"); }
+  const fetchOrders = async () => {
+    try {
+      const q = query(collection(db, "work_orders"), where("durum", "==", "Kapalı"));
+      const snap = await getDocs(q);
+      const data = snap.docs.map(document => ({
+        id: document.id, ...document.data(),
+        tarihFormatli: document.data().tamamlanmaTarihi?.toDate().toLocaleString('tr-TR') || "Bilinmiyor"
+      }));
+      setOrders(data.sort((a, b) => b.tarihFormatli.localeCompare(a.tarihFormatli)));
+    } catch (error) { console.error(error); } finally { setLoading(false); }
   };
 
-  const handleGeriAl = async (id: string) => {
-    if (!window.confirm("Bu iş yanlışlıkla tamamlandıysa tekrar 'Aktif Bekleyen İşler' listesine göndermek ister misiniz?")) return;
-    try { 
-      await updateDoc(doc(db, "work_orders", id), { durum: "Açık", tamamlayanKisi: "", tamamlanmaTarihi: null });
-      fetchOrdersAndPerformans(); 
-    } catch (error) { alert("Hata"); }
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push("/");
   };
 
-  if (loading) return (
-    <div className="min-h-screen bg-gray-950 flex flex-col justify-center items-center p-4">
-      <div className="relative mb-8">
-        <div className="absolute inset-0 bg-yellow-500/20 blur-3xl rounded-full animate-pulse"></div>
-        <img src="/dfulogo.png" className="h-24 w-auto relative z-10 animate-bounce" alt="DFU" />
-      </div>
-      <div className="w-64 h-1.5 bg-gray-800 rounded-full overflow-hidden mb-4 shadow-inner">
-        <div className="h-full bg-gradient-to-r from-yellow-600 via-yellow-400 to-yellow-600 w-full animate-[loading_1.5s_infinite_ease-in-out] origin-left"></div>
-      </div>
-      <p className="text-teal-400 font-black tracking-[0.3em] text-[10px] uppercase animate-pulse">{`YÜKLENİYOR...`}</p>
-      <style jsx>{`
-        @keyframes loading {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-      `}</style>
-    </div>
-  );
+  if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white italic">Veriler Çekiliyor...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-gray-800 pb-5 gap-4">
+    <div className="min-h-screen bg-slate-950 text-slate-200 p-6 md:p-10 font-sans">
+      <div className="max-w-6xl mx-auto">
+        
+        {/* ÜRETİM HEADER VE AKSİYON BUTONLARI */}
+        <div className="flex flex-col md:flex-row justify-between items-center mb-12 gap-6 bg-slate-900/50 p-8 rounded-[3rem] border border-slate-800 shadow-2xl">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-green-400">Tamamlanmış İş Emirleri Arşivi</h1>
-            <p className="text-gray-400 mt-1">Teknisyenler tarafından çözülen ve kapatılan iş taleplerinin arşivi.</p>
+            <h1 className="text-4xl font-black text-white italic tracking-tighter uppercase">Üretim Paneli</h1>
+            <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">Kapatılan Bildirimler ve Performans Takibi</p>
           </div>
-         <Link href={userRole === "uretim" || userRole === "admin" || userRole === "operator" ? "/admin" : "/dashboard"} className="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm transition">← İzleme Paneline Dön</Link>
+          
+          <div className="flex items-center gap-4">
+            <Link href="/admin/is-emri-ac" className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase shadow-xl shadow-blue-900/20 transition-all">
+              + Yeni İş Emri Aç
+            </Link>
+            <button onClick={handleLogout} className="bg-slate-800 hover:bg-red-900/40 text-slate-400 hover:text-red-500 px-6 py-4 rounded-2xl font-bold text-xs uppercase border border-slate-700 transition-all">
+              Çıkış
+            </button>
+          </div>
         </div>
 
-        {/* FİLTRELEME ÇUBUĞU */}
-        <div className="bg-gray-900 border border-gray-800 p-4 rounded-xl shadow-lg mb-8 flex flex-wrap gap-4 items-end">
-          <div className="flex-1 min-w-[150px]">
-            <label className="block text-xs text-gray-400 mb-1">Kayıt Ayı</label>
-            <select value={filterAy} onChange={(e) => setFilterAy(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-lg p-2 text-sm">
-              <option value="">Tüm Aylar</option><option value="1">Ocak</option><option value="2">Şubat</option><option value="3">Mart</option><option value="4">Nisan</option><option value="5">Mayıs</option><option value="6">Haziran</option><option value="7">Temmuz</option><option value="8">Ağustos</option><option value="9">Eylül</option><option value="10">Ekim</option><option value="11">Kasım</option><option value="12">Aralık</option>
-            </select>
-          </div>
-          <div className="flex-1 min-w-[150px]">
-            <label className="block text-xs text-purple-400 mb-1 font-bold">Bildiren Kişi (Üretim Yetkilisi)</label>
-            <select value={filterBildiren} onChange={(e) => setFilterBildiren(e.target.value)} className="w-full bg-gray-800 border-gray-700 rounded-lg p-2 text-sm">
-              <option value="">Tüm Personeller</option>{uretimPersonelleri.map(u => <option key={u} value={u}>{u}</option>)}
-            </select>
-          </div>
-          <button onClick={() => { setFilterAy(""); setFilterBildiren(""); }} className="bg-gray-700 px-4 py-2 rounded-lg text-sm h-9">Sıfırla</button>
-        </div>
-
-        {/* LİSTE */}
-        <div className="bg-gray-900 border border-gray-800 p-4 md:p-6 rounded-xl shadow-lg overflow-x-auto mb-10">
-          {orders.length === 0 ? <div className="text-center py-10 text-gray-500">Bu filtrelere uygun tamamlanmış iş emri bulunmuyor.</div> : (
-            <table className="w-full text-left text-sm whitespace-nowrap md:whitespace-normal">
-              <thead>
-                <tr className="border-b border-gray-800 text-gray-400">
-                  <th className="pb-3 px-2">Tamamlanma Tarihi</th><th className="pb-3 px-2 text-purple-400">Bildiren (Üretim)</th><th className="pb-3 px-2 text-green-400">Kapatan (Teknisyen)</th><th className="pb-3 px-2">Hat / Ekipman</th><th className="pb-3 px-2 min-w-[200px]">Arıza Tanımı</th>
-                  {userRole === "admin" && <th className="pb-3 px-2 text-right">Aksiyon</th>}
+        {/* TAMAMLANAN İŞLER LİSTESİ */}
+        <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] overflow-hidden shadow-2xl">
+          <table className="w-full text-left">
+            <thead className="bg-slate-950 text-slate-500 text-[10px] uppercase font-black tracking-widest">
+              <tr>
+                <th className="p-6">Hat / Ekipman</th>
+                <th className="p-6">Arıza Detayı</th>
+                <th className="p-6">Bildiren</th>
+                <th className="p-6 text-right">Kapanış Tarihi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/50 text-sm">
+              {orders.map(order => (
+                <tr key={order.id} className="hover:bg-slate-800/30 transition-all group">
+                  <td className="p-6">
+                    <p className="font-black text-slate-200 uppercase group-hover:text-blue-400">{order.ekipmanAdi}</p>
+                    <p className="text-[10px] text-slate-500 font-bold">{order.hatAdi}</p>
+                  </td>
+                  <td className="p-6 text-slate-400 font-medium italic">{order.arizaDetayi}</td>
+                  <td className="p-6 font-bold text-slate-300">{order.bildirenKisi}</td>
+                  <td className="p-6 text-right font-mono text-xs text-slate-500">{order.tarihFormatli}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {orders.map(o => (
-                  <tr key={o.id} className="border-b border-gray-800 hover:bg-gray-800/50 transition">
-                    <td className="py-4 px-2 text-gray-400 text-xs">{o.tarihFormatli}</td>
-                    <td className="py-4 px-2 font-bold text-purple-400">{o.bildirenKisi}</td>
-                    <td className="py-4 px-2 font-bold text-green-400">{o.tamamlayanKisi}</td>
-                    <td className="py-4 px-2"><div className="font-bold text-gray-200">{o.hatAdi}</div><div className="text-xs text-gray-500">{o.ekipmanAdi} ({o.sorunTipi})</div></td>
-                    <td className="py-4 px-2 text-gray-300 text-xs leading-relaxed max-w-[250px] break-words whitespace-normal">{o.aciklama}</td>
-                    {userRole === "admin" && (
-                      <td className="py-4 px-2 text-right space-x-2">
-                        <button onClick={() => handleGeriAl(o.id)} className="bg-orange-900/50 text-orange-400 text-xs px-3 py-2 rounded mb-1">Geri Al</button>
-                        <button onClick={() => handleSil(o.id)} className="bg-red-900/50 text-red-400 text-xs px-3 py-2 rounded">Sil</button>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+              ))}
+            </tbody>
+          </table>
         </div>
-
-        {/* ÜRETİM YETKİLİSİ LİDERLİK TABLOSU */}
-        <div className="bg-gray-900 border border-purple-700/50 p-4 md:p-6 rounded-xl shadow-[0_0_15px_rgba(168,85,247,0.1)] overflow-x-auto">
-          <h2 className="text-xl font-bold mb-6 text-purple-400 flex items-center gap-2">Üretim Yetkilisi Bildirim Performansı (İlk 3 Lider)</h2>
-          {performansListesi.length === 0 ? <div className="text-gray-500 py-4">Filtreye uygun bildirim yapan üretim yetkilisi bulunamadı.</div> : (
-            <table className="w-full text-left text-sm md:text-base border-collapse">
-              <thead>
-                <tr className="border-b border-gray-800 text-gray-400">
-                  <th className="pb-3 px-4">Sıralama</th><th className="pb-3 px-4">Üretim Yetkilisi Adı</th><th className="pb-3 px-4 text-purple-400">Açtığı İş Emri / Bildirim Sayısı</th>
-                </tr>
-              </thead>
-              <tbody>
-                {performansListesi.slice(0, 3).map((p, index) => (
-                  <tr key={index} className="border-b border-gray-800 hover:bg-gray-800/50 transition">
-                    <td className="py-4 px-4 text-2xl">{index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"}</td>
-                    <td className="py-4 px-4 font-bold text-gray-200">{p.isim}</td>
-                    <td className="py-4 px-4"><span className="bg-purple-900/30 text-purple-400 font-bold px-4 py-1 rounded-full border border-purple-800/50">{p.adet} Adet Bildirim</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-
       </div>
     </div>
   );

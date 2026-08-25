@@ -148,21 +148,60 @@ function DashboardIcerik() {
     <div className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-6 font-sans">
       <div className="max-w-[1440px] mx-auto space-y-6">
         
-        {/* --- 12 BUTONLUK TAM NAVİGASYON GRUBU --- */}
-        <div className="flex flex-wrap items-center gap-2 bg-slate-900/50 p-4 rounded-[2.5rem] border border-slate-800 shadow-2xl">
-          <Link href="/dashboard" className="bg-blue-600 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase shadow-lg shadow-blue-600/20 tracking-tighter">Dashboarda Dön</Link>
-          <Link href="/dashboard/kontrol-formlari" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">Kontrol Formları</Link>
-          <Link href="/dashboard/pano-kontrol" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">Pano Kontrol</Link>
-          <Link href="/dashboard/periyodik-bakim" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">Periyodik Bakım</Link>
-          <Link href="/admin/pm-setup" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">Manuel PM</Link>
-          <Link href="/dashboard/sayac" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">Sayaç Okuma</Link>
-          <Link href="/dashboard/mesai" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">Mesai Girişi</Link>
-          <Link href="/admin/eked" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">EKED Takip</Link>
-          <Link href="/dashboard/mesai" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">Mesailerim</Link>
-          <Link href="/admin/is-listesi" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">Yapılan İşler</Link>
-          <Link href="/admin/bakim-ligi" className="bg-yellow-500/10 border border-yellow-500/20 px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase text-yellow-500 italic">Bakım Ligi</Link>
-          <button onClick={handleLogout} className="bg-red-900/20 border border-red-900/30 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase text-red-500 hover:bg-red-600 transition-all ml-auto">Çıkış</button>
-        </div>
+       {/* --- NAVİGASYON BUTON GRUBU (DÜZELTİLMİŞ LİNKLER) --- */}
+<div className="flex flex-wrap items-center gap-2 bg-slate-900/50 p-4 rounded-[2rem] border border-slate-800 shadow-2xl">
+  <Link href="/dashboard" className="bg-blue-600 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase shadow-lg tracking-tighter">
+    Dashboard
+  </Link>
+  
+  <Link href="/dashboard/kontrol-formlari" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">
+    Kontrol Formları
+  </Link>
+
+  {/* PANO TEMİZLİĞİ -> Elektrik Panoları Listesi */}
+  <Link href="/dashboard/pano-listesi" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">
+    Pano Temizliği
+  </Link>
+
+  {/* PERİYODİK BAKIM -> Gerçek Periyodik Bakım Sayfası */}
+  <Link href="/dashboard/periyodik-bakim" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">
+    Periyodik Bakım
+  </Link>
+
+  {/* MANUEL PM -> PM Takvim / Giriş Ekranı (Periyot Güncelleme Değil) */}
+  <Link href="/admin/pm-takvim" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">
+    Manuel PM
+  </Link>
+
+  <Link href="/dashboard/sayac" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">
+    Sayaç Okuma
+  </Link>
+
+  <Link href="/dashboard/mesai" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">
+    Mesai Girişi
+  </Link>
+
+  <Link href="/admin/eked" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">
+    EKED Takip
+  </Link>
+
+  {/* MESAİLERİM -> Mesai Arşiv / Liste (Giriş Ekranı Değil) */}
+  <Link href="/admin/mesai" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">
+    Mesailerim
+  </Link>
+
+  <Link href="/admin/is-listesi" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">
+    Yapılan İşler
+  </Link>
+
+  <Link href="/admin/bakim-ligi" className="bg-yellow-500/10 border border-yellow-500/20 px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase text-yellow-500 italic">
+    Bakım Ligi
+  </Link>
+
+  <button onClick={handleLogout} className="bg-red-900/20 border border-red-900/30 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase text-red-500 hover:bg-red-600 transition-all ml-auto">
+    Çıkış
+  </button>
+</div>
 
         {/* --- ISG VE SAHA BİLDİRİMLERİ (ORIJINAL DÜZEN) --- */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

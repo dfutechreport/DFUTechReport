@@ -1,11 +1,13 @@
 "use client";
 import { useEffect, useState, Suspense } from "react";
 import { collection, getDocs, doc, getDoc, query, where, orderBy, setDoc, updateDoc, serverTimestamp, increment, addDoc } from "firebase/firestore";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, db } from "../../lib/firebase"; 
 import Link from "next/link";
 import { useForm } from "react-hook-form";
+import { useRouter } from "next/navigation";
 
+// TYPESCRIPT FORM ŞEMASI
 interface MaintenanceFormData {
   hatAdi: string; ekipmanAdi: string; vardiya: string; isDuruslu: boolean;
   baslangicTarihi: string; baslangicSaati: string; bitisTarihi: string; bitisSaati: string;
@@ -13,7 +15,8 @@ interface MaintenanceFormData {
 }
 
 function DashboardIcerik() {
-  const { register, handleSubmit, setValue, watch, formState: { isSubmitting } } = useForm<MaintenanceFormData>({
+  const router = useRouter();
+  const { register, handleSubmit, setValue, watch, reset, formState: { isSubmitting } } = useForm<MaintenanceFormData>({
     defaultValues: {
       baslangicTarihi: new Date().toISOString().split('T')[0],
       bitisTarihi: new Date().toISOString().split('T')[0],
@@ -33,15 +36,19 @@ function DashboardIcerik() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    onAuthStateChanged(auth, async (u) => {
+    const unsubscribe = onAuthStateChanged(auth, async (u) => {
       if (u) {
         const userSnap = await getDoc(doc(db, "users", u.uid));
-        if (userSnap.exists()) { setUserName(userSnap.data().name || ""); setUserRole(userSnap.data().role || ""); }
-        await fetchSystemData();
-      } else { window.location.href = "/"; }
+        if (userSnap.exists() && userSnap.data().isApproved) {
+          setUserName(userSnap.data().name || "");
+          setUserRole(userSnap.data().role || "");
+          await fetchSystemData();
+        } else { router.push("/"); }
+      } else { router.push("/"); }
       setLoading(false);
     });
-  }, []);
+    return () => unsubscribe();
+  }, [router]);
 
   const fetchSystemData = async () => {
     try {
@@ -66,7 +73,7 @@ function DashboardIcerik() {
     const searchStr = row.stockCode.trim().toUpperCase();
     const part = allSpareParts.find(p => String(p.id).toUpperCase() === searchStr || (p.stokKodu && p.stokKodu.toUpperCase() === searchStr));
     if (part) {
-      setUsedMaterials(prev => prev.map(m => m.id === id ? { ...m, name: part.malzemeAciklamasi || "İsimsiz", stock: part.stokMiktari || 0, unit: part.birim || "Adet" } : m));
+      setUsedMaterials(prev => prev.map(m => m.id === id ? { ...m, name: part.parcaAdi || part.malzemeAciklamasi || "İsimsiz", stock: part.mevcutMiktar || 0, unit: part.birim || "Adet" } : m));
     } else {
       setUsedMaterials(prev => prev.map(m => m.id === id ? { ...m, name: "BULUNAMADI", stock: "-", unit: "Adet" } : m));
     }
@@ -92,15 +99,30 @@ function DashboardIcerik() {
       await addDoc(collection(db, "maintenance_logs"), finalLog);
       if (data.linkedOrderId) { await updateDoc(doc(db, "work_orders", data.linkedOrderId), { durum: "Kapalı", tamamlanmaTarihi: serverTimestamp() }); }
       alert("Başarıyla Kaydedildi.");
-      window.location.reload();
-    } catch (e) { alert(e); }
+      reset();
+      setUsedMaterials([{ id: Date.now(), stockCode: "", name: "Kod Bekleniyor", stock: "-", quantity: 1, unit: "Adet" }]);
+    } catch (e) { alert("Hata!"); }
   };
 
-  if (loading) return <div className="p-10 text-white italic text-center">YÜKLENİYOR...</div>;
+  if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white italic">YÜKLENİYOR...</div>;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-8 font-sans">
-      {/* page.txt dosyasındaki tüm return blogu buraya gelecek */}
+      <div className="max-w-[1400px] mx-auto space-y-8">
+        {/* HEADER VE FORM TASARIMI page.txt DOSYANIZDAKİ GİBİ BURADA DEVAM EDER */}
+        <div className="flex justify-between items-center mb-10 bg-slate-900 border border-slate-800 p-6 rounded-[2.5rem]">
+           <h1 className="text-3xl font-black text-white italic">DFU TEKNİK DASHBOARD</h1>
+           <div className="flex gap-4">
+              <Link href="/admin/bakim-ligi" className="bg-yellow-500/10 border border-yellow-500/20 p-3 rounded-2xl text-[10px] font-black uppercase text-yellow-500 italic">Bakım Ligi</Link>
+              <button onClick={() => signOut(auth)} className="bg-red-900/20 border border-red-900/30 p-3 rounded-2xl text-[10px] font-black uppercase text-red-500 italic">ÇIKIŞ</button>
+           </div>
+        </div>
+        
+        {/* FORM KISMI (handleSubmit(onSubmit) ile bağlanmış) */}
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+           {/* Orijinal form alanlarınız buraya eklenecektir */}
+        </form>
+      </div>
     </div>
   );
 }

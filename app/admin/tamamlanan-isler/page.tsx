@@ -40,26 +40,31 @@ if (uSnap.exists()) {
   }, []);
 
   const fetchOrders = async () => {
-    try {
-      const q = query(collection(db, "work_orders"), where("durum", "==", "Kapalı"), orderBy("tamamlanmaTarihi", "desc"));
-      const snap = await getDocs(q);
-      const data = snap.docs.map(d => {
-        const date = d.data().tamamlanmaTarihi?.toDate() || new Date();
-        return {
-          id: d.id, ...d.data(),
-          jsDate: date,
-          dateStr: date.toLocaleString('tr-TR')
-        };
-      });
-      setRawOrders(data);
-      
-      // Dinamik Filtre Havuzları
-      setPersonelHavuzu(Array.from(new Set(data.map(o => o.bildirenKisi))).filter(Boolean).sort());
-      setHatHavuzu(Array.from(new Set(data.map(o => o.hatAdi))).filter(Boolean).sort());
-      
-      setFilteredOrders(data);
-    } catch (error) { console.error(error); } finally { setLoading(false); }
-  };
+  try {
+    const q = query(collection(db, "work_orders"), where("durum", "==", "Kapalı"), orderBy("tamamlanmaTarihi", "desc"));
+    const snap = await getDocs(q);
+    
+    // BURASI DÜZELTİLDİ: 'any' eklenerek tip hatası giderildi
+    const data = snap.docs.map((d): any => {
+      const docData = d.data();
+      const date = docData.tamamlanmaTarihi?.toDate() || new Date();
+      return {
+        id: d.id,
+        ...docData,
+        jsDate: date,
+        dateStr: date.toLocaleString('tr-TR')
+      };
+    });
+
+    setRawOrders(data);
+    
+    // Dinamik Filtre Havuzları
+    setPersonelHavuzu(Array.from(new Set(data.map((o: any) => o.bildirenKisi))).filter(Boolean).sort());
+    setHatHavuzu(Array.from(new Set(data.map((o: any) => o.hatAdi))).filter(Boolean).sort());
+    
+    setFilteredOrders(data);
+  } catch (error) { console.error(error); } finally { setLoading(false); }
+};
 
   // Filtreleme Motoru
   useEffect(() => {

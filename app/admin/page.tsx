@@ -176,10 +176,29 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-[#020617] text-white p-4 md:p-8 font-sans overflow-x-hidden">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-10 border-b border-gray-800 pb-5">
-          <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-12 bg-white rounded p-1" /><div><h1 className="text-2xl font-black uppercase tracking-[0.2em]">Komuta Merkezi</h1><p className="text-[10px] text-gray-500 font-bold uppercase">{userName} | {userRole}</p></div></div>
-          <div className="flex gap-3"><Link href="/dashboard" className="bg-indigo-600 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase">Vardiya Raporu</Link><button onClick={()=>auth.signOut()} className="bg-red-600 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase">Çıkış</button></div>
-        </div>
+       {/* HEADER - DÜZELTİLMİŞ LİNK */}
+<div className="flex justify-between items-center mb-10 border-b border-gray-800 pb-5 no-print">
+  <div className="flex items-center gap-4">
+    <img src="/dfulogo.png" className="h-12 bg-white rounded p-1" />
+    <div>
+      <h1 className="text-2xl font-black uppercase tracking-[0.2em] text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-white to-indigo-300">
+        Yönetim
+      </h1>
+      <p className="text-[10px] text-gray-500 font-bold uppercase">{userName} | {userRole}</p>
+    </div>
+  </div>
+  
+  <div className="flex gap-3">
+     {/* BURASI DÜZELTİLDİ: /dashboard'a yönlendirme yapıldı */}
+     <Link href="/dashboard" className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase transition-all shadow-lg">
+       Vardiya Raporu
+     </Link>
+     
+     <button onClick={() => auth.signOut()} className="bg-red-600 hover:bg-red-500 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase shadow-lg transition-all">
+       Çıkış
+     </button>
+  </div>
+</div>
         {/* BUTTON GRID */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-12">
           {userRole === "isg" ? (

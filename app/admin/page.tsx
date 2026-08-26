@@ -108,7 +108,10 @@ export default function AdminDashboard() {
       });
       setYilListesi(Array.from(yilSet).sort());
       setKpiOnayBekleyen((await getDocs(query(collection(db, "users"), where("isApproved", "==", false)))).size);
-    } catch (e) { console.error(e); }
+    } catch (error) { console.error("KRİTİK VERİ ÇEKME HATASI:", error); setRawLogs([]);
+  } finally {
+    // EN ÖNEMLİ KISIM: Hata ne olursa olsun 'Yükleniyor' yazısını kaldırır
+    setLoading(false); }
   };
 
   useEffect(() => {

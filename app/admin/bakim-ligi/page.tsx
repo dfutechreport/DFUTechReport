@@ -45,8 +45,8 @@ export default function BakimLigiPage() {
         const statsMap = new Map<string, TechStats>();
         const lastFixTimePerEquip = new Map<string, Date>();
 
-        logs.forEach(log => {
-          const equipName = log.ekipmanAdi || "Genel";
+        logs.forEach((log: any) => { // 'any' tipi eklendi
+  const equipName = log.ekipmanAdi || "Genel";
           const currentTime = log.jsDate;
           let isRecurring = false;
           if (lastFixTimePerEquip.has(equipName)) {

@@ -1,10 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
-// ... (Firebase importları)
+import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, writeBatch, setDoc, serverTimestamp } from "firebase/firestore";
+
+// BURAYI GÜNCELLEYİN:
+import { onAuthStateChanged, signOut } from "firebase/auth"; 
+
+import { auth, db } from "../../lib/firebase"; 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid, LabelList, PieChart, Pie, Cell } from 'recharts';
 import Link from "next/link";
-import { useRouter } from "next/navigation"; // navigation'dan import edin
-
+import { useRouter } from "next/navigation";
 export default function AdminDashboard() {
   const router = useRouter(); // Tanımlama burada olmalı
 

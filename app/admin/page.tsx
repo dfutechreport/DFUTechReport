@@ -58,24 +58,48 @@ export default function AdminDashboard() {
     { id: "ortam", label: "Ortam", color: "#8B5CF6" }
   ];
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+ useEffect(() => {
+  const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    try {
       if (user) {
         setUserEmail(user.email || "");
         const userRef = doc(db, "users", user.uid);
         const userSnap = await getDoc(userRef);
-        if (userSnap.exists() && userSnap.data().isApproved) {
+        
+        if (userSnap.exists()) {
           const userData = userSnap.data();
-          setUserRole(userData.role); setUserName(userData.name);
-          if (["admin", "operator", "uretim", "isg", "teknisyen"].includes(userData.role)) {
-            setIsAdmin(true); fetchInitialData(); fetchRcaData();
-          } else { window.location.href = "/dashboard"; }
+          
+          // Onay ve Rol Kontrolü
+          if (userData.isApproved && ["admin", "operator", "uretim", "isg", "teknisyen"].includes(userData.role)) {
+            setUserRole(userData.role); 
+            setUserName(userData.name);
+            setIsAdmin(true); 
+            // Veri çekme fonksiyonunu çağır
+            await fetchInitialData(); 
+          } else {
+            // Yetkisi yoksa veya onaylanmamışsa dashboard'a at
+            console.warn("Yetkisiz erişim veya onaysız hesap.");
+            window.location.href = "/dashboard";
+          }
+        } else {
+          // Kullanıcı kaydı Firestore'da yoksa
+          console.error("Kullanıcı kaydı bulunamadı.");
+          window.location.href = "/";
         }
-      } else { window.location.href = "/"; }
+      } else {
+        // Oturum açılmamışsa girişe at
+        window.location.href = "/";
+      }
+    } catch (err) {
+      console.error("Giriş Kontrol Hatası:", err);
       setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
+    } finally {
+      // Hangi durumda olursa olsun yükleniyor'u kapat
+      setLoading(false);
+    }
+  });
+  return () => unsubscribe();
+}, [router]);
 
   const fetchRcaData = async () => {
     const snap = await getDocs(collection(db, "root_cause_analysis"));

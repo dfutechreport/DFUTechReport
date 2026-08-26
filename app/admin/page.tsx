@@ -372,10 +372,10 @@ export default function AdminDashboard() {
         </div>
       )}
 
-                {/* EKED DETAY MODAL - GERÇEK VERİ EŞLEMESİ */}
+                     {/* EKED DETAY MODAL - GERÇEK VERİ EŞLEMESİ */}
       {showEkedModal && selectedEked && (
         <div className="fixed inset-0 bg-black/95 backdrop-blur-xl z-[1000] flex items-center justify-center p-4">
-          <div className="bg-slate-900 border-2 border-yellow-600/30 w-full max-w-2xl rounded-[3rem] shadow-2xl p-10 relative italic font-bold">
+          <div className="bg-slate-900 border-2 border-yellow-600/30 w-full max-w-2xl rounded-[3rem] shadow-2xl p-10 relative italic font-bold text-white">
             <button 
               onClick={() => { setShowEkedModal(false); setSelectedEked(null); }} 
               className="absolute top-6 right-6 text-gray-500 hover:text-white text-2xl"
@@ -388,7 +388,6 @@ export default function AdminDashboard() {
             </h2>
             
             <div className="space-y-6">
-              {/* KONUM / YER BİLGİSİ */}
               <div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 shadow-inner">
                 <p className="text-[9px] text-gray-500 uppercase mb-1">Kilitlenen Bölge / Makine</p>
                 <p className="text-xl text-white uppercase tracking-tighter">
@@ -396,7 +395,6 @@ export default function AdminDashboard() {
                 </p>
               </div>
 
-              {/* SORUMLU PERSONEL (personelName yerine personel) */}
               <div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 shadow-inner">
                 <p className="text-[9px] text-gray-500 uppercase mb-1">Kilitlemeyi Yapan Sorumlu</p>
                 <p className="text-xl text-yellow-500 uppercase tracking-tighter">
@@ -404,7 +402,6 @@ export default function AdminDashboard() {
                 </p>
               </div>
 
-              {/* TARİH BİLGİSİ */}
               <div className="bg-slate-950 p-6 rounded-3xl border border-slate-800">
                 <p className="text-[9px] text-gray-500 uppercase mb-1">Kilitleme Tarihi</p>
                 <p className="text-lg text-slate-300">
@@ -422,3 +419,7 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+    </div> 
+  </div> 
+  );
+}

@@ -372,7 +372,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-                     {/* EKED DETAY MODAL - GERÇEK VERİ EŞLEMESİ */}
+                          {/* EKED DETAY MODAL */}
       {showEkedModal && selectedEked && (
         <div className="fixed inset-0 bg-black/95 backdrop-blur-xl z-[1000] flex items-center justify-center p-4">
           <div className="bg-slate-900 border-2 border-yellow-600/30 w-full max-w-2xl rounded-[3rem] shadow-2xl p-10 relative italic font-bold text-white">
@@ -382,33 +382,22 @@ export default function AdminDashboard() {
             >
               ✕
             </button>
-            
             <h2 className="text-2xl font-black text-yellow-400 uppercase tracking-widest mb-8 flex items-center gap-3">
               <span className="text-3xl">🔐</span> EKED (LOTO) BİLGİSİ
             </h2>
-            
             <div className="space-y-6">
-              <div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 shadow-inner">
+              <div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 shadow-inner text-white">
                 <p className="text-[9px] text-gray-500 uppercase mb-1">Kilitlenen Bölge / Makine</p>
-                <p className="text-xl text-white uppercase tracking-tighter">
-                  {selectedEked.yer || "Bölge Belirtilmemiş"}
-                </p>
+                <p className="text-xl uppercase tracking-tighter">{selectedEked.yer || "Bölge Belirtilmemiş"}</p>
               </div>
-
-              <div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 shadow-inner">
+              <div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 shadow-inner text-white">
                 <p className="text-[9px] text-gray-500 uppercase mb-1">Kilitlemeyi Yapan Sorumlu</p>
-                <p className="text-xl text-yellow-500 uppercase tracking-tighter">
-                  {selectedEked.personel || "İsimsiz Kayıt"}
-                </p>
+                <p className="text-xl text-yellow-500 uppercase tracking-tighter">{selectedEked.personel || "İsimsiz Kayıt"}</p>
               </div>
-
-              <div className="bg-slate-950 p-6 rounded-3xl border border-slate-800">
+              <div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 text-white">
                 <p className="text-[9px] text-gray-500 uppercase mb-1">Kilitleme Tarihi</p>
-                <p className="text-lg text-slate-300">
-                  {selectedEked.tarih || "Tarih Bilgisi Yok"}
-                </p>
+                <p className="text-lg text-slate-300">{selectedEked.tarih || "Tarih Bilgisi Yok"}</p>
               </div>
-
               <button 
                 onClick={() => { setShowEkedModal(false); setSelectedEked(null); }} 
                 className="w-full bg-yellow-600 text-black py-5 rounded-2xl font-black uppercase text-xs shadow-xl active:scale-95 transition-all hover:bg-yellow-500"
@@ -419,7 +408,6 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
-    </div> 
-  </div> 
+    </div>
   );
 }

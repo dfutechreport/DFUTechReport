@@ -372,18 +372,59 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {showEkedModal && selectedEked && (
-        <div className="fixed inset-0 bg-black/95 backdrop-blur-xl z-[1000] flex items-center justify-center p-4">
-          <div className="bg-slate-900 border-2 border-yellow-600/30 w-full max-w-2xl rounded-[3rem] shadow-2xl p-10 relative italic font-bold">
-            <h2 className="text-2xl font-black text-yellow-400 uppercase tracking-widest mb-6">EKED (LOTO) Detayı</h2>
-            <div className="space-y-6">
-              <div className="bg-slate-950 p-5 rounded-3xl border border-slate-800"><p className="text-[9px] text-gray-500 uppercase">Sorumlu Personel</p><p className="text-lg text-yellow-500 uppercase tracking-tighter">{selectedEked.personelName}</p></div>
-              <div className="bg-slate-950 p-5 rounded-3xl border border-slate-800"><p className="text-[9px] text-gray-500 uppercase">Kilit Açıklaması</p><p className="text-gray-300 text-sm italic">"{selectedEked.aciklama || "Açıklama yok."}"</p></div>
-              <button onClick={() => setShowEkedModal(false)} className="w-full bg-yellow-600 text-black py-4 rounded-2xl font-black uppercase text-xs shadow-xl active:scale-95 transition-all">Anladım ve Kapat</button>
-            </div>
+     {/* EKED DETAY MODAL - GÜNCELLENDİ */}
+{showEkedModal && selectedEked && (
+  <div className="fixed inset-0 bg-black/95 backdrop-blur-xl z-[1000] flex items-center justify-center p-4">
+    <div className="bg-slate-900 border-2 border-yellow-600/30 w-full max-w-2xl rounded-[3rem] shadow-2xl p-10 relative italic font-bold">
+      <button 
+        onClick={() => setShowEkedModal(false)} 
+        className="absolute top-6 right-6 text-gray-500 hover:text-white transition-all text-2xl"
+      >
+        ✕
+      </button>
+      
+      <div className="flex items-center gap-4 mb-8">
+        <div className="bg-yellow-600 p-4 rounded-3xl text-black">
+          <span className="text-3xl">🔐</span>
+        </div>
+        <div>
+          <h2 className="text-2xl font-black text-yellow-400 uppercase tracking-widest">EKED (LOTO) Detayı</h2>
+          <p className="text-gray-500 text-[10px] font-black uppercase">Güvenlik Kilitleme Bilgisi</p>
+        </div>
+      </div>
+
+      <div className="space-y-6">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-slate-950 p-5 rounded-3xl border border-slate-800">
+            <p className="text-[9px] text-gray-500 uppercase mb-1">Konum / Ekipman</p>
+            <p className="text-lg text-white uppercase tracking-tighter">{selectedEked.yer || "Belirtilmemiş"}</p>
+          </div>
+          <div className="bg-slate-950 p-5 rounded-3xl border border-slate-800">
+            <p className="text-[9px] text-gray-500 uppercase mb-1">Kilit Zamanı</p>
+            <p className="text-lg text-white">{selectedEked.tarih || "Bilinmiyor"}</p>
           </div>
         </div>
-      )}
+
+        <div className="bg-slate-950 p-5 rounded-3xl border border-slate-800">
+          <p className="text-[9px] text-gray-500 uppercase mb-1">Sorumlu Personel</p>
+          <p className="text-lg text-yellow-500 uppercase tracking-tighter">{selectedEked.personelName || "İsimsiz"}</p>
+        </div>
+
+        {/* AÇIKLAMA ALANI (Tüm ihtimaller tarandı) */}
+        <div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 shadow-inner">
+          <p className="text-[9px] text-indigo-400 uppercase font-black mb-3 underline underline-offset-4 decoration-indigo-800">Kilit Açıklaması / Neden:</p>
+          <p className="text-gray-300 text-sm italic leading-relaxed">
+            "{selectedEked.aciklama || selectedEked.neden || selectedEked.ekedNedeni || "Açıklama notu girilmemiş."}"
+          </p>
+        </div>
+
+        <button 
+          onClick={() => setShowEkedModal(false)} 
+          className="w-full bg-yellow-600 text-black py-5 rounded-2xl font-black uppercase text-xs shadow-xl active:scale-95 transition-all hover:bg-yellow-500"
+        >
+          Anladım ve Kapat
+        </button>
+      </div>
     </div>
-  );
-}
+  </div>
+)}

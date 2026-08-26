@@ -30,10 +30,10 @@ export default function TamamlananIsler() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         const uSnap = await getDoc(doc(db, "users", user.uid));
-        if (userSnap.exists()) {
-          setUserRole(userSnap.data().role);
-          fetchOrders();
-        }
+if (uSnap.exists()) {
+  setUserRole(uSnap.data().role);
+  fetchOrders();
+}
       } else router.push("/");
     });
     return () => unsubscribe();

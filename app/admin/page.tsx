@@ -322,7 +322,7 @@ export default function AdminDashboard() {
                  <div className="h-64 w-full font-bold">
                    <ResponsiveContainer width="100%" height="100%">
                      <PieChart>
-                       <Pie data={RCA_CATEGORIES.map(c=>({ name:c.label, value: rcaLogs.filter(r=>r.category===c.id).length, color: c.color })).filter(d=>d.value>0)} cx="50%" cy="50%" innerRadius={60} outerRadius={80} dataKey="value" labelLine={false} label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                       <Pie data={RCA_CATEGORIES.map(c=>({ name:c.label, value: rcaLogs.filter(r=>r.category===c.id).length, color: c.color })).filter(d=>d.value>0)} cx="50%" cy="50%" innerRadius={60} outerRadius={80} dataKey="value" labelLine={false} label={({name, percent}) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}>
                          {RCA_CATEGORIES.map((e,i)=><Cell key={i} fill={e.color} />)}
                        </Pie>
                        <Tooltip />

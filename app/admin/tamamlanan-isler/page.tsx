@@ -155,19 +155,24 @@ export default function TamamlananIsler() {
                 <th className="p-6 text-right">Zaman / Tarih</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/50 text-sm italic font-bold">
-              {filteredOrders.map(order => (
-                <tr key={order.id} className="hover:bg-slate-800/30 transition-all group">
-                  <td className="p-6">
-                    <p className="font-black text-slate-200 uppercase group-hover:text-blue-400">{order.ekipmanAdi}</p>
-                    <p className="text-[10px] text-slate-500 uppercase">{order.hatAdi}</p>
-                  </td>
-                  <td className="p-6 text-slate-400 max-w-sm">{order.arizaDetayi}</td>
-                  <td className="p-6 font-bold text-slate-300">{order.bildirenKisi}</td>
-                  <td className="p-6 text-right font-mono text-xs text-slate-500">{order.dateStr}</td>
-                </tr>
-              ))}
-            </tbody>
+            <tbody className="divide-y divide-slate-800/50 text-sm">
+  {filteredOrders.map(order => (
+    <tr key={order.id} className="hover:bg-slate-800/30 transition-all group">
+      <td className="p-6">
+        <p className="font-black text-slate-200 uppercase group-hover:text-blue-400">{order.ekipmanAdi}</p>
+        <p className="text-[10px] text-slate-500 uppercase">{order.hatAdi}</p>
+      </td>
+      
+      {/* ARIZA DETAYI HÜCRESİ - DÜZELTİLDİ */}
+      <td className="p-6 text-slate-400 max-w-sm italic font-medium leading-relaxed">
+        {order.arizaDetayi || order.aciklama || order.sorun || order.detay || "Detay belirtilmemiş."}
+      </td>
+
+      <td className="p-6 font-bold text-slate-300">{order.bildirenKisi}</td>
+      <td className="p-6 text-right font-mono text-xs text-slate-500">{order.dateStr}</td>
+    </tr>
+  ))}
+</tbody>
           </table>
           {filteredOrders.length === 0 && <div className="p-20 text-center text-slate-600 italic">Veri bulunamadı.</div>}
         </div>

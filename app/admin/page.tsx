@@ -56,7 +56,7 @@ export default function AdminDashboard() {
 
   const downloadFullSnapshot = async () => {
     const pass = window.prompt("Snapshot Şifresi:");
-    if (pass !== "140826") return alert("Hatalı!");
+    if (pass !== "161004") return alert("Hatalı!");
     try {
       const collections = ["maintenance_logs", "work_orders", "spare_parts", "users", "assets", "eked_logs", "meter_logs"];
       let dbBackup: any = {};

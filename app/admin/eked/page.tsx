@@ -8,26 +8,32 @@ export default function EkedTrackingPage({ user }: { user?: any }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
+  if (!mounted || !user) return null;
 
-  if (!mounted) return null;
-
-  const handleBack = () => {
-    if (user?.role === 'admin') {
-      router.push('/admin'); // Admin kendi paneline döner
+  const handleReturn = () => {
+    // Kural: Hangi kullanıcı yetkisi ile girildi ise o dashboarda dön
+    if (user.role === 'admin') {
+      router.push('/admin');
     } else {
-      router.push('/dashboard'); // Diğerleri dashboarda döner
+      router.push('/dashboard');
     }
   };
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between mb-6">
-        <h1 className="text-xl font-bold">EKED Takip</h1>
-        <button onClick={handleBack} className="px-4 py-2 bg-gray-200 rounded">dashboarda dön</button>
-      </div>
+    <div className="flex flex-col min-h-screen p-8 bg-gray-50">
+      <h1 className="text-2xl font-bold text-gray-800 mb-6">EKED TAKİP VE GÜVENLİK LOGLARI</h1>
       
-      <div className="border-2 border-dashed p-20 text-center text-gray-400">
-        EKED Verileri ve Logları (Admin ve Yetkili Erişimi Aktif)
+      <div className="flex-1 bg-white border border-dashed border-gray-300 rounded-xl flex items-center justify-center text-gray-400 mb-8 italic">
+        Burada aktif kilitli ekipmanlar ve İSG logları listelenmektedir.
+      </div>
+
+      <div className="flex justify-start">
+        <button 
+          onClick={handleReturn}
+          className="px-8 py-3 bg-gray-900 text-white font-bold rounded shadow-lg hover:bg-black transition"
+        >
+          dashboarda dön
+        </button>
       </div>
     </div>
   );

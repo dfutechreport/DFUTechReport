@@ -1,89 +1,263 @@
-'use client';
+"use client";
+import { useEffect, useState, Suspense } from "react";
+import { collection, getDocs, doc, getDoc, query, where, orderBy, setDoc, updateDoc, serverTimestamp, increment, addDoc } from "firebase/firestore";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { auth, db } from "../../lib/firebase"; 
+import Link from "next/link";
+import { useForm } from "react-hook-form";
+import { useRouter } from "next/navigation";
 
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-
-// JSON verisindeki role yapısına uygun tip tanımlaması
-interface User {
-  name: string;
-  role: 'admin' | 'teknisyen' | 'isg';
+// TYPESCRIPT FORM ŞEMASI
+interface MaintenanceFormData {
+  hatAdi: string; ekipmanAdi: string; vardiya: string; isDuruslu: boolean;
+  baslangicTarihi: string; baslangicSaati: string; bitisTarihi: string; bitisSaati: string;
+  aciklama: string; linkedOrderId: string | null;
 }
 
-export default function DashboardPage({ user }: { user?: User }) {
+function DashboardIcerik() {
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
+  const today = new Date().toISOString().split('T')[0];
+  
+  const { register, handleSubmit, setValue, watch, reset, formState: { isSubmitting } } = useForm<MaintenanceFormData>({
+    defaultValues: {
+      baslangicTarihi: today, bitisTarihi: today,
+      isDuruslu: false, vardiya: "08:00 - 16:00", linkedOrderId: null, aciklama: ""
+    }
+  });
+  
+  const [aktifIsler, setAktifIsler] = useState<any[]>([]);
+  const [isgAlarmlari, setIsgAlarmlari] = useState<any[]>([]);
+  const [aktifEked, setAktifEked] = useState<any[]>([]);
+  const [hatlar, setHatlar] = useState<string[]>([]);
+  const [allAssets, setAllAssets] = useState<any[]>([]);
+  const [filteredEkipmanlar, setFilteredEkipmanlar] = useState<string[]>([]);
+  const [allSpareParts, setAllSpareParts] = useState<any[]>([]);
+  const [usedMaterials, setUsedMaterials] = useState([{ id: Date.now(), stockCode: "", name: "Kod Bekleniyor", stock: "-", quantity: 1, unit: "Adet" }]);
+  const [userName, setUserName] = useState("");
+  const [userRole, setUserRole] = useState("");
+  const [isDictating, setIsDictating] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [destekListesi, setDestekListesi] = useState<any[]>([]);
+  const [secilenDestekler, setSecilenDestekler] = useState<string[]>([]);
+
+  const selectedHat = watch("hatAdi");
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    onAuthStateChanged(auth, async (u) => {
+      if (u) {
+        const userSnap = await getDoc(doc(db, "users", u.uid));
+        if (userSnap.exists() && userSnap.data().isApproved) {
+          setUserName(userSnap.data().name || "");
+          setUserRole(userSnap.data().role || "");
+          await fetchSystemData();
+        } else { router.push("/"); }
+      } else { router.push("/"); }
+      setLoading(false);
+    });
+  }, [router]);
 
-  // Hydration hatasını önlemek için güvenli çıkış
-  if (!mounted || !user) {
-    return <div className="flex h-screen items-center justify-center font-sans">Yükleniyor...</div>;
-  }
+  const fetchSystemData = async () => {
+    try {
+      const wSnap = await getDocs(query(collection(db, "work_orders"), where("durum", "==", "Açık")));
+      const wData = wSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+      setIsgAlarmlari(wData.filter(d => d.ekipmanAdi === "KAR devreye alma"));
+      setAktifIsler(wData.filter(d => d.ekipmanAdi !== "KAR devreye alma"));
+      
+      const aSnap = await getDocs(collection(db, "assets"));
+      const aData = aSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setAllAssets(aData);
+      const hSet = new Set<string>();
+      aData.forEach((item: any) => { if (item.hatAdi) hSet.add(item.hatAdi); });
+      setHatlar(Array.from(hSet).sort());
 
-  const isAdmin = user.role === 'admin';
-  const isTech = user.role === 'teknisyen';
-  const isISG = user.role === 'isg';
+      const pSnap = await getDocs(collection(db, "spare_parts"));
+      setAllSpareParts(pSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
-  // Admin veya Teknisyen girişi yapıldığında eski halini (tam erişim) korur
-  const hasFullAccess = isAdmin || isTech;
+      const uSnap = await getDocs(query(collection(db, "users"), where("role", "in", ["teknisyen", "operator"])));
+      setDestekListesi(uSnap.docs.map(d => ({ id: d.id, name: d.data().name })));
+
+      // İSG İÇİN EKED VERİLERİ
+      const ekedSnap = await getDocs(query(collection(db, "eked_logs"), where("durum", "==", "Açık")));
+      setAktifEked(ekedSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+
+    } catch (e) { console.error(e); }
+  };
+
+  useEffect(() => {
+    if (selectedHat) {
+      const filtered = allAssets.filter(a => a.hatAdi === selectedHat).map(a => a.ekipmanAdi).filter(Boolean).sort();
+      setFilteredEkipmanlar(Array.from(new Set(filtered)));
+    } else { setFilteredEkipmanlar([]); }
+  }, [selectedHat, allAssets]);
+
+  const findStockItem = (id: number) => {
+    const row = usedMaterials.find(m => m.id === id);
+    if (!row || !row.stockCode) return;
+    const searchStr = row.stockCode.trim().toUpperCase();
+    const part = allSpareParts.find(p => String(p.id).toUpperCase() === searchStr || (p.stokKodu && p.stokKodu.toUpperCase() === searchStr));
+    if (part) {
+      setUsedMaterials(prev => prev.map(m => m.id === id ? { 
+        ...m, name: part.parcaAdi || part.malzemeAciklamasi || "İsimsiz", stock: part.mevcutMiktar || 0, unit: part.birim || "Adet" 
+      } : m));
+    } else {
+      setUsedMaterials(prev => prev.map(m => m.id === id ? { ...m, name: "BULUNAMADI", stock: "-", unit: "Adet" } : m));
+    }
+  };  const startDictation = () => {
+    if (!('webkitSpeechRecognition' in window)) return;
+    const recognition = new (window as any).webkitSpeechRecognition();
+    recognition.lang = 'tr-TR';
+    recognition.onstart = () => setIsDictating(true);
+    recognition.onend = () => setIsDictating(false);
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      const currentVal = watch("aciklama");
+      setValue("aciklama", currentVal ? currentVal + " " + transcript : transcript);
+    };
+    recognition.start();
+  };
+
+  const onSubmit = async (data: MaintenanceFormData) => {
+    try {
+      const tumEkip = [userName, ...secilenDestekler].join(", ");
+      const finalLog = { ...data, bildirenKisi: userName, teknisyen: tumEkip, ekip: secilenDestekler, kayitTarihi: serverTimestamp(), usedMaterials, durum: "Kapalı" };
+      await addDoc(collection(db, "maintenance_logs"), finalLog);
+      if (data.linkedOrderId) { await updateDoc(doc(db, "work_orders", data.linkedOrderId), { durum: "Kapalı", tamamlanmaTarihi: serverTimestamp() }); }
+      alert("Başarıyla Kaydedildi.");
+      reset(); setSecilenDestekler([]);
+      setUsedMaterials([{ id: Date.now(), stockCode: "", name: "Kod Bekleniyor", stock: "-", quantity: 1, unit: "Adet" }]);
+    } catch (e) { alert("Hata!"); }
+  };
+
+  const getDashboardLink = () => {
+    if (userRole === "admin") return "/admin";
+    if (userRole === "uretim") return "/admin/tamamlanan-isler";
+    if (userRole === "ik") return "/admin/mesai";
+    return "/dashboard";
+  };
+
+  if (loading) return <div className="p-10 bg-slate-950 min-h-screen text-white flex justify-center items-center font-black italic uppercase tracking-widest">Sistem Yükleniyor...</div>;
 
   return (
-    <div className="flex flex-col min-h-screen p-6 bg-gray-50 font-sans text-gray-900">
-      <header className="mb-8 border-b-2 border-gray-200 pb-4">
-        <h1 className="text-xl font-bold uppercase tracking-tight text-gray-700">
-          Kullanıcı: {user.name} | Yetki: {user.role.toUpperCase()}
-        </h1>
-      </header>
-
-      {/* BUTONLAR PANELİ */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-10">
+    <div className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-6 font-sans">
+      <div className="max-w-[1440px] mx-auto space-y-6">
         
-        {/* İSG Yetkisinde GİZLENEN Bölüm */}
-        {hasFullAccess && (
-          <>
-            <button onClick={() => router.push('/kontrol-formlari')} className="p-4 bg-white border rounded shadow hover:bg-gray-50">kontrol formları</button>
-            <button onClick={() => router.push('/periyodik-bakim')} className="p-4 bg-white border rounded shadow hover:bg-gray-50">periyodik bakım</button>
-            <button onClick={() => router.push('/manuel-pm')} className="p-4 bg-white border rounded shadow hover:bg-gray-50">manuel pm</button>
-            <button onClick={() => router.push('/sayac-okuma')} className="p-4 bg-white border rounded shadow hover:bg-gray-50">sayaç okuma</button>
-            <button onClick={() => router.push('/mesai-girisi')} className="p-4 bg-white border rounded shadow hover:bg-gray-50">mesai girişi</button>
-            <button onClick={() => router.push('/mesailerim')} className="p-4 bg-white border rounded shadow hover:bg-gray-50">mesailerim</button>
-            <button onClick={() => router.push('/yapilan-isler')} className="p-4 bg-white border rounded shadow hover:bg-gray-50">yapılan işler</button>
-            <button onClick={() => router.push('/bakim-ligi')} className="p-4 bg-white border rounded shadow hover:bg-gray-50">bakım ligi</button>
-          </>
+        {/* NAVİGASYON BUTONLARI - İSG Kısıtlaması Uygulandı */}
+        <div className="flex flex-wrap items-center gap-2 bg-slate-900 border border-slate-800 p-4 rounded-[2.5rem] shadow-2xl">
+          <Link href={getDashboardLink()} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-blue-600/20 tracking-tighter">Dashboarda Dön</Link>
+          
+          {userRole !== "isg" && (
+            <>
+              <Link href="/dashboard/kontrol-formlari" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase text-slate-400">Kontrol Formları</Link>
+              <Link href="/dashboard/periyodik-bakim" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase text-slate-400">Periyodik Bakım</Link>
+              <Link href="/admin/pm-takvim" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase text-slate-400">Manuel PM</Link>
+              <Link href="/dashboard/sayac" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase text-slate-400">Sayaç Okuma</Link>
+              <Link href="/dashboard/mesai" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase text-slate-400">Mesai Girişi</Link>
+              <Link href="/admin/mesai" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase text-slate-400">Mesailerim</Link>
+              <Link href="/admin/is-listesi" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase text-slate-400">Yapılan İşler</Link>
+              <Link href="/admin/bakim-ligi" className="bg-yellow-500/10 border border-yellow-500/20 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase text-yellow-500 italic">Bakım Ligi</Link>
+            </>
+          )}
+
+          <Link href="/dashboard/pano-listesi" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase text-slate-400">Pano Temizliği</Link>
+          <Link href="/admin/eked" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase text-slate-400">EKED Takip</Link>
+          
+          {userRole === "isg" && (
+            <>
+              <Link href="/admin/kar-takip" className="bg-red-900/20 border border-red-900/30 px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase text-red-500">⚡ KAR Arşivi</Link>
+              <Link href="/admin/duyurular" className="bg-orange-900/20 border border-orange-900/30 px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase text-orange-500">📢 İSG Duyuru</Link>
+            </>
+          )}
+
+          <button onClick={() => { signOut(auth); router.push("/"); }} className="bg-red-900/20 border border-red-900/30 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase text-red-500 ml-auto hover:bg-red-600 hover:text-white transition-all">Çıkış</button>
+        </div>
+
+        {/* ALARMLAR - İSG VE DİĞERLERİ İÇİN ORTAK */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 italic font-bold">
+          <div className="bg-red-950/20 border border-red-900/30 p-6 rounded-[2.5rem]">
+            <h3 className="text-red-500 text-xs font-black mb-4 uppercase italic">⚠️ KRİTİK İSG ALARMLARI</h3>
+            {isgAlarmlari.map(a => (<div key={a.id} className="bg-red-900/20 p-4 rounded-2xl mb-2 flex justify-between items-center border border-red-800/30 shadow-lg"><span>{a.aciklama}</span>{userRole !== "isg" && <button type="button" onClick={() => { setValue("hatAdi", a.hatAdi); setValue("ekipmanAdi", a.ekipmanAdi); setValue("linkedOrderId", a.id); }} className="text-[9px] bg-red-600 text-white px-4 py-2 rounded-xl font-black uppercase shadow-lg">Seç</button>}</div>))}
+          </div>
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-[2.5rem]">
+            <h3 className="text-yellow-500 text-xs font-black mb-4 uppercase italic tracking-widest">🔐 AKTİF EKED BİLDİRİMLERİ</h3>
+            <div className="space-y-3">
+              {aktifEked.map(e => (<div key={e.id} className="bg-slate-950 p-4 rounded-2xl border border-yellow-600/20 flex justify-between items-center italic"><div><p className="text-xs font-black text-yellow-500 uppercase">{e.yer}</p><p className="text-[10px] text-gray-500 uppercase font-black">{e.personel}</p></div><Link href="/admin/eked" className="bg-yellow-600 text-black px-3 py-1.5 rounded-lg text-[9px] font-black uppercase">Detay</Link></div>))}
+            </div>
+          </div>
+        </div>
+
+        {/* --- TEKNİSYEN VE ADMİN FORMU --- */}
+        {userRole !== "isg" && (
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <div className="bg-slate-900 border border-slate-800 p-8 rounded-[3rem] space-y-8 shadow-2xl">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div><label className="text-[10px] font-bold text-slate-500 block mb-2 uppercase italic font-bold">1. Hat / Bölge</label><select {...register("hatAdi")} className="w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl text-white outline-none focus:border-blue-500 shadow-inner italic font-bold"><option value="">Hat Seçin</option>{hatlar.map(h => <option key={h} value={h}>{h}</option>)}</select></div>
+                <div><label className="text-[10px] font-bold text-slate-500 block mb-2 uppercase italic font-bold">2. Ekipman Seçimi</label><select {...register("ekipmanAdi")} disabled={!selectedHat} className="w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl text-white outline-none focus:border-blue-500 shadow-inner italic font-bold"><option value="">{selectedHat ? "Ekipman Seçiniz" : "Önce Hat Seçiniz"}</option>{filteredEkipmanlar.map(e => <option key={e} value={e}>{e}</option>)}</select></div>
+                <div><label className="text-[10px] font-bold text-slate-500 block mb-2 uppercase italic font-bold">3. Vardiya</label><select {...register("vardiya")} className="w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl text-white outline-none focus:border-blue-500 shadow-inner italic font-bold"><option>08:00 - 16:00</option><option>16:00 - 00:00</option><option>00:00 - 08:00</option></select></div>
+              </div>
+              <div className="bg-slate-950/50 p-6 rounded-[2rem] border border-slate-800/50 shadow-inner">
+                <label className="text-[9px] font-black text-slate-500 block mb-4 uppercase tracking-[0.2em] italic font-bold">Ekip Çalışması (Destek Verenler)</label>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <span className="bg-blue-600 text-white px-4 py-1.5 rounded-xl text-[9px] font-black uppercase italic">{userName} (Lider)</span>
+                  {secilenDestekler.map(name => (<span key={name} className="bg-slate-800 text-blue-400 border border-slate-700 px-4 py-1.5 rounded-xl text-[9px] font-bold flex items-center gap-2">{name} <button type="button" onClick={() => setSecilenDestekler(prev => prev.filter(t => t !== name))} className="text-slate-500 hover:text-red-500 font-black">×</button></span>))}
+                </div>
+                <select className="w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl text-slate-400 outline-none focus:border-blue-500 text-xs italic font-bold" onChange={(e) => { const v = e.target.value; if (v && !secilenDestekler.includes(v) && v !== userName) setSecilenDestekler([...secilenDestekler, v]); e.target.value = ""; }}>
+                  <option value="">Destek Personeli Ekle...</option>
+                  {destekListesi.filter(t => t.name !== userName).map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 p-8 rounded-[3rem] space-y-8 shadow-xl">
+               <div className="flex items-center gap-4 bg-slate-950 p-6 rounded-[2rem] border border-slate-800 shadow-inner"><input type="checkbox" {...register("isDuruslu")} className="w-6 h-6 accent-red-600 shadow-lg" /><label className="text-xs font-black text-red-600 uppercase italic tracking-widest font-bold underline decoration-red-900/30">Üretim Duruşlu Arıza</label></div>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 italic font-bold">
+                  <div className="bg-slate-950/30 p-5 rounded-3xl border border-slate-800 shadow-inner">
+                    <label className="text-[10px] text-blue-500 font-black mb-3 block uppercase italic">Arıza Başlangıç</label>
+                    <div className="flex gap-4">
+                      <input type="date" {...register("baslangicTarihi")} className="bg-slate-900 border border-slate-800 p-3 rounded-xl text-white text-xs w-full italic" />
+                      <input type="time" {...register("baslangicSaati")} className="bg-slate-900 border border-slate-800 p-3 rounded-xl text-white text-xs w-full italic" />
+                    </div>
+                  </div>
+                  <div className="bg-slate-950/30 p-5 rounded-3xl border border-slate-800 shadow-inner">
+                    <label className="text-[10px] text-green-500 font-black mb-3 block uppercase italic">Arıza Bitiş</label>
+                    <div className="flex gap-4">
+                      <input type="date" {...register("bitisTarihi")} className="bg-slate-900 border border-slate-800 p-3 rounded-xl text-white text-xs w-full italic" />
+                      <input type="time" {...register("bitisSaati")} className="bg-slate-900 border border-slate-800 p-3 rounded-xl text-white text-xs w-full italic" />
+                    </div>
+                  </div>
+               </div>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 p-8 rounded-[3rem] shadow-xl italic font-bold">
+              <h3 className="text-[10px] font-black text-white mb-6 uppercase tracking-[0.3em] italic underline decoration-slate-800">Yedek Parça / Sarf Malzeme Kullanımı</h3>
+              {usedMaterials.map(row => (
+                <div key={row.id} className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4 items-end animate-in fade-in slide-in-from-left duration-300">
+                  <div className="md:col-span-1"><input type="text" placeholder="KOD..." value={row.stockCode} onBlur={() => findStockItem(row.id)} onChange={e => setUsedMaterials(prev => prev.map(m => m.id === row.id ? {...m, stockCode: e.target.value} : m))} className="w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl text-xs text-blue-400 font-black uppercase shadow-inner italic" /></div>
+                  <div className="md:col-span-2"><div className="w-full bg-slate-950/50 border border-slate-800/50 p-4 rounded-2xl text-[10px] text-slate-400 italic truncate font-bold shadow-inner italic">{row.name}</div></div>
+                  <div className="flex gap-2 items-center"><input type="number" value={row.quantity} onChange={e => setUsedMaterials(prev => prev.map(m => m.id === row.id ? {...m, quantity: Number(e.target.value)} : m))} className="w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl text-xs text-white text-center font-black" /><span className="text-[10px] text-slate-600 font-bold uppercase">{row.unit}</span></div>
+                  <button type="button" onClick={() => setUsedMaterials(prev => prev.filter(m => m.id !== row.id))} className="bg-red-900/20 text-red-500 p-4 rounded-2xl hover:bg-red-600 transition-all text-[9px] font-black uppercase shadow-lg shadow-inner">SİL</button>
+                </div>
+              ))}
+              <button type="button" onClick={() => setUsedMaterials([...usedMaterials, {id: Date.now(), stockCode: "", name: "Kod Bekleniyor", stock: "-", quantity: 1, unit: "Adet"}])} className="text-blue-500 text-[9px] font-black uppercase tracking-[0.2em] hover:underline mt-4 italic">+ Yeni Malzeme Ekle</button>
+            </div>
+
+            <div className="relative group italic font-bold">
+              <label className="text-[10px] font-bold text-slate-500 block mb-2 uppercase tracking-widest italic tracking-tighter font-bold">Yapılan İşlem Açıklaması</label>
+              <textarea {...register("aciklama")} className="w-full bg-slate-900 border border-slate-800 p-8 rounded-[3rem] text-white text-sm outline-none focus:border-blue-500 h-52 resize-none shadow-2xl shadow-inner italic font-bold" placeholder="Müdahale detaylarını buraya yazın..." />
+              <button type="button" onClick={startDictation} className={`absolute bottom-8 right-8 p-6 rounded-full shadow-2xl transition-all ${isDictating ? 'bg-red-600 animate-pulse text-white' : 'bg-blue-600 text-white hover:scale-110 active:scale-95 shadow-blue-600/20'}`}><svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2.5" fill="none"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button>
+            </div>
+
+            <button type="submit" disabled={isSubmitting} className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 text-white font-black py-7 rounded-[3rem] shadow-2xl shadow-blue-900/20 transition-all uppercase tracking-[0.5em] text-sm italic tracking-tighter">{isSubmitting ? "Sisteme Kaydediliyor..." : "Bakım Raporunu Sisteme Gönder"}</button>
+          </form>
         )}
-
-        {/* HER ROLDE GÖRÜNECEK BUTONLAR */}
-        <button onClick={() => router.push('/pano-temizligi')} className="p-4 bg-white border rounded shadow hover:bg-gray-50">pano temizliği</button>
-        <button onClick={() => router.push('/eked-takip')} className="p-4 bg-white border rounded shadow hover:bg-gray-50">eked takip</button>
-
-        {/* SADECE İSG VE ADMIN İÇİN EK BUTONLAR */}
-        {(isISG || isAdmin) && (
-          <>
-            <button onClick={() => router.push('/kar-arsivi')} className="p-4 bg-blue-600 text-white rounded shadow hover:bg-blue-700 font-medium">kar arşivi</button>
-            <button onClick={() => router.push('/isg-duyuru')} className="p-4 bg-blue-600 text-white rounded shadow hover:bg-blue-700 font-medium">İSG duyuru</button>
-          </>
-        )}
-      </div>
-
-      {/* ALT BİLGİ BÖLÜMLERİ */}
-      <div className="flex flex-col space-y-3">
-        {/* İSG Yetkisinde GİZLENEN Alt Bölümler */}
-        {hasFullAccess && (
-          <>
-            <div className="p-4 border rounded bg-white shadow-sm" id="saha-bildirimleri">saha bildirimleri</div>
-            <div className="p-4 border rounded bg-white shadow-sm" id="rapor-girisi">rapor girişi</div>
-            <div className="p-4 border rounded bg-white shadow-sm" id="yedek-parca">yedek parça sarf malzeme kullanımı</div>
-            <div className="p-4 border rounded bg-white shadow-sm" id="zaman-girisi">zaman girişi</div>
-            <div className="p-4 border rounded bg-white shadow-sm" id="aciklama">açıklama</div>
-          </>
-        )}
-
-        {/* HERKESİN GÖRDÜĞÜ / SADECE İSG'DE AKTİF OLANLAR */}
-        <div className="p-4 border-l-4 border-red-500 bg-red-50 text-red-700 font-bold uppercase shadow-sm" id="kritik-isg-alarmlari">kritik isg alarmları</div>
-        <div className="p-4 border-l-4 border-yellow-500 bg-yellow-50 text-yellow-700 font-bold uppercase shadow-sm" id="aktif-eked-bildirimleri">aktif eked bildirimleri</div>
       </div>
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<div className="p-10 text-white italic tracking-[0.3em] font-black italic">SİSTEM YÜKLENİYOR...</div>}>
+      <DashboardIcerik />
+    </Suspense>
   );
 }

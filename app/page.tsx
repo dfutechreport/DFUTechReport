@@ -48,7 +48,7 @@ export default function LoginPage() {
       if (!userSnap.exists()) {
         await setDoc(userRef, { name: user.displayName, email: user.email, role: "user", isApproved: false, createdAt: serverTimestamp() });
       }
-    } catch (err) { setError("Google girişi başarısız."); }
+    } catch (err) { setError("İşlem iptal edildi."); }
   };
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -67,12 +67,7 @@ export default function LoginPage() {
     setIsProcessing(false);
   };
 
-  if (loading) return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center space-y-4">
-      <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-      <p className="text-slate-500 font-bold uppercase text-xs tracking-widest">Sistemler Başlatılıyor...</p>
-    </div>
-  );
+  if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white italic tracking-widest">YÜKLENİYOR...</div>;
 
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 relative overflow-hidden font-sans italic font-bold">
@@ -81,19 +76,19 @@ export default function LoginPage() {
       <div className="w-full max-w-md z-10">
         <div className="flex flex-col items-center mb-10 group">
           <img src="/dfulogo.png" alt="DFU" className="h-28 w-auto object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.1)] transition-transform duration-500 group-hover:scale-105" />
-          <div className="h-1 w-16 bg-blue-600 mt-4 rounded-full shadow-[0_0_10px_rgba(37,99,235,0.5)]"></div>
+          <div className="h-1 w-16 bg-blue-600 mt-4 rounded-full"></div>
         </div>
-        <div className="bg-slate-900/80 backdrop-blur-2xl border border-slate-800 p-10 rounded-[3rem] shadow-2xl relative">
+        <div className="bg-slate-900/80 backdrop-blur-2xl border border-slate-800 p-10 rounded-[3rem] shadow-2xl relative text-white">
           <button onClick={() => setShowInfoModal(true)} className="absolute top-8 right-8 text-slate-500 hover:text-blue-400 flex items-center gap-1 text-[10px] font-black uppercase"><IconInfo /> Kayıt Rehberi</button>
           <div className="mb-8 uppercase tracking-tighter">
-            <h2 className="text-2xl font-black text-white">{isResetMode ? "Kurtarma" : isLoginMode ? "Giriş Paneli" : "Yeni Kayıt"}</h2>
+            <h2 className="text-2xl font-black">{isResetMode ? "Kurtarma" : isLoginMode ? "Giriş Paneli" : "Yeni Kayıt"}</h2>
             <p className="text-slate-500 text-[10px] tracking-widest">Teknik Yönetim Portalı</p>
           </div>
           <form onSubmit={handleAuth} className="space-y-4">
             {!isLoginMode && !isResetMode && <input type="text" placeholder="Ad Soyad" className="w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl text-white outline-none focus:border-blue-500" value={name} onChange={(e)=>setName(e.target.value)} required />}
             <input type="email" placeholder="E-posta" className="w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl text-white outline-none focus:border-blue-500" value={email} onChange={(e)=>setEmail(e.target.value)} required />
             {!isResetMode && <input type="password" placeholder="Şifre" className="w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl text-white outline-none focus:border-blue-500" value={password} onChange={(e)=>setPassword(e.target.value)} required />}
-            <button type="submit" disabled={isProcessing} className="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-2xl text-white font-black uppercase text-xs tracking-widest shadow-lg active:scale-95">{isProcessing ? "İŞLENİYOR..." : isResetMode ? "TALİMAT GÖNDER" : isLoginMode ? "SİSTEME GİRİŞ" : "KAYDI TAMAMLA"}</button>
+            <button type="submit" disabled={isProcessing} className="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-2xl text-white font-black uppercase text-xs tracking-widest transition-all">{isProcessing ? "İŞLENİYOR..." : isResetMode ? "ŞİFREYİ SIFIRLA" : isLoginMode ? "SİSTEME GİRİŞ" : "KAYDI TAMAMLA"}</button>
           </form>
           {isLoginMode && !isResetMode && (
             <>
@@ -104,24 +99,22 @@ export default function LoginPage() {
           {error && <div className="mt-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 text-center text-xs font-bold">{error}</div>}
           {successMsg && <div className="mt-6 p-4 bg-green-500/10 border border-green-500/20 rounded-2xl text-green-500 text-center text-xs font-bold">{successMsg}</div>}
           <div className="mt-10 flex flex-col gap-4 text-center">
-            <button onClick={()=>{setIsResetMode(!isResetMode); setSuccessMsg(""); setError("");}} className="text-slate-500 text-[10px] font-black uppercase underline underline-offset-4">{isResetMode ? "Giriş Ekranına Dön" : "Şifremi Unuttum"}</button>
+            <button onClick={()=>{setIsResetMode(!isResetMode); setSuccessMsg(""); setError("");}} className="text-slate-500 text-[10px] font-black uppercase underline underline-offset-4">{isResetMode ? "Geri Dön" : "Şifremi Unuttum"}</button>
             {!isResetMode && <button onClick={()=>setIsLoginMode(!isLoginMode)} className="text-slate-300 text-[11px] font-black uppercase">{isLoginMode ? "Yeni Hesap Oluştur" : "Zaten hesabınız var mı?"}</button>}
           </div>
         </div>
       </div>
       {showInfoModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
-          <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-[3rem] shadow-2xl p-10 relative">
+          <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-[3rem] shadow-2xl p-10 relative text-white text-center">
             <button onClick={() => setShowInfoModal(false)} className="absolute top-8 right-8 text-slate-500 hover:text-white"><IconX /></button>
-            <div className="flex flex-col items-center text-center">
-              <h3 className="text-2xl font-black text-white italic uppercase mb-6">Giriş Prosedürü</h3>
-              <div className="space-y-6 text-slate-400 text-sm text-left">
-                <p><span className="text-white">01. Kayıt:</span> Kurumsal mailiniz ile şifrenizi belirleyin.</p>
-                <p><span className="text-white">02. Onay:</span> Hesabınız admin tarafından kontrol edilip onaylanacaktır.</p>
-                <p><span className="text-white">03. Erişim:</span> Onay sonrası belirlediğiniz şifre ile giriş yapabilirsiniz.</p>
-              </div>
-              <button onClick={() => setShowInfoModal(false)} className="w-full mt-10 py-5 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-2xl text-[10px] tracking-widest shadow-xl">Anladım</button>
+            <h3 className="text-2xl font-black italic uppercase mb-6">Giriş Prosedürü</h3>
+            <div className="space-y-6 text-slate-400 text-sm text-left font-black">
+              <p><span className="text-blue-500">01. Kayıt:</span> Kurumsal mailiniz ile şifrenizi belirleyin.</p>
+              <p><span className="text-blue-500">02. Onay:</span> Hesabınız admin tarafından onaylanacaktır.</p>
+              <p><span className="text-blue-500">03. Erişim:</span> Onay sonrası sistemdeki yetki alanınıza giriş yapabilirsiniz.</p>
             </div>
+            <button onClick={() => setShowInfoModal(false)} className="w-full mt-10 py-5 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-2xl text-[10px] tracking-widest shadow-xl transition-all">Anladım</button>
           </div>
         </div>
       )}

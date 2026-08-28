@@ -5,7 +5,7 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, db } from "../../../lib/firebase";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import * as XLSX from "xlsx"; // Projenizdeki Excel kütüphanesi kullanıldı
+import * as XLSX from "xlsx";
 
 export default function MesaiRaporlari() {
   const [loading, setLoading] = useState(true);
@@ -26,12 +26,19 @@ export default function MesaiRaporlari() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const uSnap = await getDoc(doc(db, "users", user.uid));
-        if (uSnap.exists() && userSnap.data().isApproved) {
+        const uRef = doc(db, "users", user.uid);
+        const uSnap = await getDoc(uRef); // uSnap olarak tanımlandı
+        
+        // HATA DÜZELTİLDİ: uSnap kontrolü sağlandı
+        if (uSnap.exists() && uSnap.data().isApproved) {
           setUserRole(uSnap.data().role);
           fetchMesaiRecords();
-        } else router.push("/");
-      } else router.push("/");
+        } else {
+          router.push("/");
+        }
+      } else {
+        router.push("/");
+      }
     });
     return () => unsubscribe();
   }, [router]);
@@ -41,7 +48,7 @@ export default function MesaiRaporlari() {
       const snap = await getDocs(query(collection(db, "overtime_logs"), orderBy("tarih", "desc")));
       const data = snap.docs.map(d => {
         const raw = d.data();
-        const dateParts = raw.tarih ? raw.tarih.split("-") : []; // YYYY-MM-DD formatı parçalanır
+        const dateParts = raw.tarih ? raw.tarih.split("-") : [];
         return {
           id: d.id,
           ...raw,
@@ -59,7 +66,6 @@ export default function MesaiRaporlari() {
     setLoading(false);
   };
 
-  // FİLTRELEME MOTORU
   useEffect(() => {
     let result = mesaiList.filter(m => {
       const matchYil = !fYil || m.yil === fYil;
@@ -72,7 +78,6 @@ export default function MesaiRaporlari() {
     setFilteredList(result);
   }, [fYil, fAy, fGun, fPersonel, fTur, mesaiList]);
 
-  // EXCEL RAPORLAMA FONKSİYONU
   const exportToExcel = () => {
     const reportData = filteredList.map(m => ({
       "Tarih": m.tarih,
@@ -91,28 +96,26 @@ export default function MesaiRaporlari() {
     XLSX.writeFile(wb, `DFU_Mesai_Raporu_${new Date().toISOString().slice(0,10)}.xlsx`);
   };
 
-  if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white italic">Raporlar Hazırlanıyor...</div>;
+  if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white italic">Yükleniyor...</div>;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-10 font-sans italic font-bold">
       <div className="max-w-[1400px] mx-auto">
         
-        {/* Üst Navigasyon */}
         <div className="flex justify-between items-center mb-10 bg-slate-900/50 p-8 rounded-[3rem] border border-slate-800 shadow-2xl">
           <div>
-            <h1 className="text-3xl font-black text-white italic uppercase tracking-tighter">Mesai Raporları</h1>
-            <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">Personel Puantaj ve Verimlilik Takibi</p>
+            <h1 className="text-3xl font-black text-white italic tracking-tighter uppercase">Mesai Raporları</h1>
+            <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">Personel Puantaj Sistemi</p>
           </div>
           <div className="flex gap-4">
             <button onClick={exportToExcel} className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase shadow-lg transition-all">📊 Excel Raporu Al</button>
             {userRole !== "ik" && (
-              <button onClick={() => router.back()} className="bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase shadow-lg border border-slate-700">← Geri Dön</button>
+              <button onClick={() => router.back()} className="bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase shadow-lg border border-slate-700 transition-all">← Geri Dön</button>
             )}
-            <button onClick={() => { signOut(auth); router.push("/"); }} className="bg-red-900/20 text-red-500 px-6 py-3 rounded-2xl font-black text-[10px] uppercase border border-red-900/30">Çıkış</button>
+            <button onClick={() => { signOut(auth); router.push("/"); }} className="bg-red-900/20 text-red-500 px-6 py-3 rounded-2xl font-black text-[10px] uppercase border border-red-900/30 transition-all">Çıkış</button>
           </div>
         </div>
 
-        {/* Gelişmiş Filtreleme Paneli */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8 bg-slate-900/30 p-8 rounded-[3rem] border border-slate-800 shadow-xl">
           <div className="space-y-1">
             <label className="text-[9px] font-black text-slate-500 uppercase px-2">Yıl</label>
@@ -123,13 +126,13 @@ export default function MesaiRaporlari() {
           <div className="space-y-1">
             <label className="text-[9px] font-black text-slate-500 uppercase px-2">Ay</label>
             <select value={fAy} onChange={e=>setFAy(e.target.value)} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-xs text-white outline-none italic font-bold">
-              <option value="">Tümü</option>{[...Array(12)].map((_,i)=><option key={i+1} value={i+1}>{i+1}. Ay</option>)}
+              <option value="">Tümü</option>{[...Array(12)].map((_,i)=><option key={i+1} value={String(i+1)}>{i+1}. Ay</option>)}
             </select>
           </div>
           <div className="space-y-1">
             <label className="text-[9px] font-black text-slate-500 uppercase px-2">Gün</label>
             <select value={fGun} onChange={e=>setFGun(e.target.value)} className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-xs text-white outline-none italic font-bold">
-              <option value="">Tümü</option>{[...Array(31)].map((_,i)=><option key={i+1} value={i+1}>{i+1}</option>)}
+              <option value="">Tümü</option>{[...Array(31)].map((_,i)=><option key={i+1} value={String(i+1)}>{i+1}</option>)}
             </select>
           </div>
           <div className="space-y-1">
@@ -146,43 +149,24 @@ export default function MesaiRaporlari() {
           </div>
         </div>
 
-        {/* Mesai Tablosu */}
         <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] overflow-hidden shadow-2xl">
           <table className="w-full text-left">
             <thead className="bg-slate-950 text-slate-500 text-[10px] uppercase font-black tracking-widest border-b border-slate-800 italic">
-              <tr>
-                <th className="p-6">Personel</th>
-                <th className="p-6">Zaman / Detay</th>
-                <th className="p-6">Tür</th>
-                <th className="p-6">Toplam Süre</th>
-                <th className="p-6 text-right">Durum</th>
-              </tr>
+              <tr><th className="p-6">Personel</th><th className="p-6">Zaman / Detay</th><th className="p-6">Tür</th><th className="p-6">Toplam Süre</th><th className="p-6 text-right">Durum</th></tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/50 text-sm italic font-bold uppercase">
+            <tbody className="divide-y divide-slate-800/50 text-sm font-bold uppercase italic">
               {filteredList.map(log => (
                 <tr key={log.id} className="hover:bg-slate-800/30 transition-all group">
-                  <td className="p-6">
-                    <p className="text-slate-200 font-black group-hover:text-blue-400">{log.personelIsmi}</p>
-                    <p className="text-[10px] text-slate-600 font-bold italic">{log.bolum || "Teknik Departman"}</p>
-                  </td>
-                  <td className="p-6">
-                    <p className="text-slate-300">{log.tarih}</p>
-                    <p className="text-[10px] text-slate-500 font-bold">{log.baslangicSaati} - {log.bitisSaati}</p>
-                  </td>
-                  <td className="p-6 text-slate-400 text-xs">
-                    {log.mesaiTuru} {log.evdenCagirma === "Var" && <span className="text-[9px] text-orange-500 block">+ Evden Çağırma</span>}
-                  </td>
-                  <td className="p-6 text-blue-500 font-black text-lg">{log.sureSaat} <span className="text-xs text-slate-600">Saat</span></td>
-                  <td className="p-6 text-right">
-                    <span className={`text-[10px] px-3 py-1 rounded-full font-black uppercase ${log.durum === "Onaylandı" ? "bg-green-900/20 text-green-500 border border-green-900/30" : "bg-blue-900/20 text-blue-500 border border-blue-900/30"}`}>
-                      {log.durum || "Beklemede"}
-                    </span>
-                  </td>
+                  <td className="p-6"><p className="text-slate-200 font-black group-hover:text-blue-400">{log.personelIsmi}</p></td>
+                  <td className="p-6"><p className="text-slate-300">{log.tarih}</p><p className="text-[10px] text-slate-500 font-bold">{log.baslangicSaati} - {log.bitisSaati}</p></td>
+                  <td className="p-6 text-slate-400 text-xs">{log.mesaiTuru}</td>
+                  <td className="p-6 text-blue-500 font-black text-lg">{log.sureSaat} Saat</td>
+                  <td className="p-6 text-right"><span className={`text-[10px] px-3 py-1 rounded-full font-black uppercase ${log.durum === "Onaylandı" ? "bg-green-900/20 text-green-500 border border-green-900/30" : "bg-blue-900/20 text-blue-500 border border-blue-900/30"}`}>{log.durum || "Beklemede"}</span></td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {filteredList.length === 0 && <div className="p-20 text-center text-slate-600 font-black uppercase italic">Kriterlere uygun mesai kaydı bulunamadı.</div>}
+          {filteredList.length === 0 && <div className="p-20 text-center text-slate-600 font-black uppercase italic">Sonuç bulunamadı.</div>}
         </div>
       </div>
     </div>

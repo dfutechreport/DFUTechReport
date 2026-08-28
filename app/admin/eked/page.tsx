@@ -11,21 +11,6 @@ export default function EkedTakip() {
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      localStorage.clear();
-      sessionStorage.clear();
-      router.push("/login");
-      router.refresh();
-    } catch (e) { console.error(e); }
-  };
-  const secureAction = (callback: () => void) => {
-    const pw = prompt("Kritik işlem için yetki şifresini girin:");
-    if (pw === "161004") { callback(); }
-    else { alert("Hatalı Şifre! İşlem reddedildi."); }
-  };
-
   const [userRole, setUserRole] = useState("");
   const [userName, setUserName] = useState("");
   const router = useRouter();

@@ -10,10 +10,7 @@ import { useRouter } from "next/navigation";
 export default function AdminDashboard() {
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
-  const [userRole, setUserRole] = useState(""); 
-  const [userName, setUserName] = useState(""); 
-  const [loading, setLoading] = useState(true);
-  const [mounted, setMounted] = useState(false);
+  const [userRole, setUserRole] = useState("");
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -28,7 +25,10 @@ export default function AdminDashboard() {
     if (pw === "161004") { callback(); }
     else { alert("Hatalı Şifre! İşlem reddedildi."); }
   };
-
+ 
+  const [userName, setUserName] = useState(""); 
+  const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
   
   // VERİ HAVUZLARI
   const [rawLogs, setRawLogs] = useState<any[]>([]);

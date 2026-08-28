@@ -10,22 +10,7 @@ import { useRouter } from "next/navigation";
 export default function AdminDashboard() {
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
-  const [userRole, setUserRole] = useState("");
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      localStorage.clear();
-      sessionStorage.clear();
-      router.push("/login");
-      router.refresh();
-    } catch (e) { console.error(e); }
-  };
-  const secureAction = (callback: () => void) => {
-    const pw = prompt("Kritik işlem için yetki şifresini girin:");
-    if (pw === "161004") { callback(); }
-    else { alert("Hatalı Şifre! İşlem reddedildi."); }
-  };
- 
+  const [userRole, setUserRole] = useState(""); 
   const [userName, setUserName] = useState(""); 
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
@@ -198,8 +183,8 @@ export default function AdminDashboard() {
           <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-12 bg-white rounded p-1" /><h1 className="text-2xl font-black uppercase text-indigo-400">Komuta Merkezi</h1></div>
           <div className="flex gap-3">
              <Link href="/dashboard" className="bg-indigo-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg">Vardiya Raporu</Link>
-             <button onClick={() => secureAction(downloadFullSnapshot)} className="bg-emerald-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg italic">💾 Sistem Yedeği</button>
-             <button onClick={handleLogout} className="bg-red-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg">Çıkış</button>
+             <button onClick={downloadFullSnapshot} className="bg-emerald-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg italic">💾 Sistem Yedeği</button>
+             <button onClick={()=>signOut(auth)} className="bg-red-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg">Çıkış</button>
           </div>
         </div>
 
@@ -208,25 +193,24 @@ export default function AdminDashboard() {
           <Link href="/admin/is-emri-ac" className="bg-red-600 p-3 rounded-2xl text-[10px] text-center uppercase shadow-lg">🚨 Yeni İş Emri</Link>
           <Link href="/admin/aktif-isler" className="bg-red-950 border border-red-500 p-3 rounded-2xl text-[10px] text-center uppercase">Aktif Bildirimler</Link>
           <Link href="/admin/eked" className="bg-yellow-600 text-black p-3 rounded-2xl text-[10px] text-center uppercase">🔐 EKED Takip</Link>
-          {userRole === "isg" && <Link href="/admin/isg-duyuru" className="bg-orange-600 p-3 rounded-2xl text-[10px] text-center uppercase text-white animate-pulse">📢 İSG Duyuru</Link>}
           <Link href="/admin/eked/arsiv" className="bg-gray-700 p-3 rounded-2xl text-[10px] text-center uppercase text-white">📂 EKED Arşivi</Link>
           <Link href="/admin/personel" className="bg-purple-600 p-3 rounded-2xl text-[10px] text-center uppercase relative">👤 Personel Onay {kpiOnayBekleyen > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-[8px] px-1 rounded-full animate-pulse">{kpiOnayBekleyen}</span>}</Link>
           <Link href="/dashboard/pano-listesi" className="bg-indigo-600 p-3 rounded-2xl text-[10px] text-center uppercase text-white">🔌 Pano Listesi</Link>
           <Link href="/admin/pano-takip" className="bg-gray-800 p-3 rounded-2xl text-[10px] text-center uppercase border border-gray-600 text-white">📂 Pano Arşivi</Link>
-          {userRole !== 'isg' && <Link href="/dashboard/kontrol-formlari" className="bg-cyan-600 p-3 rounded-2xl text-[10px] text-center uppercase text-white">✅ Kontrol Formları</Link>}
-          {userRole !== 'isg' && <Link href="/admin/yedek-parca" className="bg-fuchsia-700 p-3 rounded-2xl text-[10px] text-center uppercase text-white">⚙️ Yedek Parça</Link>}
-          {userRole !== 'isg' && <Link href="/admin/is-listesi" className="bg-indigo-700 p-3 rounded-2xl text-[10px] text-center uppercase border border-indigo-500">📋 Yapılan İşler</Link>}
+          <Link href="/dashboard/kontrol-formlari" className="bg-cyan-600 p-3 rounded-2xl text-[10px] text-center uppercase text-white">✅ Kontrol Formları</Link>
+          <Link href="/admin/yedek-parca" className="bg-fuchsia-700 p-3 rounded-2xl text-[10px] text-center uppercase text-white">⚙️ Yedek Parça</Link>
+          <Link href="/admin/is-listesi" className="bg-indigo-700 p-3 rounded-2xl text-[10px] text-center uppercase border border-indigo-500">📋 Yapılan İşler</Link>
           <Link href="/admin/kar-takip" className="bg-red-800 p-3 rounded-2xl text-[10px] text-center uppercase text-white">⚡ KAR Arşivi</Link>
-          {userRole !== 'isg' && <Link href="/admin/pm-takvim" className="bg-teal-700 p-3 rounded-2xl text-[10px] text-center uppercase text-white">📅 PM Takvimi</Link>}
-          {userRole !== 'isg' && <Link href="/admin/periyodik-bakim-arsiv" className="bg-teal-800 p-3 rounded-2xl text-[10px] text-center text-white uppercase">📂 PM Arşivi</Link>}
+          <Link href="/admin/pm-takvim" className="bg-teal-700 p-3 rounded-2xl text-[10px] text-center uppercase text-white">📅 PM Takvimi</Link>
+          <Link href="/admin/periyodik-bakim-arsiv" className="bg-teal-800 p-3 rounded-2xl text-[10px] text-center text-white uppercase">📂 PM Arşivi</Link>
           <Link href="/dashboard/periyodik-bakim" className="bg-emerald-600 p-3 rounded-2xl text-[10px] text-center uppercase font-black italic">🛠️ Manuel PM</Link>
           <Link href="/dashboard/sayac" className="bg-emerald-600 p-3 rounded-2xl text-[10px] text-center uppercase italic">⚡ Sayaç Okuma</Link>
           <Link href="/admin/mesai" className="bg-teal-600 p-3 rounded-2xl text-[10px] text-center uppercase text-white">⌛ Mesai Raporları</Link>
           <Link href="/admin/tamamlanan-isler" className="bg-gray-700 p-3 rounded-2xl text-[10px] text-center uppercase text-white">📂 Tamamlanan İşler</Link>
           <Link href="/admin/ekipmanlar" className="bg-blue-600 p-3 rounded-2xl text-[10px] text-center uppercase text-white">⚙️ Hat/Makineler</Link>
           <Link href="/admin/duyurular" className="bg-orange-600 p-3 rounded-2xl text-[10px] text-center uppercase text-white">📢 İSG Duyuru</Link>
-          {userRole !== 'isg' && <Link href="/admin/bakim-ligi" className="bg-yellow-500/20 border border-yellow-500/40 p-3 rounded-2xl text-[10px] text-center text-yellow-500 uppercase">🏆 Bakım Ligi</Link>}
-          {userRole === "admin" && <button onClick={() => secureAction(handleSystemReset)} className="bg-red-950 border border-red-900 p-3 rounded-2xl text-[10px] text-red-500 uppercase font-black shadow-inner">💀 Sistemi Sıfırla</button>}
+          <Link href="/admin/bakim-ligi" className="bg-yellow-500/20 border border-yellow-500/40 p-3 rounded-2xl text-[10px] text-center text-yellow-500 uppercase">🏆 Bakım Ligi</Link>
+          {userRole === "admin" && <button onClick={handleSystemReset} className="bg-red-950 border border-red-900 p-3 rounded-2xl text-[10px] text-red-500 uppercase font-black shadow-inner">💀 Sistemi Sıfırla</button>}
         </div>
 
         {/* 3-COLUMN ALARM GRID (EKED, ISG, SAHA) */}

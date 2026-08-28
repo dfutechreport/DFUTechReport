@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import { collection, getDocs, doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
@@ -12,169 +11,85 @@ export default function PersonelYonetimi() {
   const [kullanicilar, setKullanicilar] = useState<any[]>([]);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const currentUserRef = doc(db, "users", user.uid);
-        const currentUserSnap = await getDoc(currentUserRef);
-        
-        if (currentUserSnap.exists() && currentUserSnap.data().role === "admin") {
-          setIsAdmin(true);
-          fetchKullanicilar();
-        } else {
-          window.location.href = "/dashboard";
-        }
-      } else {
-        window.location.href = "/";
-      }
+        const uSnap = await getDoc(doc(db, "users", user.uid));
+        if (uSnap.exists() && uSnap.data().role === "admin") {
+          setIsAdmin(true); fetchKullanicilar();
+        } else { window.location.href = "/dashboard"; }
+      } else { window.location.href = "/"; }
     });
-    return () => unsubscribe();
   }, []);
 
   const fetchKullanicilar = async () => {
     setLoading(true);
     try {
       const snap = await getDocs(collection(db, "users"));
-      const data: any[] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      
-      data.sort((a: any, b: any) => {
-        if (a.isApproved === b.isApproved) return 0;
-        return a.isApproved ? 1 : -1;
-      });
-      
-      setKullanicilar(data);
-    } catch (error) {
-      console.error("Kullanıcılar çekilirken hata:", error);
-    }
+      const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setKullanicilar(data.sort((a: any, b: any) => (a.isApproved === b.isApproved) ? 0 : (a.isApproved ? 1 : -1)));
+    } catch (e) { console.error(e); }
     setLoading(false);
   };
 
-  const handleLocalRoleChange = (userId: string, val: string) => {
-    setKullanicilar(prev => prev.map(u => u.id === userId ? { ...u, role: val } : u));
-  };
-
-  const handleOnayla = async (userId: string, currentRole: string) => {
-    if (!currentRole) return alert("Lütfen onaylamadan önce listeden bir rol seçiniz!");
+  const handleRolGuncelle = async (userId: string, newRole: string) => {
     try {
-      await updateDoc(doc(db, "users", userId), { isApproved: true, role: currentRole });
-      alert("Personel başarıyla onaylandı.");
+      await updateDoc(doc(db, "users", userId), { role: newRole, isApproved: true });
+      alert("Personel Rolü ve Onayı Güncellendi.");
       fetchKullanicilar();
-    } catch (error) {
-      alert("Onaylama sırasında hata oluştu.");
-    }
-  };
-
-  const handleRolDegistir = async (userId: string, newRole: string) => {
-    try {
-      await updateDoc(doc(db, "users", userId), { role: newRole });
-      alert("Rol başarıyla güncellendi.");
-      fetchKullanicilar();
-    } catch (error) {
-      alert("Rol güncellenirken hata oluştu.");
-    }
+    } catch (e) { alert("Hata!"); }
   };
 
   const handleSil = async (userId: string) => {
-    if (!window.confirm("DİKKAT: Bu personelin sisteme erişimini tamamen silmek istediğinize emin misiniz?")) return;
-    try {
-      // 1. Kullanıcıyı Firestore veritabanından sileriz
-      await deleteDoc(doc(db, "users", userId));
-      alert("Kullanıcı kaydı başarıyla silindi. (Not: Bu kişi kendi şifresiyle tekrar kayıt olabilir ancak yine onayınıza düşecektir).");
-      fetchKullanicilar();
-    } catch (error) {
-      alert("Silme işlemi başarısız.");
+    if (confirm("Bu kullanıcıyı silmek istediğinize emin misiniz?")) {
+      await deleteDoc(doc(db, "users", userId)); fetchKullanicilar();
     }
   };
 
-  if (loading) return (
-    <div className="min-h-screen bg-gray-950 flex flex-col justify-center items-center p-4">
-      <div className="relative mb-8">
-        <div className="absolute inset-0 bg-yellow-500/20 blur-3xl rounded-full animate-pulse"></div>
-        <img src="/dfulogo.png" className="h-24 w-auto relative z-10 animate-bounce" alt="DFU" />
-      </div>
-      <div className="w-64 h-1.5 bg-gray-800 rounded-full overflow-hidden mb-4 shadow-inner">
-        <div className="h-full bg-gradient-to-r from-yellow-600 via-yellow-400 to-yellow-600 w-full animate-[loading_1.5s_infinite_ease-in-out] origin-left"></div>
-      </div>
-      <p className="text-teal-400 font-black tracking-[0.3em] text-[10px] uppercase animate-pulse">{`YÜKLENİYOR...`}</p>
-      <style jsx>{`
-        @keyframes loading {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-      `}</style>
-    </div>
-  );
-  if (!isAdmin) return <div className="min-h-screen bg-gray-950 text-red-500 flex justify-center items-center">Yetkisiz Erişim!</div>;
+  if (loading) return <div className="p-10 text-white italic">Yükleniyor...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8">
-      <div className="max-w-6xl mx-auto space-y-8">
-        
-        <div className="bg-gray-900 border border-purple-500/50 rounded-2xl shadow-2xl p-6 md:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <p className="text-purple-400 font-bold mb-1 text-sm tracking-wider uppercase">Yetki Yönetimi</p>
-            <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
-              <svg className="w-8 h-8 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-              Sistem Personel Kontrolü
-            </h1>
-            <p className="text-gray-400 mt-2 text-sm">Giriş ekranından (Google veya Şifre ile) sisteme kayıt olan personelleri onaylayın ve rollerini atayın.</p>
-          </div>
-          <Link href="/admin" className="bg-gray-800 hover:bg-gray-700 px-6 py-3 rounded-lg text-sm font-bold shadow-lg transition flex items-center border border-gray-700">← Panele Dön</Link>
+    <div className="min-h-screen bg-slate-950 text-slate-200 p-8 font-sans">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex justify-between items-center mb-10 bg-slate-900 border border-slate-800 p-6 rounded-[2.5rem] shadow-2xl">
+          <h1 className="text-2xl font-black text-white italic uppercase tracking-widest">Personel Yetkilendirme</h1>
+          <Link href="/admin" className="bg-gray-800 text-white px-6 py-2 rounded-xl text-xs font-bold">Admin Panel</Link>
         </div>
 
-        <div className="overflow-x-auto bg-gray-900 rounded-xl border border-gray-700 shadow-lg">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-gray-800">
-              <tr className="text-gray-400 text-sm">
-                <th className="py-4 px-4 font-bold border-b border-gray-700">İsim Soyisim</th>
-                <th className="py-4 px-4 font-bold border-b border-gray-700">E-Posta Adresi</th>
-                <th className="py-4 px-4 font-bold border-b border-gray-700">Sistem Durumu</th>
-                <th className="py-4 px-4 font-bold border-b border-gray-700">Kullanıcı Rolü (Yetki)</th>
-                <th className="py-4 px-4 font-bold border-b border-gray-700 text-right">İşlemler</th>
-              </tr>
+        <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] overflow-hidden shadow-2xl italic font-bold">
+          <table className="w-full text-left">
+            <thead className="bg-slate-950 text-slate-500 text-[10px] uppercase font-black">
+              <tr><th className="p-6">Ad Soyad</th><th className="p-6">E-Posta</th><th className="p-6">Mevcut Rol</th><th className="p-6">İşlemler</th></tr>
             </thead>
-            <tbody>
-              {kullanicilar.map((user) => (
-                <tr key={user.id} className={`border-b border-gray-800 transition ${user.isApproved ? 'hover:bg-gray-800/50' : 'bg-red-900/10 hover:bg-red-900/20'}`}>
-                  <td className="py-4 px-4 font-bold text-white">{user.name}</td>
-                  <td className="py-4 px-4 text-gray-400 text-sm">{user.email}</td>
-                  <td className="py-4 px-4">
-                    {user.isApproved ? (
-                      <span className="bg-green-900/40 text-green-400 px-3 py-1 rounded-full text-xs font-bold border border-green-800/50">✅ Onaylı</span>
-                    ) : (
-                      <span className="bg-red-900/40 text-red-400 px-3 py-1 rounded-full text-xs font-bold border border-red-800/50 animate-pulse">⏳ Bekliyor</span>
-                    )}
-                  </td>
-                  <td className="py-4 px-4">
-                    <select 
-                      value={user.role || ""} 
-                      onChange={(e) => {
-                        if (user.isApproved) handleRolDegistir(user.id, e.target.value);
-                        else handleLocalRoleChange(user.id, e.target.value);
-                      }}
-                      className={`bg-gray-900 border rounded-lg p-2 text-sm focus:outline-none w-full min-w-[160px] ${!user.role && !user.isApproved ? 'border-red-500 text-red-400' : 'border-gray-600 text-gray-300 focus:border-purple-500'}`}
-                    >
-                      <option value="">-- Rol Seçin --</option>
-                      <option value="admin">Yönetici (Admin)</option>
-                      <option value="teknisyen">Bakım Teknisyeni</option>
-                      <option value="operator">Teknik Operatör</option>
-                      <option value="uretim">Üretim Bildiricisi</option>
-                      <option value="isg">İSG (Güvenlik)</option>
-                      <option value="depo">Depo ve Stok Sorumlusu</option>
-                    </select>
-                  </td>
-                  <td className="py-4 px-4 text-right flex justify-end gap-2">
-                    {!user.isApproved && (
-                      <button onClick={() => handleOnayla(user.id, user.role)} className="bg-green-700 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-bold transition shadow-lg">Onayla</button>
-                    )}
-                    <button onClick={() => handleSil(user.id)} className="bg-red-900/50 hover:bg-red-600 text-red-400 hover:text-white border border-red-800/50 px-4 py-2 rounded-lg text-xs font-bold transition">Sil</button>
+            <tbody className="divide-y divide-slate-800">
+              {kullanicilar.map(u => (
+                <tr key={u.id} className="hover:bg-slate-800/30 transition-all">
+                  <td className="p-6 text-white uppercase">{u.name} {!u.isApproved && <span className="text-red-500 text-[8px] border border-red-500 px-1 ml-2 rounded">ONAY BEKLİYOR</span>}</td>
+                  <td className="p-6 text-slate-500 text-sm">{u.email}</td>
+                  <td className="p-6"><span className="bg-slate-800 px-3 py-1 rounded-lg text-blue-400 text-xs font-black uppercase">{u.role}</span></td>
+                  <td className="p-6">
+                    <div className="flex gap-2">
+                      <select 
+                        className="bg-slate-950 border border-slate-700 rounded-lg p-2 text-[10px] uppercase font-black text-white outline-none"
+                        onChange={(e) => handleRolGuncelle(u.id, e.target.value)}
+                        value={u.role}
+                      >
+                        <option value="">Rol Seç...</option>
+                        <option value="admin">Yönetici</option>
+                        <option value="teknisyen">Teknisyen</option>
+                        <option value="operator">Operatör</option>
+                        <option value="uretim">Üretim Yetkilisi</option>
+                        <option value="ik">İK Yetkilisi</option> {/* YENİ EKLENDİ */}
+                        <option value="isg">İSG Uzmanı</option>
+                        <option value="depo">Depo Sorumlusu</option>
+                      </select>
+                      <button onClick={() => handleSil(u.id)} className="bg-red-900/20 text-red-500 p-2 rounded-lg text-[10px] font-black uppercase border border-red-900/30">Sil</button>
+                    </div>
                   </td>
                 </tr>
               ))}
-              {kullanicilar.length === 0 && <tr><td colSpan={5} className="py-8 text-center text-gray-500">Sistemde onay bekleyen veya kayıtlı kullanıcı bulunmamaktadır.</td></tr>}
             </tbody>
           </table>
         </div>
-
       </div>
     </div>
   );

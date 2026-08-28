@@ -1,25 +1,35 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-// Not: 'user' bilgisinin projenizdeki global state (AuthContext vb.) 
-// üzerinden geldiği varsayılmıştır.
 interface User {
   name: string;
   role: 'admin' | 'teknisyen' | 'isg';
 }
 
-export default function TechnicianDashboard({ user }: { user: User }) {
+// user prop'u opsiyonel yapıldı (? eklendi)
+export default function TechnicianDashboard({ user }: { user?: User }) {
   const router = useRouter();
-  
-  // Yetki Kontrolleri
-  const isISG = user.role === 'isg';
-  const isAdminOrTech = user.role === 'admin' || user.role === 'teknisyen';
+  const [mounted, setMounted] = useState(false);
+
+  // Sayfa mount olana kadar (istemci tarafına geçene kadar) bekle
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Build sırasında veya user henüz yüklenmemişken hata vermemesi için koruma
+  if (!mounted || !user) {
+    return <div className="p-10 text-center">Yükleniyor...</div>;
+  }
+
+  // Yetki Kontrolleri (Opsiyonel zincirleme '?.' ile güvenli hale getirildi)
+  const isISG = user?.role === 'isg';
+  const isAdminOrTech = user?.role === 'admin' || user?.role === 'teknisyen';
 
   return (
     <div className="flex flex-col min-h-screen p-4 bg-gray-50">
-      {/* ÜST BUTON GRUBU - Grid yapısı korunmuştur */}
+      {/* ÜST BUTON GRUBU */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
         
         {/* İSG Yetkisinde GİZLENEN Butonlar */}
@@ -51,8 +61,6 @@ export default function TechnicianDashboard({ user }: { user: User }) {
 
       {/* SAYFA ALTI BÖLÜMLERİ */}
       <div className="flex flex-col space-y-4">
-        
-        {/* İSG Yetkisinde GİZLENEN Bölümler */}
         {isAdminOrTech && (
           <>
             <div className="p-4 border rounded bg-white shadow-sm" id="saha-bildirimleri">saha bildirimleri</div>

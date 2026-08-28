@@ -1,23 +1,29 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-// Kullanıcı yetki objesi
 interface User {
   role: 'admin' | 'teknisyen' | 'isg';
 }
 
-export default function EkedTrackingPage({ user }: { user: User }) {
+export default function EkedTrackingPage({ user }: { user?: User }) {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
 
-  // Dinamik Dashboard Yönlendirmesi
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted || !user) {
+    return <div className="p-10 text-center">Yükleniyor...</div>;
+  }
+
   const handleDashboardReturn = () => {
-    if (user.role === 'admin') {
-      router.push('/admin/dashboard'); // Admin paneline döner
+    if (user?.role === 'admin') {
+      router.push('/admin/dashboard');
     } else {
-      // isg veya teknisyen ise kendi dashboard'una (üstteki teknisyen sayfasına) döner
-      router.push('/dashboard'); 
+      router.push('/dashboard');
     }
   };
 
@@ -27,12 +33,10 @@ export default function EkedTrackingPage({ user }: { user: User }) {
         <h1 className="text-xl font-bold">EKED Takip Sistemi</h1>
       </header>
 
-      {/* Mevcut EKED Kayıtları İçerik Alanı (Mevcudu bozmamak için boş bırakılmıştır) */}
       <div className="min-h-[500px] border-dashed border-2 rounded-lg flex items-center justify-center text-gray-400 italic">
         EKED Kayıtları ve Log Listesi Burada Görüntülenir
       </div>
 
-      {/* ALT NAVİGASYON PANELİ */}
       <div className="flex justify-start">
         <button 
           onClick={handleDashboardReturn}

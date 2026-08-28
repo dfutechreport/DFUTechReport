@@ -13,7 +13,6 @@ export default function AdminDashboard() {
   const [userRole, setUserRole] = useState(""); 
   const [userName, setUserName] = useState(""); 
   const [loading, setLoading] = useState(true);
-  const [mounted, setMounted] = useState(false);
   
   // VERİ HAVUZLARI
   const [rawLogs, setRawLogs] = useState<any[]>([]);
@@ -91,7 +90,6 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    setMounted(true);
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         const userRef = doc(db, "users", user.uid);
@@ -173,7 +171,7 @@ export default function AdminDashboard() {
     alert("Başarılı!"); setShowRcaModal(false); fetchRcaData();
   };
 
-  if (!mounted || loading) return <div className="p-10 bg-slate-950 min-h-screen text-white flex justify-center items-center uppercase italic font-black">Güvenlik Kontrolü...</div>;
+  if (loading) return <div className="p-10 bg-slate-950 min-h-screen text-white flex justify-center items-center uppercase italic font-black">Güvenlik Kontrolü...</div>;
   if (!isAdmin) return <div className="p-10 text-red-500 font-bold uppercase italic">YETKİSİZ ERİŞİM!</div>;
 
   return (

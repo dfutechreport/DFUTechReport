@@ -10,7 +10,6 @@ import { useRouter } from "next/navigation";
 export default function EkedTakip() {
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [mounted, setMounted] = useState(false);
   const [userRole, setUserRole] = useState("");
   const [userName, setUserName] = useState("");
   const router = useRouter();
@@ -20,7 +19,6 @@ export default function EkedTakip() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         const userRef = doc(db, "users", user.uid);
@@ -87,7 +85,7 @@ export default function EkedTakip() {
     return "/dashboard";
   };
 
-  if (!mounted || loading) return <div className="p-10 text-white italic text-center uppercase tracking-widest bg-slate-950 min-h-screen flex items-center justify-center">EKED Sistemleri Hazırlanıyor...</div>;
+  if (loading) return <div className="p-10 text-white italic text-center uppercase tracking-widest bg-slate-950 min-h-screen flex items-center justify-center">EKED Sistemleri Hazırlanıyor...</div>;
 
   return (
     <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8 relative italic font-bold">

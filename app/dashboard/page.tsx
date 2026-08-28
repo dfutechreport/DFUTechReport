@@ -37,6 +37,18 @@ function DashboardIcerik() {
   const [isDictating, setIsDictating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const handleLogout = async () => {
+    if (confirm("Çıkış Yapılsın mı?")) {
+      try {
+        await signOut(auth);
+        localStorage.clear();
+        sessionStorage.clear();
+        router.push("/login");
+        router.refresh();
+      } catch (e) { console.error(e); }
+    }
+  };
+
 
   // DESTEK PERSONELİ STATES
   const [destekListesi, setDestekListesi] = useState<any[]>([]);

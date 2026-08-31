@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Zap, ShieldAlert, ClipboardList, AlertTriangle, LogOut } from 'lucide-react';
+
+import { useEffect, useState } from "react";
 import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, setDoc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, db } from "../../lib/firebase"; 
@@ -14,10 +17,14 @@ export default function AdminDashboard() {
     try { await signOut(auth); localStorage.clear(); sessionStorage.clear(); router.push("/login"); router.refresh(); } catch (e) { console.error(e); }
   };
   const secureAction = (callback: () => void) => {
-    const pw = prompt("Kritik işlem için yönetici şifresini girin:");
+    const pw = prompt("Kritik işlem için yetki şifresini girin:");
     if (pw === "161004") { callback(); }
     else { alert("Hatalı Şifre!"); }
   };
+
+  useEffect(() => { setMounted(true); }, []);
+
+  if (!mounted || loading) return <div className="h-screen bg-black flex items-center justify-center text-white italic font-black uppercase tracking-widest">SİSTEM YÜKLENİYOR...</div>;
 
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
@@ -42,8 +49,6 @@ export default function AdminDashboard() {
   const [showRcaModal, setShowRcaModal] = useState(false);
   const [selectedLogForRca, setSelectedLogForRca] = useState<any>(null);
   const [rcaForm, setRcaForm] = useState({ category: "", why: "" });
-  if (!mounted || loading) return <div className="h-screen bg-black flex items-center justify-center text-white italic font-black uppercase">SİSTEM YÜKLENİYOR...</div>;
-
   
   const [filterYil, setFilterYil] = useState(new Date().getFullYear().toString());
   const [filterElekSayac, setFilterElekSayac] = useState("");
@@ -103,7 +108,6 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    setMounted(true);
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         const userRef = doc(db, "users", user.uid);

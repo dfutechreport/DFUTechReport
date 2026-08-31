@@ -10,27 +10,25 @@ import { useRouter } from "next/navigation";
 export default function AdminDashboard() {
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
-  const [userRole, setUserRole] = useState("");
-  const [mounted, setMounted] = useState(false);
-  const handleLogout = async () => {
-    if (confirm("Çıkış Yapılsın mı?")) {
-      try {
-        await signOut(auth);
-        localStorage.clear();
-        sessionStorage.clear();
-        router.push("/login");
-        router.refresh();
-      } catch (e) { console.error(e); }
-    }
-  };
+  const [userRole, setUserRole] = useState(""); 
+  const [userName, setUserName] = useState("");
   const secureAction = (callback: () => void) => {
     const pw = prompt("Kritik işlem için yetki şifresini girin:");
     if (pw === "161004") { callback(); }
     else { alert("Hatalı Şifre! İşlem reddedildi."); }
   };
- 
-  const [userName, setUserName] = useState(""); 
+     
   const [loading, setLoading] = useState(true);
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      localStorage.clear();
+      sessionStorage.clear();
+      router.push("/login");
+      router.refresh();
+    } catch (e) { console.error(e); }
+  };
+    
   
   // VERİ HAVUZLARI
   const [rawLogs, setRawLogs] = useState<any[]>([]);
@@ -108,7 +106,6 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    setMounted(true);
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         const userRef = doc(db, "users", user.uid);
@@ -190,7 +187,7 @@ export default function AdminDashboard() {
     alert("Başarılı!"); setShowRcaModal(false); fetchRcaData();
   };
 
-  if (!mounted || loading) return <div className="p-10 bg-slate-950 min-h-screen text-white flex justify-center items-center uppercase italic font-black">Güvenlik Kontrolü...</div>;
+  if (loading) return <div className="p-10 bg-slate-950 min-h-screen text-white flex justify-center items-center uppercase italic font-black">Güvenlik Kontrolü...</div>;
   if (!isAdmin) return <div className="p-10 text-red-500 font-bold uppercase italic">YETKİSİZ ERİŞİM!</div>;
 
   return (

@@ -34,6 +34,8 @@ function DashboardIcerik() {
   const [usedMaterials, setUsedMaterials] = useState([{ id: Date.now(), stockCode: "", name: "Kod Bekleniyor", stock: "-", quantity: 1, unit: "Adet" }]);
   const [userName, setUserName] = useState("");
   const [userRole, setUserRole] = useState("");
+  const [isDictating, setIsDictating] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   const handleLogout = async () => {
     if (confirm("Çıkış Yapılsın mı?")) {
@@ -46,14 +48,7 @@ function DashboardIcerik() {
       } catch (e) { console.error(e); }
     }
   };
-  const secureAction = (callback: () => void) => {
-    const pw = prompt("Kritik işlem için yetki şifresini girin:");
-    if (pw === "161004") { callback(); }
-    else { alert("Hatalı Şifre! İşlem reddedildi."); }
-  };
-
-  const [isDictating, setIsDictating] = useState(false);
-  const [loading, setLoading] = useState(true);
+    
 
   // DESTEK PERSONELİ STATES
   const [destekListesi, setDestekListesi] = useState<any[]>([]);
@@ -146,7 +141,7 @@ function DashboardIcerik() {
     recognition.start();
   };
 
-   };
+  
 
   const onSubmit = async (data: MaintenanceFormData) => {
     try {

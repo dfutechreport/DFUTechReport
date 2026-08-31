@@ -11,6 +11,23 @@ export default function EkedTakip() {
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const handleLogout = async () => {
+    if (confirm("Çıkış Yapılsın mı?")) {
+      try {
+        await signOut(auth);
+        localStorage.clear();
+        sessionStorage.clear();
+        router.push("/login");
+        router.refresh();
+      } catch (e) { console.error(e); }
+    }
+  };
+  const secureAction = (callback: () => void) => {
+    const pw = prompt("İşlem için yetki şifresini girin:");
+    if (pw === "161004") { callback(); }
+    else { alert("Hatalı Şifre!"); }
+  };
+
   const [userRole, setUserRole] = useState("");
   const [userName, setUserName] = useState("");
   const router = useRouter();
@@ -87,7 +104,7 @@ export default function EkedTakip() {
     return "/dashboard";
   };
 
-  if (loading) return <div className="p-10 text-white italic text-center uppercase tracking-widest bg-slate-950 min-h-screen flex items-center justify-center">EKED Sistemleri Hazırlanıyor...</div>;
+  if (!mounted || loading) return <div className="p-10 text-white italic text-center uppercase tracking-widest bg-slate-950 min-h-screen flex items-center justify-center">EKED Sistemleri Hazırlanıyor...</div>;
 
   return (
     <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8 relative italic font-bold">

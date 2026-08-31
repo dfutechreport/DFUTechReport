@@ -1,7 +1,5 @@
 "use client";
-
-import { useEffect, useState } from "react";
-import { Zap, ShieldAlert, ClipboardList, AlertTriangle, LogOut } from 'lucide-react';
+import { Zap, ShieldAlert, ClipboardList, AlertTriangle, LogOut, LayoutDashboard, Users, Trophy, Settings, ChevronRight, Clock, CheckCircle2, Package, FileBarChart, Search, ArrowRight } from 'lucide-react';
 
 import { useEffect, useState } from "react";
 import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, setDoc, serverTimestamp, writeBatch } from "firebase/firestore";
@@ -17,14 +15,12 @@ export default function AdminDashboard() {
     try { await signOut(auth); localStorage.clear(); sessionStorage.clear(); router.push("/login"); router.refresh(); } catch (e) { console.error(e); }
   };
   const secureAction = (callback: () => void) => {
-    const pw = prompt("Kritik işlem için yetki şifresini girin:");
+    const pw = prompt("Kritik işlem için yönetici şifresini girin:");
     if (pw === "161004") { callback(); }
     else { alert("Hatalı Şifre!"); }
   };
-
   useEffect(() => { setMounted(true); }, []);
-
-  if (!mounted || loading) return <div className="h-screen bg-black flex items-center justify-center text-white italic font-black uppercase tracking-widest">SİSTEM YÜKLENİYOR...</div>;
+  if (!mounted || loading) return <div className="h-screen bg-black flex items-center justify-center text-white italic font-black uppercase tracking-widest text-center">SİSTEM YÜKLENİYOR...</div>;
 
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);

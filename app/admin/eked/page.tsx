@@ -1,8 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Zap, ShieldAlert, ClipboardList, AlertTriangle, LogOut } from 'lucide-react';
-
 
 import { useEffect, useState } from "react";
 import { collection, getDocs, doc, getDoc, addDoc, updateDoc, query, where, orderBy, deleteDoc } from "firebase/firestore";
@@ -18,19 +15,11 @@ export default function EkedTakip() {
     if (userRole === "admin") router.push("/admin");
     else router.push("/dashboard");
   };
-
   useEffect(() => {
     setMounted(true);
-    const checkRole = async () => {
-      if (auth.currentUser) {
-        const snap = await getDoc(doc(db, "users", auth.currentUser.uid));
-        if (snap.exists()) setUserRole(snap.data().role);
-      }
-    };
-    checkRole();
+    const getR = async () => { if(auth.currentUser) { const s = await getDoc(doc(db, "users", auth.currentUser.uid)); if(s.exists()) setUserRole(s.data().role); } }; getR();
   }, []);
-
-  if (!mounted || loading) return <div className="h-screen bg-black flex items-center justify-center text-white italic font-black tracking-widest">YÜKLENİYOR...</div>;
+  if (!mounted || loading) return null;
 
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

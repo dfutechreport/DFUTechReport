@@ -9,21 +9,21 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 export default function AdminDashboard() {
-  const [mounted, setMounted] = useState(false);
-  const handleLogout = async () => {
-    try { await signOut(auth); localStorage.clear(); sessionStorage.clear(); router.push("/login"); router.refresh(); } catch (e) { console.error(e); }
-  };
-  const secureAction = (callback: () => void) => {
-    const pw = prompt("İşlem için yetki şifresini girin:");
-    if (pw === "161004") { callback(); }
-    else { alert("Hatalı Şifre!"); }
-  };
-
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
   const [userRole, setUserRole] = useState(""); 
   const [userName, setUserName] = useState(""); 
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
+  const handleLogout = async () => {
+    try { await signOut(auth); localStorage.clear(); sessionStorage.clear(); router.push("/login"); router.refresh(); } catch (e) { console.error(e); }
+  };
+  const secureAction = (callback: () => void) => {
+    const pw = prompt("İşlem için yönetici şifresini girin:");
+    if (pw === "161004") { callback(); }
+    else { alert("Hatalı Şifre!"); }
+  };
+
   
   // VERİ HAVUZLARI
   const [rawLogs, setRawLogs] = useState<any[]>([]);

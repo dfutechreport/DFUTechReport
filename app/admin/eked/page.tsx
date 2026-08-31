@@ -1,5 +1,6 @@
-import { Zap, ShieldAlert, ClipboardList, AlertTriangle, LogOut } from 'lucide-react';
 "use client";
+import { Zap, ShieldAlert, ClipboardList, AlertTriangle, LogOut } from 'lucide-react';
+
 
 import { useEffect, useState } from "react";
 import { collection, getDocs, doc, getDoc, addDoc, updateDoc, query, where, orderBy, deleteDoc } from "firebase/firestore";

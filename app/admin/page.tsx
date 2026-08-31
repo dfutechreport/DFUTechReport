@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, setDoc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { onAuthStateChanged, signOut } from "firebase/auth";
@@ -22,7 +23,7 @@ export default function AdminDashboard() {
     if (pw === "161004") { callback(); }
     else { alert("Hatalı Şifre!"); }
   };
-    
+
   
   // VERİ HAVUZLARI
   const [rawLogs, setRawLogs] = useState<any[]>([]);

@@ -1,5 +1,4 @@
 "use client";
-import { Zap, ShieldAlert, ClipboardList, AlertTriangle, LogOut, LayoutDashboard, Users, Trophy, Settings, ChevronRight, Clock, CheckCircle2, Package, FileBarChart, Search, ArrowRight } from 'lucide-react';
 
 import { useEffect, useState } from "react";
 import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, setDoc, serverTimestamp, writeBatch } from "firebase/firestore";

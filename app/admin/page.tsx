@@ -15,20 +15,14 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      localStorage.clear();
-      sessionStorage.clear();
-      router.push("/login");
-      router.refresh();
-    } catch (e) { console.error(e); }
+    try { await signOut(auth); localStorage.clear(); sessionStorage.clear(); router.push("/login"); router.refresh(); } catch (e) { console.error(e); }
   };
   const secureAction = (callback: () => void) => {
-    const pw = prompt("Kritik işlem için yönetici şifresini girin:");
+    const pw = prompt("İşlem için yetki şifresini girin:");
     if (pw === "161004") { callback(); }
-    else { alert("Hatalı Şifre! Yetki Reddedildi."); }
+    else { alert("Hatalı Şifre!"); }
   };
-
+    
   
   // VERİ HAVUZLARI
   const [rawLogs, setRawLogs] = useState<any[]>([]);

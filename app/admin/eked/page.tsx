@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 export default function EkedTakip() {
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState("");
   const [mounted, setMounted] = useState(false);
   const handleLogout = async () => {
     if (confirm("Çıkış Yapılsın mı?")) {
@@ -22,13 +23,7 @@ export default function EkedTakip() {
       } catch (e) { console.error(e); }
     }
   };
-  const secureAction = (callback: () => void) => {
-    const pw = prompt("İşlem için yetki şifresini girin:");
-    if (pw === "161004") { callback(); }
-    else { alert("Hatalı Şifre!"); }
-  };
 
-  const [userRole, setUserRole] = useState("");
   const [userName, setUserName] = useState("");
   const router = useRouter();
 

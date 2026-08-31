@@ -1,4 +1,5 @@
-"use client";
+import React from 'react';
+import { Zap, ShieldAlert, ClipboardList, AlertTriangle, LogOut } from 'lucide-react';"use client";
 import { useEffect, useState, Suspense } from "react";
 import { collection, getDocs, doc, getDoc, query, where, orderBy, setDoc, updateDoc, serverTimestamp, increment, addDoc } from "firebase/firestore";
 import { onAuthStateChanged, signOut } from "firebase/auth";

@@ -1,5 +1,4 @@
 "use client";
-import { Zap, ShieldAlert, ClipboardList, AlertTriangle, LogOut } from 'lucide-react';
 
 
 import { useEffect, useState } from "react";
@@ -13,6 +12,7 @@ export default function EkedTakip() {
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState("");
+  const [userRole, setUserRole] = useState("");
   const [userName, setUserName] = useState("");
   const router = useRouter();
 
@@ -21,6 +21,7 @@ export default function EkedTakip() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    const getR = async () => { if(auth.currentUser) { const s = await getDoc(doc(db, "users", auth.currentUser.uid)); if(s.exists()) setUserRole(s.data().role); } }; getR();
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         const userRef = doc(db, "users", user.uid);

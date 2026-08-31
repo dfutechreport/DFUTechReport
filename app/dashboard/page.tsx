@@ -48,7 +48,7 @@ function DashboardIcerik() {
       } catch (e) { console.error(e); }
     }
   };
-    
+        
 
   // DESTEK PERSONELİ STATES
   const [destekListesi, setDestekListesi] = useState<any[]>([]);
@@ -141,7 +141,7 @@ function DashboardIcerik() {
     recognition.start();
   };
 
-  
+   };
 
   const onSubmit = async (data: MaintenanceFormData) => {
     try {

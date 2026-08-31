@@ -45,7 +45,7 @@ function DashboardIcerik() {
         sessionStorage.clear();
         router.push("/login");
         router.refresh();
-      } catch (e) { console.error(e); }
+      } catch (e) { console.error("Çıkış Hatası:", e); }
     }
   };
 
@@ -156,25 +156,48 @@ function DashboardIcerik() {
     } catch (e) { alert(e); }
   };
 
-  if (!mounted || loading) return <div className="h-screen bg-black flex items-center justify-center text-white italic font-black uppercase">SİSTEM VERİLERİ SENKRONİZE EDİLİYOR...</div>;
+  if (!mounted || loading) return <div className="h-screen bg-black flex items-center justify-center text-white italic font-black uppercase tracking-widest text-center">SİSTEM VERİLERİ SENKRONİZE EDİLİYOR...</div>;
 
   
+  // ==========================================
+  // İSG UZMANI ÖZEL GÖRÜNÜMÜ (STRICT VIEW)
+  // ==========================================
   if (userRole === "isg") {
     return (
-      <div className="min-h-screen bg-[#050505] text-white p-6 md:p-12 font-sans italic font-black uppercase overflow-x-hidden">
-        <div className="max-w-[1440px] mx-auto space-y-12 animate-in fade-in zoom-in duration-500">
-          {/* ISG BUTONLAR */}
+      <div className="min-h-screen bg-[#050505] text-white p-6 md:p-12 font-sans italic font-black uppercase overflow-x-hidden selection:bg-indigo-500">
+        <div className="max-w-[1440px] mx-auto space-y-12 animate-in fade-in duration-700">
+          {/* ÜST BUTONLAR */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
-            <Link href="/dashboard/pano-listesi" className="bg-indigo-600 p-8 rounded-[2.5rem] border border-indigo-400/30 flex flex-col items-center justify-center gap-4 hover:scale-105 transition-all shadow-2xl italic"><Zap size={32} /><span>Pano Kontrol</span></Link>
-            <Link href="/admin/eked" className="bg-yellow-600 p-8 rounded-[2.5rem] border border-yellow-400/30 flex flex-col items-center justify-center gap-4 hover:scale-105 transition-all shadow-2xl text-black italic"><ShieldAlert size={32} /><span>EKED Takip</span></Link>
-            <Link href="/admin/eked/arsiv" className="bg-slate-800 p-8 rounded-[2.5rem] border border-slate-700 flex flex-col items-center justify-center gap-4 hover:scale-105 transition-all shadow-2xl italic"><ClipboardList size={32} /><span>EKED Arşivi</span></Link>
-            <Link href="/admin/duyurular" className="bg-orange-600 p-8 rounded-[2.5rem] border border-orange-400/30 flex flex-col items-center justify-center gap-4 hover:scale-105 transition-all shadow-2xl animate-pulse italic"><AlertTriangle size={32} /><span>İSG Duyurusu</span></Link>
-            <button onClick={handleLogout} className="bg-red-600 p-8 rounded-[2.5rem] border border-red-400/30 flex flex-col items-center justify-center gap-4 hover:scale-105 transition-all shadow-2xl italic"><LogOut size={32} /><span>Çıkış</span></button>
+            <Link href="/dashboard/pano-listesi" className="bg-indigo-600 p-10 rounded-[2.5rem] border border-indigo-400/30 flex flex-col items-center justify-center gap-4 hover:scale-105 transition-all shadow-2xl italic font-black uppercase">
+               <Zap size={32} /> <span>Pano Kontrol</span>
+            </Link>
+            <Link href="/admin/eked" className="bg-yellow-600 p-10 rounded-[2.5rem] border border-yellow-400/30 flex flex-col items-center justify-center gap-4 hover:scale-105 transition-all shadow-2xl text-black italic font-black uppercase">
+               <ShieldAlert size={32} /> <span>EKED Takip</span>
+            </Link>
+            <Link href="/admin/eked/arsiv" className="bg-slate-800 p-10 rounded-[2.5rem] border border-slate-700 flex flex-col items-center justify-center gap-4 hover:scale-105 transition-all shadow-2xl italic font-black uppercase">
+               <ClipboardList size={32} /> <span>EKED Arşivi</span>
+            </Link>
+            <Link href="/admin/duyurular" className="bg-orange-600 p-10 rounded-[2.5rem] border border-orange-400/30 flex flex-col items-center justify-center gap-4 hover:scale-105 transition-all animate-pulse shadow-2xl italic font-black uppercase">
+               <AlertTriangle size={32} /> <span>İSG Duyurusu</span>
+            </Link>
+            <button onClick={handleLogout} className="bg-red-600 p-10 rounded-[2.5rem] border border-red-400/30 flex flex-col items-center justify-center gap-4 hover:scale-105 transition-all shadow-2xl italic font-black uppercase">
+               <LogOut size={32} /> <span>Çıkış Yap</span>
+            </button>
           </div>
-          {/* ALARMLAR */}
+          {/* ALARMLAR VE BİLDİRİMLER */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-            <div className="bg-neutral-900 border-2 border-red-900/40 p-10 rounded-[3.5rem] shadow-2xl relative"><h2 className="text-xl font-black text-red-500 mb-8 uppercase tracking-widest italic underline decoration-red-600">🚨 KRİTİK İSG ALARMLARI</h2><div className="space-y-4 max-h-[450px] overflow-y-auto">{isgAlarmlari.length === 0 ? <p className="text-center py-10 text-gray-600">Alarm Yok</p> : isgAlarmlari.map(a => <div key={a.id} className="bg-red-950/20 border border-red-900/30 p-5 rounded-3xl text-xs">{a.aciklama}</div>)}</div></div>
-            <div className="bg-neutral-900 border-2 border-yellow-900/40 p-10 rounded-[3.5rem] shadow-2xl relative"><h2 className="text-xl font-black text-yellow-500 mb-8 uppercase tracking-widest italic underline decoration-yellow-600">🔐 AKTİF EKED BİLDİRİMLERİ</h2><div className="space-y-4 max-h-[450px] overflow-y-auto">{ekedLogs.filter(e => e.durum === "Açık").length === 0 ? <p className="text-center py-10 text-gray-600">Bildirim Yok</p> : ekedLogs.filter(e => e.durum === "Açık").map(e => <div key={e.id} className="bg-yellow-950/20 border border-yellow-900/30 p-5 rounded-3xl text-xs">{e.yer}</div>)}</div></div>
+            <div className="bg-neutral-900 border-2 border-red-900/40 p-10 rounded-[4rem] shadow-2xl relative overflow-hidden">
+               <h2 className="text-xl font-black text-red-500 mb-8 uppercase tracking-widest italic underline decoration-red-600">🚨 KRİTİK İSG ALARMLARI</h2>
+               <div className="space-y-4 max-h-[500px] overflow-y-auto pr-3">
+                 {isgAlarmlari.length === 0 ? <p className="text-center py-20 text-gray-600 italic uppercase">Aktif Alarm Yok</p> : isgAlarmlari.map(a => <div key={a.id} className="bg-red-950/20 border border-red-900/30 p-6 rounded-[2rem] text-xs font-black italic tracking-tighter text-red-200 uppercase">{a.aciklama}</div>)}
+               </div>
+            </div>
+            <div className="bg-neutral-900 border-2 border-yellow-900/40 p-10 rounded-[4rem] shadow-2xl relative overflow-hidden">
+               <h2 className="text-xl font-black text-yellow-500 mb-8 uppercase tracking-widest italic underline decoration-yellow-600">🔐 AKTİF EKED BİLDİRİMLERİ</h2>
+               <div className="space-y-4 max-h-[500px] overflow-y-auto pr-3">
+                 {ekedLogs.filter(e => e.durum === "Açık").length === 0 ? <p className="text-center py-20 text-gray-600 italic uppercase">Aktif Bildirim Yok</p> : ekedLogs.filter(e => e.durum === "Açık").map(e => <div key={e.id} className="bg-yellow-950/20 border border-yellow-900/30 p-6 rounded-[2rem] text-xs font-black italic tracking-tighter text-yellow-200 uppercase">{e.yer}</div>)}
+               </div>
+            </div>
           </div>
         </div>
       </div>

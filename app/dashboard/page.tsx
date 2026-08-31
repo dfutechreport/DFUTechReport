@@ -46,6 +46,11 @@ function DashboardIcerik() {
       } catch (e) { console.error(e); }
     }
   };
+  const secureAction = (callback: () => void) => {
+    const pw = prompt("Kritik işlem için yetki şifresini girin:");
+    if (pw === "161004") { callback(); }
+    else { alert("Hatalı Şifre! İşlem reddedildi."); }
+  };
 
   const [isDictating, setIsDictating] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -141,7 +146,7 @@ function DashboardIcerik() {
     recognition.start();
   };
 
-  const handleLogout = async () => { if (confirm("Çıkış Yapılsın mı?")) { await signOut(auth); router.push("/"); } };
+   };
 
   const onSubmit = async (data: MaintenanceFormData) => {
     try {

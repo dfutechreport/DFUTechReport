@@ -7,6 +7,7 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
+// --- SAF SVG İKONLAR ---
 const ICONS = {
   PANO: <svg viewBox="0 0 24 24" width="32" height="32" stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>,
   EKED: <svg viewBox="0 0 24 24" width="32" height="32" stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>,
@@ -27,7 +28,7 @@ function ISGPageContent() {
   useEffect(() => {
     setMounted(true);
     const unsubscribe = onAuthStateChanged(auth, async (currUser) => {
-      if (!currUser) { router.push("/login"); return; }
+      if (!currUser) { window.location.href = "/"; return; }
       const userSnap = await getDoc(doc(db, "users", currUser.uid));
       if (userSnap.exists()) {
         const userData = userSnap.data();
@@ -39,30 +40,27 @@ function ISGPageContent() {
       setLoading(false);
     });
 
-    // --- DATA FETCHING (MATCHING ADMIN LOGIC) ---
-    // 1. Field Notifications (Aktif Isler)
+    // --- VERİ ÇEKME (ADMİN PANELİ İLE %100 SENKRON) ---
     const qWork = query(collection(db, "work_orders"), where("durum", "==", "Açık"));
     const unsubWork = onSnapshot(qWork, (snap) => {
       const data = snap.docs.map(d => ({id: d.id, ...d.data()}));
-      // Filter out KAR activations like Admin does
       setAktifIsler(data.filter((d: any) => d.ekipmanAdi !== "KAR devreye alma"));
-      // Filter for ISG Alarms (Specific to ISG needs)
       setIsgAlarmlari(data.filter((d: any) => d.sorunTipi === "Elektrik" && d.ekipmanAdi === "KAR devreye alma"));
     });
 
-    // 2. Active EKED
     const qEked = query(collection(db, "eked_logs"), where("durum", "==", "Açık"));
     const unsubEked = onSnapshot(qEked, (snap) => setEkedLogs(snap.docs.map(d => ({id: d.id, ...d.data()}))));
 
     return () => { unsubscribe(); unsubWork(); unsubEked(); };
   }, [router]);
 
+  // ÇIKIŞ FONKSİYONU - DÜZELTİLDİ (404 Hatası Çözümü)
   const handleLogout = async () => {
     if (confirm("Çıkış Yapılsın mı?")) {
       await signOut(auth);
       localStorage.clear();
       sessionStorage.clear();
-      router.push("/login");
+      window.location.href = "/"; // Direkt ana girişe (Login) yönlendirme
     }
   };
 
@@ -71,37 +69,43 @@ function ISGPageContent() {
   return (
     <div className="min-h-screen bg-[#050505] text-white p-6 md:p-10 font-sans italic font-black uppercase overflow-x-hidden selection:bg-indigo-500">
       <div className="max-w-[1440px] mx-auto space-y-12 animate-in fade-in duration-700">
+        
+        {/* ÜST BUTON GRUBU */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-          <Link href="/dashboard/pano-listesi" className="bg-indigo-600 p-8 rounded-[2.5rem] border border-indigo-400/30 flex flex-col items-center justify-center gap-4 hover:scale-105 transition-all shadow-2xl">{ICONS.PANO}<span>Pano Kontrol</span></Link>
-          <Link href="/admin/eked" className="bg-yellow-600 p-8 rounded-[2.5rem] border border-yellow-400/30 flex flex-col items-center justify-center gap-4 hover:scale-105 transition-all shadow-2xl text-black">{ICONS.EKED}<span>EKED Takip</span></Link>
-          <Link href="/admin/eked/arsiv" className="bg-slate-800 p-8 rounded-[2.5rem] border border-slate-700 flex flex-col items-center justify-center gap-4 hover:scale-105 transition-all shadow-2xl">{ICONS.ARSIV}<span>EKED Arşivi</span></Link>
-          <Link href="/admin/duyurular" className="bg-orange-600 p-8 rounded-[2.5rem] border border-orange-400/30 flex flex-col items-center justify-center gap-4 hover:scale-105 transition-all shadow-2xl animate-pulse">{ICONS.DUYURU}<span>İSG Duyuru</span></Link>
-          <Link href="/admin/kar-takip" className="bg-red-800 p-8 rounded-[2.5rem] border border-red-700 flex flex-col items-center justify-center gap-4 hover:scale-105 transition-all shadow-2xl">{ICONS.KAR}<span>KAR Arşivi</span></Link>
-          <button onClick={handleLogout} className="bg-red-600 p-8 rounded-[2.5rem] border border-red-400/30 flex flex-col items-center justify-center gap-4 hover:scale-105 transition-all shadow-2xl">{ICONS.CIKIS}<span>Çıkış Yap</span></button>
+          <Link href="/dashboard/pano-listesi" className="bg-indigo-600 p-8 rounded-[2.5rem] border border-indigo-400/30 flex flex-col items-center justify-center gap-4 hover:scale-105 transition-all shadow-2xl tracking-widest">{ICONS.PANO}<span>Pano Kontrol</span></Link>
+          <Link href="/admin/eked" className="bg-yellow-600 p-8 rounded-[2.5rem] border border-yellow-400/30 flex flex-col items-center justify-center gap-4 hover:scale-105 transition-all shadow-2xl text-black tracking-widest">{ICONS.EKED}<span>EKED Takip</span></Link>
+          <Link href="/admin/eked/arsiv" className="bg-slate-800 p-8 rounded-[2.5rem] border border-slate-700 flex flex-col items-center justify-center gap-4 hover:scale-105 transition-all shadow-2xl tracking-widest">{ICONS.ARSIV}<span>EKED Arşivi</span></Link>
+          <Link href="/admin/duyurular" className="bg-orange-600 p-8 rounded-[2.5rem] border border-orange-400/30 flex flex-col items-center justify-center gap-4 hover:scale-105 transition-all shadow-2xl animate-pulse tracking-widest">{ICONS.DUYURU}<span>İSG Duyuru</span></Link>
+          <Link href="/admin/kar-takip" className="bg-red-800 p-8 rounded-[2.5rem] border border-red-700 flex flex-col items-center justify-center gap-4 hover:scale-105 transition-all shadow-2xl tracking-widest">{ICONS.KAR}<span>KAR Arşivi</span></Link>
+          <button onClick={handleLogout} className="bg-red-600 p-8 rounded-[2.5rem] border border-red-400/30 flex flex-col items-center justify-center gap-4 hover:scale-105 transition-all shadow-2xl tracking-widest uppercase italic font-black">{ICONS.CIKIS}<span>Çıkış Yap</span></button>
         </div>
 
+        {/* VERİ MODÜLLERİ */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* İSG Alarmları */}
           <div className="bg-neutral-900 border-2 border-red-900/40 p-8 rounded-[3.5rem] shadow-2xl">
-            <h2 className="text-lg text-red-500 mb-6 underline decoration-red-600 tracking-widest uppercase italic">🚨 İSG ALARMLARI</h2>
-            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 font-black italic">
-              {isgAlarmlari.length === 0 ? <p className="text-gray-600 py-10 text-center">Aktif Alarm Yok</p> : 
-                isgAlarmlari.map(wo => <div key={wo.id} className="bg-red-950/20 p-5 rounded-3xl border border-red-900/30 text-[10px] italic">{wo.aciklama}</div>)}
+            <h2 className="text-lg text-red-500 mb-6 underline decoration-red-600 tracking-widest uppercase italic font-black">🚨 İSG ALARMLARI</h2>
+            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+              {isgAlarmlari.length === 0 ? <p className="text-gray-600 py-10 text-center font-black italic">Aktif Alarm Yok</p> : 
+                isgAlarmlari.map(wo => <div key={wo.id} className="bg-red-950/20 p-5 rounded-3xl border border-red-900/30 text-[10px] italic font-black text-red-200">{wo.aciklama}</div>)}
             </div>
           </div>
 
+          {/* Aktif EKED */}
           <div className="bg-neutral-900 border-2 border-yellow-900/40 p-8 rounded-[3.5rem] shadow-2xl">
-            <h2 className="text-lg text-yellow-500 mb-6 underline decoration-yellow-600 tracking-widest uppercase italic">🔐 AKTİF EKED</h2>
-            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 font-black italic">
-              {ekedLogs.length === 0 ? <p className="text-gray-600 py-10 text-center">Bildirim Yok</p> : 
-                ekedLogs.map(log => <div key={log.id} className="bg-yellow-950/20 p-5 rounded-3xl border border-yellow-900/30 text-[10px] italic font-black">{log.yer}</div>)}
+            <h2 className="text-lg text-yellow-500 mb-6 underline decoration-yellow-600 tracking-widest uppercase italic font-black">🔐 AKTİF EKED</h2>
+            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 italic font-black text-yellow-100">
+              {ekedLogs.length === 0 ? <p className="text-gray-600 py-10 text-center font-black italic">Bildirim Yok</p> : 
+                ekedLogs.map(log => <div key={log.id} className="bg-yellow-950/20 p-5 rounded-3xl border border-yellow-900/30 text-[10px]">{log.yer}</div>)}
             </div>
           </div>
 
+          {/* Saha Bildirimleri */}
           <div className="bg-neutral-900 border-2 border-indigo-900/40 p-8 rounded-[3.5rem] shadow-2xl">
-            <h2 className="text-lg text-indigo-400 mb-6 underline decoration-indigo-600 tracking-widest uppercase italic">📡 SAHA BİLDİRİMLERİ</h2>
-            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 font-black italic">
-              {aktifIsler.length === 0 ? <p className="text-gray-600 py-10 text-center">Bildirim Yok</p> : 
-                aktifIsler.map(wo => <div key={wo.id} className="bg-indigo-950/20 p-5 rounded-3xl border border-indigo-900/30 text-[10px] italic font-black">{wo.ekipmanAdi}</div>)}
+            <h2 className="text-lg text-indigo-400 mb-6 underline decoration-indigo-600 tracking-widest uppercase italic font-black">📡 SAHA BİLDİRİMLERİ</h2>
+            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 italic font-black text-indigo-100">
+              {aktifIsler.length === 0 ? <p className="text-gray-600 py-10 text-center font-black italic">Bildirim Yok</p> : 
+                aktifIsler.map(wo => <div key={wo.id} className="bg-indigo-950/20 p-5 rounded-3xl border border-indigo-900/30 text-[10px]">{wo.ekipmanAdi} - {wo.hatAdi}</div>)}
             </div>
           </div>
         </div>
@@ -112,7 +116,7 @@ function ISGPageContent() {
 
 export default function ISGPage() {
   return (
-    <Suspense fallback={<div>Yükleniyor...</div>}>
+    <Suspense fallback={<div className="h-screen bg-black flex items-center justify-center text-white italic font-black">YÜKLENİYOR...</div>}>
       <ISGPageContent />
     </Suspense>
   );

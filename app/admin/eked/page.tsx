@@ -11,10 +11,7 @@ import { useRouter } from "next/navigation";
 export default function EkedTakip() {
   const [mounted, setMounted] = useState(false);
   const [userRole, setUserRole] = useState("");
-  const handleBack = () => {
-    if (userRole === "admin") router.push("/admin");
-    else router.push("/dashboard");
-  };
+  const handleBack = () => { if (userRole === "admin") router.push("/admin"); else router.push("/dashboard"); };
   useEffect(() => {
     setMounted(true);
     const getR = async () => { if(auth.currentUser) { const s = await getDoc(doc(db, "users", auth.currentUser.uid)); if(s.exists()) setUserRole(s.data().role); } }; getR();

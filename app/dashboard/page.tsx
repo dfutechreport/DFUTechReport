@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState, Suspense } from "react";
 import { collection, getDocs, doc, getDoc, query, where, orderBy, setDoc, updateDoc, serverTimestamp, increment, addDoc } from "firebase/firestore";
 import { onAuthStateChanged, signOut } from "firebase/auth";
@@ -22,19 +21,12 @@ function DashboardIcerik() {
       try { await signOut(auth); localStorage.clear(); sessionStorage.clear(); router.push("/login"); router.refresh(); } catch (e) { console.error(e); }
     }
   };
-  
   useEffect(() => { setMounted(true); }, []);
-
-  if (!mounted || loading) return (
-    <div className="h-screen bg-black flex items-center justify-center text-white italic font-black uppercase tracking-widest text-center">
-      SİSTEM VERİLERİ SENKRONİZE EDİLİYOR...
-    </div>
-  );
-
+  if (!mounted || loading) return <div className="h-screen bg-black flex items-center justify-center text-white italic font-black uppercase tracking-widest text-center">SİSTEM VERİLERİ SENKRONİZE EDİLİYOR...</div>;
   if (userRole === "isg") {
     return (
       <div className="min-h-screen bg-[#050505] text-white p-6 md:p-10 font-sans italic font-black uppercase overflow-x-hidden selection:bg-indigo-500">
-        <div className="max-w-[1440px] mx-auto space-y-12 animate-in fade-in duration-700">
+        <div className="max-w-[1440px] mx-auto space-y-12 animate-in fade-in zoom-in duration-500">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
             <Link href="/dashboard/pano-listesi" className="bg-indigo-600 p-8 rounded-[2.5rem] border border-indigo-400/30 flex flex-col items-center justify-center gap-4 hover:scale-105 transition-all shadow-2xl tracking-widest uppercase italic"><svg viewBox="0 0 24 24" width="36" height="36" stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg><span>Pano Kontrol</span></Link>
             <Link href="/admin/eked" className="bg-yellow-600 p-8 rounded-[2.5rem] border border-yellow-400/30 flex flex-col items-center justify-center gap-4 hover:scale-105 transition-all shadow-2xl text-black tracking-widest uppercase italic"><svg viewBox="0 0 24 24" width="36" height="36" stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg><span>EKED Takip</span></Link>
@@ -43,8 +35,12 @@ function DashboardIcerik() {
             <button onClick={handleLogout} className="bg-red-600 p-8 rounded-[2.5rem] border border-red-400/30 flex flex-col items-center justify-center gap-4 hover:scale-105 transition-all shadow-2xl tracking-widest uppercase italic"><svg viewBox="0 0 24 24" width="36" height="36" stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg><span>Çıkış</span></button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-            <div className="bg-neutral-900 border-2 border-red-900/40 p-10 rounded-[3.5rem] shadow-2xl relative overflow-hidden"><h2 className="text-xl font-black text-red-500 mb-8 tracking-widest italic underline decoration-red-600 uppercase italic">🚨 KRİTİK İSG ALARMLARI</h2><div className="space-y-5 max-h-[500px] overflow-y-auto pr-3 text-center italic">{isgAlarmlari.length === 0 ? <p className="py-20 text-gray-600 tracking-widest font-black uppercase italic">Aktif Alarm Yok</p> : isgAlarmlari.map(a => <div key={a.id} className="bg-red-950/20 border border-red-900/30 p-6 rounded-[2rem] text-xs font-black tracking-tighter italic text-red-200 uppercase">{a.aciklama}</div>)}</div></div>
-            <div className="bg-neutral-900 border-2 border-yellow-900/40 p-10 rounded-[4rem] shadow-2xl relative overflow-hidden"><h2 className="text-xl font-black text-yellow-500 mb-8 tracking-widest italic underline decoration-yellow-600 uppercase italic">🔐 AKTİF EKED BİLDİRİMLERİ</h2><div className="space-y-5 max-h-[500px] overflow-y-auto pr-3 text-center italic font-black uppercase text-xs tracking-tighter">{ekedLogs.filter(e => e.durum === "Açık").length === 0 ? <p className="py-20 text-gray-600 tracking-widest font-black uppercase italic">Bildirim Yok</p> : ekedLogs.filter(e => e.durum === "Açık").map(e => <div key={e.id} className="bg-yellow-950/20 border border-yellow-900/30 p-6 rounded-[2rem] text-xs font-black tracking-tighter italic uppercase text-red-200">{e.yer}</div>)}</div></div>
+            <div className="bg-neutral-900 border-2 border-red-900/40 p-10 rounded-[3.5rem] shadow-2xl relative overflow-hidden"><h2 className="text-xl font-black text-red-500 mb-8 uppercase tracking-widest italic underline decoration-red-600 uppercase italic">🚨 KRİTİK İSG ALARMLARI</h2><div className="space-y-4 max-h-[500px] overflow-y-auto pr-3 text-center italic font-black uppercase text-xs tracking-tighter">
+              {isgAlarmlari.length === 0 ? <p className="py-20 text-gray-600 uppercase tracking-widest font-black italic">Alarm Yok</p> : isgAlarmlari.map(a => <div key={a.id} className="bg-red-950/20 border border-red-900/30 p-5 rounded-3xl text-red-200 uppercase font-black italic tracking-tighter">{a.aciklama}</div>)}
+            </div></div>
+            <div className="bg-neutral-900 border-2 border-yellow-900/40 p-10 rounded-[3.5rem] shadow-2xl relative overflow-hidden"><h2 className="text-xl font-black text-yellow-500 mb-8 uppercase tracking-widest italic underline decoration-yellow-600 uppercase italic">🔐 AKTİF EKED BİLDİRİMLERİ</h2><div className="space-y-4 max-h-[500px] overflow-y-auto pr-3 text-center italic font-black uppercase text-xs tracking-tighter">
+              {ekedLogs.filter(e => e.durum === "Açık").length === 0 ? <p className="py-20 text-gray-600 uppercase tracking-widest font-black italic">Bildirim Yok</p> : ekedLogs.filter(e => e.durum === "Açık").map(e => <div key={e.id} className="bg-yellow-950/20 border border-yellow-900/30 p-6 rounded-[2rem]">{e.yer}</div>)}
+            </div></div>
           </div>
         </div>
       </div>

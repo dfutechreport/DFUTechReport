@@ -31,7 +31,7 @@ export default function LoginPage() {
           if (role === "ik") router.push("/admin/mesai");
           else if (role === "uretim") router.push("/admin/tamamlanan-isler");
           else if (role === "admin") router.push("/admin");
-          else if (role === "isg") router.push("/isg"); else router.push("/dashboard");
+          else if (role === "isg") router.push("/isg"); else if (role === "ik") router.push("/admin/mesai"); else router.push("/dashboard");
         } else { setLoading(false); }
       } else { setLoading(false); }
     });

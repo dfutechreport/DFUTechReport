@@ -1,5 +1,6 @@
 "use client";
 
+import DashboardReturn from "../../components/DashboardReturn";
 import { useEffect, useState } from "react";
 import { collection, getDocs, doc, getDoc, addDoc, updateDoc, query, where, orderBy, deleteDoc } from "firebase/firestore";
 import { auth, db } from "../../../lib/firebase"; 
@@ -83,13 +84,14 @@ export default function EkedTakip() {
     try { await deleteDoc(doc(db, "eked_logs", id)); fetchEked(); } catch (error) { alert("Hata!"); }
   };
 
-  // ROL BAZLI DİNAMİK LİNK
-  const getDashboardLink = () => {
-    if (userRole === "admin") return "/admin";
-    if (userRole === "uretim") return "/admin/tamamlanan-isler";
-    if (userRole === "ik") return "/admin/mesai";
-    return "/dashboard";
-  };
+ return (
+  <div className="min-h-screen bg-black p-8">
+          
+     <div className="mt-10">
+        <DashboardReturn />
+     </div>
+  </div>
+);
 
   if (loading) return <div className="p-10 text-white italic text-center uppercase tracking-widest bg-slate-950 min-h-screen flex items-center justify-center">EKED Sistemleri Hazırlanıyor...</div>;
 

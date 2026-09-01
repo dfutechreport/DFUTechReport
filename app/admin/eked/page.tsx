@@ -16,9 +16,13 @@ function EkedContent() {
   const [userName, setUserName] = useState("");
   const [logs, setLogs] = useState<any[]>([]);
 
-  // EKED Kilit Formu State'leri
-  const [yer, setYer] = useState("");
+  // EKED Kilit Formu State'leri - Gelişmiş
+  const [hatAdi, setHatAdi] = useState("");
+  const [ekipmanAdi, setEkipmanAdi] = useState("");
+  const [aciklama, setAciklama] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const hatlar = ["ML", "SPL", "BUN", "DİĞER"];
 
   useEffect(() => {
     setMounted(true);
@@ -46,19 +50,24 @@ function EkedContent() {
 
   const handleEkedEkle = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!yer) return alert("Lütfen kilitleme yapılan yeri/ekipmanı belirtin.");
+    if (!hatAdi || !ekipmanAdi || !aciklama) return alert("Lütfen tüm alanları doldurun.");
     
     setIsSubmitting(true);
     try {
       await addDoc(collection(db, "eked_logs"), {
-        yer,
+        hatAdi,
+        ekipmanAdi,
+        aciklama,
+        yer: `${hatAdi} - ${ekipmanAdi}`, // Geriye dönük uyumluluk için
         personel: userName,
         durum: "Açık",
         tarih: new Date().toLocaleDateString("tr-TR"),
         kayitTarihi: serverTimestamp(),
         kapatmaTarihi: null
       });
-      setYer("");
+      setHatAdi("");
+      setEkipmanAdi("");
+      setAciklama("");
       alert("EKED Kilitleme işlemi başarıyla kaydedildi.");
     } catch (error) {
       alert("Hata oluştu.");
@@ -84,74 +93,105 @@ function EkedContent() {
 
   return (
     <div className="p-6 bg-[#050505] min-h-screen text-slate-200 font-sans italic font-black uppercase overflow-x-hidden">
-      <div className="max-w-[1200px] mx-auto space-y-8">
+      <div className="max-w-[1300px] mx-auto space-y-8">
         
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-slate-900/50 p-8 rounded-[3rem] border border-slate-800 shadow-2xl">
           <div>
             <h1 className="text-3xl font-black tracking-tighter text-yellow-500 uppercase italic">
               🔐 EKED TAKİP SİSTEMİ
             </h1>
-            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-[0.3em] mt-2">KİLİTLEME VE EMNİYETE ALMA</p>
+            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-[0.3em] mt-2">Enerji Kesme ve Kilitleme Yönetimi</p>
           </div>
           
           <DashboardReturn />
         </div>
 
-        {/* EKED KİLİTLEME FORMU (Tüm Yetkili Roller Görür) */}
+        {/* GELİŞMİŞ EKED KİLİTLEME FORMU */}
         <div className="bg-slate-900 border border-yellow-500/20 p-8 rounded-[2.5rem] shadow-xl">
-          <h2 className="text-yellow-500 text-sm mb-6 tracking-widest font-black uppercase italic underline decoration-yellow-600/30">⚠️ YENİ EKED KİLİTLEME KAYDI</h2>
-          <form onSubmit={handleEkedEkle} className="flex flex-col md:flex-row gap-4 items-end">
-            <div className="flex-1 w-full">
-              <label className="text-[10px] text-slate-500 mb-2 block font-black">KİLİTLENEN YER / EKİPMAN / PANO</label>
-              <input 
-                type="text" 
-                placeholder="ÖRN: MCC PANOSU / KİLİT NO: 12" 
-                value={yer} 
-                onChange={e => setYer(e.target.value)}
-                className="w-full bg-black border border-slate-700 p-4 rounded-2xl text-white outline-none focus:border-yellow-500 transition-all font-black uppercase italic"
+          <h2 className="text-yellow-500 text-sm mb-6 tracking-widest font-black uppercase italic">⚠️ YENİ EKED KİLİTLEME KAYDI</h2>
+          <form onSubmit={handleEkedEkle} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] text-slate-500 font-black">HAT SEÇİMİ</label>
+                <select 
+                  value={hatAdi} 
+                  onChange={e => setHatAdi(e.target.value)}
+                  className="w-full bg-black border border-slate-700 p-4 rounded-2xl text-white outline-none focus:border-yellow-500 transition-all font-black uppercase italic"
+                >
+                  <option value="">HAT SEÇİNİZ</option>
+                  {hatlar.map(h => <option key={h} value={h}>{h}</option>)}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] text-slate-500 font-black">KİLİTLENEN EKİPMAN / PANO</label>
+                <input 
+                  type="text" 
+                  placeholder="ÖRN: FIRIN ANA MOTORU" 
+                  value={ekipmanAdi} 
+                  onChange={e => setEkipmanAdi(e.target.value)}
+                  className="w-full bg-black border border-slate-700 p-4 rounded-2xl text-white outline-none focus:border-yellow-500 transition-all font-black uppercase italic"
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-[10px] text-slate-500 font-black">KİLİTLEME GEREKÇESİ (AÇIKLAMA)</label>
+              <textarea 
+                placeholder="LÜTFEN KİLİTLEME SEBEBİNİ DETAYLANDIRIN..." 
+                value={aciklama} 
+                onChange={e => setAciklama(e.target.value)}
+                className="w-full bg-black border border-slate-700 p-4 rounded-2xl text-white outline-none focus:border-yellow-500 transition-all font-black uppercase italic h-24"
               />
             </div>
+
             <button 
               type="submit" 
               disabled={isSubmitting}
-              className="bg-yellow-600 hover:bg-yellow-500 text-black px-10 py-4 rounded-2xl font-black transition-all disabled:opacity-50 shadow-lg shadow-yellow-900/20"
+              className="w-full bg-yellow-600 hover:bg-yellow-500 text-black p-5 rounded-2xl font-black transition-all disabled:opacity-50 shadow-lg shadow-yellow-900/20"
             >
-              {isSubmitting ? "KAYDEDİLİYOR..." : "KİLİTLEME YAP"}
+              {isSubmitting ? "KAYDEDİLİYOR..." : "KİLİTLEME İŞLEMİNİ BAŞLAT"}
             </button>
           </form>
         </div>
 
         {/* LİSTE TABLOSU */}
         <div className="bg-slate-900 border border-slate-800 p-8 rounded-[3rem] shadow-2xl">
-          <h2 className="text-white text-sm mb-6 tracking-widest font-black uppercase italic border-b border-slate-800 pb-4">🔐 MEVCUT KİLİT LİSTESİ</h2>
+          <h2 className="text-white text-sm mb-6 tracking-widest font-black uppercase italic border-b border-slate-800 pb-4">🔐 AKTİF VE GEÇMİŞ KİLİT LİSTESİ</h2>
           {logs.length === 0 ? (
             <div className="text-center py-20 text-slate-600 font-black italic uppercase">
               Aktif EKED işlemi bulunmuyor.
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left">
+              <table className="w-full text-left border-separate border-spacing-y-2">
                 <thead>
-                  <tr className="text-slate-500 text-[10px] tracking-widest uppercase italic border-b border-slate-800 font-black">
-                    <th className="py-4">Tarih</th>
-                    <th className="py-4">Ekipman / Yer</th>
-                    <th className="py-4">Sorumlu Personel</th>
-                    <th className="py-4 text-center">Durum</th>
-                    <th className="py-4 text-right">İşlem</th>
+                  <tr className="text-slate-500 text-[10px] tracking-widest uppercase italic font-black">
+                    <th className="px-6 py-2">Tarih</th>
+                    <th className="px-6 py-2">Hat / Ekipman</th>
+                    <th className="px-6 py-2">Gerekçe / Açıklama</th>
+                    <th className="px-6 py-2">Sorumlu</th>
+                    <th className="px-6 py-2 text-center">Durum</th>
+                    <th className="px-6 py-2 text-right">İşlem</th>
                   </tr>
                 </thead>
                 <tbody>
                   {logs.map(log => (
-                    <tr key={log.id} className="border-b border-slate-800/50 hover:bg-slate-800/30 transition italic font-black">
-                      <td className="py-4 text-xs font-bold text-slate-400 tracking-tighter">{log.tarih}</td>
-                      <td className="py-4 text-sm font-black text-white">{log.yer}</td>
-                      <td className="py-4 text-xs text-indigo-400 font-black uppercase">{log.personel}</td>
-                      <td className="py-4 text-center">
+                    <tr key={log.id} className="bg-black/40 hover:bg-slate-800/30 transition-all font-black italic">
+                      <td className="px-6 py-4 text-xs font-bold text-slate-400 rounded-l-2xl">{log.tarih}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] text-indigo-400 uppercase">{log.hatAdi}</span>
+                          <span className="text-sm text-white uppercase">{log.ekipmanAdi}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-[10px] text-slate-400 normal-case max-w-xs truncate">{log.aciklama}</td>
+                      <td className="px-6 py-4 text-xs text-indigo-400 uppercase">{log.personel}</td>
+                      <td className="px-6 py-4 text-center">
                         <span className={`px-4 py-1.5 rounded-full text-[9px] font-black italic ${log.durum === 'Açık' ? 'bg-red-900/50 text-red-400' : 'bg-green-900/50 text-green-400'}`}>
                           {log.durum}
                         </span>
                       </td>
-                      <td className="py-4 text-right">
+                      <td className="px-6 py-4 text-right rounded-r-2xl">
                         {log.durum === "Açık" && (
                           <button onClick={() => handleKilitAc(log.id)} className="bg-green-600 text-black px-4 py-1.5 rounded-lg text-[9px] font-black hover:bg-green-500 transition-all shadow-lg">KİLİDİ AÇ</button>
                         )}

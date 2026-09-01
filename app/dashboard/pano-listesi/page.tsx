@@ -5,6 +5,7 @@ import { collection, getDocs, doc, getDoc, deleteDoc, addDoc, query, orderBy } f
 import { auth, db } from "../../../lib/firebase"; 
 import Link from "next/link";
 import { onAuthStateChanged } from "firebase/auth";
+import DashboardReturn from "@/components/DashboardReturn";
 
 export default function PanoListesi() {
   const [panolar, setPanolar] = useState<any[]>([]);
@@ -97,8 +98,7 @@ export default function PanoListesi() {
             <h1 className="text-2xl md:text-3xl font-bold text-indigo-400">🔌 Sistemdeki Elektrik Panoları</h1>
             <p className="text-gray-400 mt-1">Tesis genelindeki panoların kaydı, listesi ve kontrol erişimi.</p>
           </div>
-          <Link href={userRole === "admin" || userRole === "operator" || userRole === "isg" ? "/admin" : "/dashboard"} className="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm transition">← Panele Dön</Link>
-        </div>
+        <DashboardReturn />
 
         {/* YENİ: PANO EKLEME FORMU (Üstte) */}
         <div className="bg-gray-900 border border-indigo-500/50 p-6 rounded-2xl shadow-[0_0_15px_rgba(99,102,241,0.15)] mb-8 flex flex-col md:flex-row gap-4 items-end">

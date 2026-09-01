@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
@@ -31,7 +32,7 @@ export default function LoginPage() {
           if (role === "ik") router.push("/admin/mesai");
           else if (role === "uretim") router.push("/admin/tamamlanan-isler");
           else if (role === "admin") router.push("/admin");
-          else if (role === "isg") router.push("/isg"); else if (role === "ik") router.push("/admin/mesai"); else router.push("/dashboard");
+          else router.push("/dashboard");
         } else { setLoading(false); }
       } else { setLoading(false); }
     });

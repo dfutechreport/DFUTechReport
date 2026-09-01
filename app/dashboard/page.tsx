@@ -36,6 +36,7 @@ function DashboardIcerik() {
   const [userRole, setUserRole] = useState("");
   const [isDictating, setIsDictating] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   // DESTEK PERSONELİ STATES
   const [destekListesi, setDestekListesi] = useState<any[]>([]);
@@ -44,6 +45,7 @@ function DashboardIcerik() {
   const selectedHat = watch("hatAdi");
 
   useEffect(() => {
+    setMounted(true);
     onAuthStateChanged(auth, async (u) => {
       if (u) {
         const userSnap = await getDoc(doc(db, "users", u.uid));
@@ -142,7 +144,7 @@ function DashboardIcerik() {
     } catch (e) { alert(e); }
   };
 
-  if (loading) return <div className="p-10 text-white italic tracking-widest text-center">SİSTEM VERİLERİ SENKRONİZE EDİLİYOR...</div>;
+  if (!mounted || loading) return <div className="h-screen bg-black flex items-center justify-center text-white italic font-black uppercase">SİSTEM VERİLERİ SENKRONİZE EDİLİYOR...</div>;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-6 font-sans">

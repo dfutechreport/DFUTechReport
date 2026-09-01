@@ -1,107 +1,98 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { collection, getDocs, doc, getDoc, deleteDoc, query, orderBy } from "firebase/firestore";
+import { useEffect, useState, Suspense } from "react";
+import { collection, query, onSnapshot, orderBy, doc, getDoc } from "firebase/firestore";
 import { auth, db } from "../../../lib/firebase"; 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
+import DashboardReturn from "../../../components/DashboardReturn";
 
-export default function KarTakipArsivi() {
-  const [logs, setLogs] = useState<any[]>([]);
+function KarArsivContent() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [userRole, setUserRole] = useState("");
-
-  const fetchArsiv = async () => {
-    try {
-      const q = query(collection(db, "kar_takip"), orderBy("kayitTarihi", "desc"));
-      const snap = await getDocs(q);
-      const data = snap.docs.map(document => ({
-        id: document.id, ...document.data(),
-        tarihFormatli: document.data().kayitTarihi ? document.data().kayitTarihi.toDate().toLocaleString('tr-TR') : "-"
-      }));
-      setLogs(data);
-    } catch (error) { console.error(error); } finally { setLoading(false); }
-  };
+  const [mounted, setMounted] = useState(false);
+  const [karLogs, setKarLogs] = useState<any[]>([]);
 
   useEffect(() => {
+    setMounted(true);
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const userRef = doc(db, "users", user.uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists() && userSnap.data().isApproved) {
-          const role = userSnap.data().role;
-          if (role === "uretim" || role === "ik") { window.location.href = "/"; } 
-          else { setUserRole(role); fetchArsiv(); }
-        } else window.location.href = "/";
-      } else window.location.href = "/";
+      if (!user) {
+        router.push("/");
+      } else {
+        // KAR Arşivi verilerini (kar_arsivi koleksiyonu) dinleme
+        const q = query(collection(db, "kar_arsivi"), orderBy("tarih", "desc"));
+        const unsubKar = onSnapshot(q, (snap) => {
+          setKarLogs(snap.docs.map(d => ({id: d.id, ...d.data()})));
+          setLoading(false);
+        });
+        return () => unsubKar();
+      }
     });
     return () => unsubscribe();
-  }, []);
+  }, [router]);
 
-  const handleSil = async (id: string) => {
-    if (!window.confirm("Bu arşiv kaydını kalıcı olarak silmek istediğinize emin misiniz?")) return;
-    try { await deleteDoc(doc(db, "kar_takip", id)); fetchArsiv(); } catch (error) { alert("Hata."); }
-  };
-
-  if (loading) return (
-    <div className="min-h-screen bg-gray-950 flex flex-col justify-center items-center p-4">
-      <div className="relative mb-8">
-        <div className="absolute inset-0 bg-yellow-500/20 blur-3xl rounded-full animate-pulse"></div>
-        <img src="/dfulogo.png" className="h-24 w-auto relative z-10 animate-bounce" alt="DFU" />
-      </div>
-      <div className="w-64 h-1.5 bg-gray-800 rounded-full overflow-hidden mb-4 shadow-inner">
-        <div className="h-full bg-gradient-to-r from-yellow-600 via-yellow-400 to-yellow-600 w-full animate-[loading_1.5s_infinite_ease-in-out] origin-left"></div>
-      </div>
-      <p className="text-teal-400 font-black tracking-[0.3em] text-[10px] uppercase animate-pulse">{`YÜKLENİYOR...`}</p>
-      <style jsx>{`
-        @keyframes loading {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-      `}</style>
-    </div>
-  );
+  if (!mounted || loading) return null;
 
   return (
-    <>
-      <style dangerouslySetInnerHTML={{__html: `@media print { body { background: white !important; color: black !important; } .no-print { display: none !important; } .bg-gray-950, .bg-gray-900 { background: white !important; } .text-white, .text-gray-400 { color: black !important; } .border-gray-800, .border-gray-700 { border-color: #ddd !important; } .shadow-lg { box-shadow: none !important; } }`}} />
-
-      <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-gray-800 pb-5 gap-4">
-            <h1 className="text-2xl font-bold text-red-500 print:text-black">🗄️ KAR (Kaçak Akım Rölesi) İhlal Arşivi</h1>
-            <div className="flex gap-3 no-print">
-              <button onClick={() => window.print()} className="bg-white text-gray-900 font-bold px-4 py-2 rounded-lg shadow-lg hover:bg-gray-200 transition flex items-center gap-2 text-sm">PDF Çıktısı Al</button>
-              <Link href={userRole === "admin" || userRole === "operator" || userRole === "isg" ? "/admin" : "/dashboard"} className="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm transition">← Panele Dön</Link>
-            </div>
+    <div className="p-6 bg-[#050505] min-h-screen text-slate-200 font-sans italic font-black uppercase overflow-x-hidden">
+      <div className="max-w-[1200px] mx-auto space-y-8">
+        
+        {/* ÜST PANEL VE DİNAMİK BUTON */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-slate-900/50 p-8 rounded-[3rem] border border-slate-800 shadow-2xl">
+          <div>
+            <h1 className="text-3xl font-black tracking-tighter text-red-500 uppercase italic">
+              ⚡ KAR İŞLEM ARŞİVİ
+            </h1>
+            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-[0.3em] mt-2">Kaçak Akım Rölesi Müdahale Kayıtları</p>
           </div>
+          
+          <DashboardReturn />
+        </div>
 
-          <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-lg overflow-x-auto print:border-none print:shadow-none print:p-0">
-            {logs.length === 0 ? <div className="text-center py-10 text-gray-500">Tesisinizde KAR ihlali bulunmuyor. Harika!</div> : (
-              <table className="w-full text-left text-sm whitespace-nowrap md:whitespace-normal">
+        {/* KAR LOG LİSTESİ */}
+        <div className="bg-slate-900 border border-slate-800 p-8 rounded-[3rem] shadow-2xl">
+          {karLogs.length === 0 ? (
+            <div className="text-center py-20 text-slate-600 font-black italic uppercase">
+              Kayıtlı KAR müdahalesi bulunmuyor.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
                 <thead>
-                  <tr className="border-b border-gray-800 text-gray-400 print:text-black">
-                    <th className="pb-3 px-2">Tespit Tarihi</th><th className="pb-3 px-2">Pano Adı</th><th className="pb-3 px-2">Pano Yeri</th><th className="pb-3 px-2 text-red-400 print:text-black">Durum (İhlal)</th><th className="pb-3 px-2">Kontrol Eden</th>
-                    {userRole === "admin" && <th className="pb-3 px-2 text-right no-print">Aksiyon</th>}
+                  <tr className="border-b border-slate-800 text-slate-500 text-[10px] tracking-widest uppercase italic">
+                    <th className="py-4">Müdahale Tarihi</th>
+                    <th className="py-4">Pano Adı / Yer</th>
+                    <th className="py-4">Personel</th>
+                    <th className="py-4 text-right">Durum</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {logs.map(log => (
-                    <tr key={log.id} className="border-b border-gray-800 print:border-gray-300 hover:bg-gray-800/50">
-                      <td className="py-4 px-2 text-gray-300 print:text-black font-bold">{log.tarihFormatli}</td>
-                      <td className="py-4 px-2 font-bold text-white print:text-black">{log.panoAdi}</td>
-                      <td className="py-4 px-2 text-gray-400 print:text-black">{log.panoYeri}</td>
-                      <td className="py-4 px-2 font-bold"><span className="bg-red-900/30 text-red-400 px-3 py-1 rounded-lg border border-red-800/50 print:border-none print:text-red-700 print:bg-transparent">{log.durum}</span></td>
-                      <td className="py-4 px-2 text-blue-300 print:text-black">{log.personel}</td>
-                      {userRole === "admin" && <td className="py-4 px-2 text-right no-print"><button onClick={() => handleSil(log.id)} className="bg-red-900/50 hover:bg-red-600 text-red-400 px-3 py-1 rounded text-xs">Sil</button></td>}
+                  {karLogs.map(log => (
+                    <tr key={log.id} className="border-b border-slate-800/50 hover:bg-slate-800/30 transition">
+                      <td className="py-4 text-xs font-bold text-slate-400">{log.tarih}</td>
+                      <td className="py-4 text-sm font-black text-white italic">{log.panoAdi}</td>
+                      <td className="py-4 text-xs text-red-400 font-black italic">{log.personel}</td>
+                      <td className="py-4 text-right">
+                        <span className="px-4 py-1.5 bg-red-600/20 text-red-500 border border-red-600/30 rounded-full text-[9px] font-black italic">
+                          MÜDAHALE EDİLDİ
+                        </span>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
-    </>
+    </div>
+  );
+}
+
+export default function KarArsivPage() {
+  return (
+    <Suspense fallback={null}>
+      <KarArsivContent />
+    </Suspense>
   );
 }

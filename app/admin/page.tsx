@@ -8,18 +8,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 export default function AdminDashboard() {
-  const [mounted, setMounted] = useState(false);
-  const handleLogout = async () => {
-    try { await signOut(auth); localStorage.clear(); sessionStorage.clear(); router.push("/login"); router.refresh(); } catch (e) { console.error(e); }
-  };
-  const secureAction = (callback: () => void) => {
-    const pw = prompt("Kritik işlem için yönetici şifresini girin:");
-    if (pw === "161004") { callback(); }
-    else { alert("Hatalı Şifre!"); }
-  };
-  useEffect(() => { setMounted(true); }, []);
-  if (!mounted || loading) return <div className="h-screen bg-black flex items-center justify-center text-white italic font-black uppercase tracking-widest text-center">SİSTEM YÜKLENİYOR...</div>;
-
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
   const [userRole, setUserRole] = useState(""); 
@@ -183,7 +171,7 @@ export default function AdminDashboard() {
     alert("Başarılı!"); setShowRcaModal(false); fetchRcaData();
   };
 
-  
+  if (loading) return <div className="p-10 bg-slate-950 min-h-screen text-white flex justify-center items-center uppercase italic font-black">Güvenlik Kontrolü...</div>;
   if (!isAdmin) return <div className="p-10 text-red-500 font-bold uppercase italic">YETKİSİZ ERİŞİM!</div>;
 
   return (
@@ -193,8 +181,8 @@ export default function AdminDashboard() {
           <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-12 bg-white rounded p-1" /><h1 className="text-2xl font-black uppercase text-indigo-400">Komuta Merkezi</h1></div>
           <div className="flex gap-3">
              <Link href="/dashboard" className="bg-indigo-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg">Vardiya Raporu</Link>
-             <button onClick={() => secureAction(downloadFullSnapshot)} className="bg-emerald-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg italic">💾 Sistem Yedeği</button>
-             <button onClick={handleLogout} className="bg-red-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg">Çıkış</button>
+             <button onClick={downloadFullSnapshot} className="bg-emerald-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg italic">💾 Sistem Yedeği</button>
+             <button onClick={()=>signOut(auth)} className="bg-red-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg">Çıkış</button>
           </div>
         </div>
 
@@ -220,7 +208,7 @@ export default function AdminDashboard() {
           <Link href="/admin/ekipmanlar" className="bg-blue-600 p-3 rounded-2xl text-[10px] text-center uppercase text-white">⚙️ Hat/Makineler</Link>
           <Link href="/admin/duyurular" className="bg-orange-600 p-3 rounded-2xl text-[10px] text-center uppercase text-white">📢 İSG Duyuru</Link>
           <Link href="/admin/bakim-ligi" className="bg-yellow-500/20 border border-yellow-500/40 p-3 rounded-2xl text-[10px] text-center text-yellow-500 uppercase">🏆 Bakım Ligi</Link>
-          {userRole === "admin" && <button onClick={() => secureAction(handleSystemReset)} className="bg-red-950 border border-red-900 p-3 rounded-2xl text-[10px] text-red-500 uppercase font-black shadow-inner">💀 Sistemi Sıfırla</button>}
+          {userRole === "admin" && <button onClick={handleSystemReset} className="bg-red-950 border border-red-900 p-3 rounded-2xl text-[10px] text-red-500 uppercase font-black shadow-inner">💀 Sistemi Sıfırla</button>}
         </div>
 
         {/* 3-COLUMN ALARM GRID (EKED, ISG, SAHA) */}

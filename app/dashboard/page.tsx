@@ -15,38 +15,6 @@ interface MaintenanceFormData {
 }
 
 function DashboardIcerik() {
-  const [mounted, setMounted] = useState(false);
-  const handleLogout = async () => {
-    if (confirm("Çıkış Yapılsın mı?")) {
-      try { await signOut(auth); localStorage.clear(); sessionStorage.clear(); router.push("/login"); router.refresh(); } catch (e) { console.error(e); }
-    }
-  };
-  useEffect(() => { setMounted(true); }, []);
-  if (!mounted || loading) return <div className="h-screen bg-black flex items-center justify-center text-white italic font-black uppercase tracking-widest text-center">SİSTEM VERİLERİ SENKRONİZE EDİLİYOR...</div>;
-  if (userRole === "isg") {
-    return (
-      <div className="min-h-screen bg-[#050505] text-white p-6 md:p-10 font-sans italic font-black uppercase overflow-x-hidden selection:bg-indigo-500">
-        <div className="max-w-[1440px] mx-auto space-y-12 animate-in fade-in zoom-in duration-500">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
-            <Link href="/dashboard/pano-listesi" className="bg-indigo-600 p-8 rounded-[2.5rem] border border-indigo-400/30 flex flex-col items-center justify-center gap-4 hover:scale-105 transition-all shadow-2xl tracking-widest uppercase italic"><svg viewBox="0 0 24 24" width="36" height="36" stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg><span>Pano Kontrol</span></Link>
-            <Link href="/admin/eked" className="bg-yellow-600 p-8 rounded-[2.5rem] border border-yellow-400/30 flex flex-col items-center justify-center gap-4 hover:scale-105 transition-all shadow-2xl text-black tracking-widest uppercase italic"><svg viewBox="0 0 24 24" width="36" height="36" stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg><span>EKED Takip</span></Link>
-            <Link href="/admin/eked/arsiv" className="bg-slate-800 p-8 rounded-[2.5rem] border border-slate-700 flex flex-col items-center justify-center gap-4 hover:scale-105 transition-all shadow-2xl tracking-widest uppercase italic"><svg viewBox="0 0 24 24" width="36" height="36" stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg><span>EKED Arşivi</span></Link>
-            <Link href="/admin/duyurular" className="bg-orange-600 p-8 rounded-[2.5rem] border border-orange-400/30 flex flex-col items-center justify-center gap-4 hover:scale-105 transition-all shadow-2xl animate-pulse tracking-widest uppercase italic"><svg viewBox="0 0 24 24" width="36" height="36" stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>İSG Duyurusu</span></Link>
-            <button onClick={handleLogout} className="bg-red-600 p-8 rounded-[2.5rem] border border-red-400/30 flex flex-col items-center justify-center gap-4 hover:scale-105 transition-all shadow-2xl tracking-widest uppercase italic"><svg viewBox="0 0 24 24" width="36" height="36" stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg><span>Çıkış</span></button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-            <div className="bg-neutral-900 border-2 border-red-900/40 p-10 rounded-[3.5rem] shadow-2xl relative overflow-hidden"><h2 className="text-xl font-black text-red-500 mb-8 uppercase tracking-widest italic underline decoration-red-600 uppercase italic">🚨 KRİTİK İSG ALARMLARI</h2><div className="space-y-4 max-h-[500px] overflow-y-auto pr-3 text-center italic font-black uppercase text-xs tracking-tighter">
-              {isgAlarmlari.length === 0 ? <p className="py-20 text-gray-600 uppercase tracking-widest font-black italic">Alarm Yok</p> : isgAlarmlari.map(a => <div key={a.id} className="bg-red-950/20 border border-red-900/30 p-5 rounded-3xl text-red-200 uppercase font-black italic tracking-tighter">{a.aciklama}</div>)}
-            </div></div>
-            <div className="bg-neutral-900 border-2 border-yellow-900/40 p-10 rounded-[3.5rem] shadow-2xl relative overflow-hidden"><h2 className="text-xl font-black text-yellow-500 mb-8 uppercase tracking-widest italic underline decoration-yellow-600 uppercase italic">🔐 AKTİF EKED BİLDİRİMLERİ</h2><div className="space-y-4 max-h-[500px] overflow-y-auto pr-3 text-center italic font-black uppercase text-xs tracking-tighter">
-              {ekedLogs.filter(e => e.durum === "Açık").length === 0 ? <p className="py-20 text-gray-600 uppercase tracking-widest font-black italic">Bildirim Yok</p> : ekedLogs.filter(e => e.durum === "Açık").map(e => <div key={e.id} className="bg-yellow-950/20 border border-yellow-900/30 p-6 rounded-[2rem]">{e.yer}</div>)}
-            </div></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const router = useRouter();
   const { register, handleSubmit, setValue, watch, reset, formState: { isSubmitting } } = useForm<MaintenanceFormData>({
     defaultValues: {
@@ -159,7 +127,7 @@ function DashboardIcerik() {
     recognition.start();
   };
 
-   };
+  const handleLogout = async () => { if (confirm("Çıkış Yapılsın mı?")) { await signOut(auth); router.push("/"); } };
 
   const onSubmit = async (data: MaintenanceFormData) => {
     try {
@@ -174,7 +142,7 @@ function DashboardIcerik() {
     } catch (e) { alert(e); }
   };
 
-  
+  if (loading) return <div className="p-10 text-white italic tracking-widest text-center">SİSTEM VERİLERİ SENKRONİZE EDİLİYOR...</div>;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-6 font-sans">
@@ -184,13 +152,13 @@ function DashboardIcerik() {
         <div className="flex flex-wrap items-center gap-2 bg-slate-900/50 p-4 rounded-[2.5rem] border border-slate-800 shadow-2xl">
           <Link href="/dashboard" className="bg-blue-600 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase shadow-lg shadow-blue-600/20 tracking-tighter">Dashboarda Dön</Link>
           <Link href="/dashboard/kontrol-formlari" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">Kontrol Formları</Link>
-          <Link href="/dashboard/pano-listesi" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">Pano Kontrol</Link>
+          <Link href="/dashboard/pano-kontrol" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">Pano Kontrol</Link>
           <Link href="/dashboard/periyodik-bakim" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">Periyodik Bakım</Link>
-          
+          <Link href="/admin/pm-setup" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">Manuel PM</Link>
           <Link href="/dashboard/sayac" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">Sayaç Okuma</Link>
-          <Link href="/admin/mesai" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">Mesai Girişi</Link>
+          <Link href="/dashboard/mesai" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">Mesai Girişi</Link>
           <Link href="/admin/eked" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">EKED Takip</Link>
-          <Link href="/admin/mesai" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">Mesailerim</Link>
+          <Link href="/dashboard/mesai" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">Mesailerim</Link>
           <Link href="/admin/is-listesi" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">Yapılan İşler</Link>
           <Link href="/admin/bakim-ligi" className="bg-yellow-500/10 border border-yellow-500/20 px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase text-yellow-500 italic">Bakım Ligi</Link>
           <button onClick={handleLogout} className="bg-red-900/20 border border-red-900/30 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase text-red-500 hover:bg-red-600 transition-all ml-auto">Çıkış</button>

@@ -1,81 +1,93 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { collection, addDoc, getDocs, query, orderBy, deleteDoc, doc } from "firebase/firestore";
-import { db } from "../../../lib/firebase";
-import Link from "next/link";
+import { useEffect, useState, Suspense } from "react";
+import { collection, query, onSnapshot, orderBy, doc, getDoc } from "firebase/firestore";
+// Dosya derinliğine göre Firebase yolu ayarlandı
+import { auth, db } from "../../lib/firebase"; 
+import { useRouter } from "next/navigation";
+import { onAuthStateChanged } from "firebase/auth";
+// Geri dönüş bileşeni eklendi
+import DashboardReturn from "../../../components/DashboardReturn";
 
-export default function DuyuruYonetimi() {
-  const [baslik, setBaslik] = useState("");
-  const [icerik, setIcerik] = useState("");
+function DuyurularContent() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const [duyurular, setDuyurular] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
 
-  const fetchDuyurular = async () => {
-    const q = query(collection(db, "announcements"), orderBy("tarih", "desc"));
-    const snap = await getDocs(q);
-    setDuyurular(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-  };
+  useEffect(() => {
+    setMounted(true);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        router.push("/");
+      } else {
+        // Duyuruları tarihe göre çekme
+        const q = query(collection(db, "duyurular"), orderBy("tarih", "desc"));
+        const unsubDuyurular = onSnapshot(q, (snap) => {
+          setDuyurular(snap.docs.map(d => ({id: d.id, ...d.data()})));
+          setLoading(false);
+        });
+        return () => unsubDuyurular();
+      }
+    });
+    return () => unsubscribe();
+  }, [router]);
 
-  useEffect(() => { fetchDuyurular(); }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!baslik || !icerik) return alert("Lütfen başlık ve içerik girin.");
-    setLoading(true);
-    try {
-      await addDoc(collection(db, "announcements"), {
-        baslik,
-        icerik,
-        tarih: new Date(),
-      });
-      setBaslik(""); setIcerik("");
-      fetchDuyurular();
-      alert("Duyuru başarıyla yayınlandı. Personel giriş yaptığında ekranına düşecek.");
-    } catch (error) { console.error(error); }
-    setLoading(false);
-  };
-
-  const handleSil = async (id: string) => {
-    if (!window.confirm("Bu duyuruyu silmek istediğinize emin misiniz?")) return;
-    await deleteDoc(doc(db, "announcements", id));
-    fetchDuyurular();
-  };
+  if (!mounted || loading) return (
+    <div className="h-screen bg-black flex items-center justify-center text-white italic font-black uppercase tracking-widest text-center">
+      DUYURULAR YÜKLENİYOR...
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-8 border-b border-gray-800 pb-4">
-          <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-10 md:h-12 bg-white p-1 rounded shadow-sm" alt="DFU" /><h1 className="text-3xl font-bold text-yellow-500">Duyuru Yönetimi</h1></div>
-          <Link href="/admin" className="bg-gray-800 px-4 py-2 rounded-lg hover:bg-gray-700 transition">← Dashboard</Link>
+    <div className="p-6 bg-[#050505] min-h-screen text-slate-200 font-sans italic font-black uppercase overflow-x-hidden">
+      <div className="max-w-[1200px] mx-auto space-y-8">
+        
+        {/* ÜST PANEL VE DİNAMİK BUTON */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-slate-900/50 p-8 rounded-[3rem] border border-slate-800 shadow-2xl">
+          <div>
+            <h1 className="text-3xl font-black tracking-tighter text-orange-500 uppercase italic">
+              📢 İSG DUYURU MERKEZİ
+            </h1>
+            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-[0.3em] mt-2">Önemli Bildirimler ve Güvenlik Uyarıları</p>
+          </div>
+          
+          <DashboardReturn />
         </div>
 
-        <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl mb-8">
-          <h2 className="text-xl font-bold mb-4">Yeni Duyuru Yayınla</h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <input type="text" placeholder="Duyuru Başlığı (Örn: İş Güvenliği Uyarısı)" value={baslik} onChange={e => setBaslik(e.target.value)} className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white" />
-            <textarea placeholder="Duyuru Detayı..." value={icerik} onChange={e => setIcerik(e.target.value)} rows={4} className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-white" />
-            <button type="submit" disabled={loading} className="bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-3 px-6 rounded-lg w-full">{loading ? "Yayınlanıyor..." : "Tüm Tesise Duyur"}</button>
-          </form>
-        </div>
-
-        <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl">
-          <h2 className="text-xl font-bold mb-4">Aktif Duyurular</h2>
-          {duyurular.length === 0 ? <p className="text-gray-500">Yayında duyuru yok.</p> : (
-            <div className="space-y-4">
-              {duyurular.map(d => (
-                <div key={d.id} className="bg-gray-800 p-4 rounded-lg flex justify-between items-start">
-                  <div>
-                    <h3 className="font-bold text-yellow-400 text-lg">{d.baslik}</h3>
-                    <p className="text-gray-300 mt-2 text-sm">{d.icerik}</p>
-                  </div>
-                  <button onClick={() => handleSil(d.id)} className="bg-red-900/50 text-red-400 text-xs px-3 py-1 rounded hover:bg-red-600 hover:text-white transition">Sil</button>
-                </div>
-              ))}
+        {/* DUYURU LİSTESİ */}
+        <div className="space-y-4">
+          {duyurular.length === 0 ? (
+            <div className="bg-slate-900 border border-slate-800 p-20 rounded-[3rem] text-center text-slate-600 font-black italic uppercase">
+              Henüz yayınlanmış bir duyuru bulunmuyor.
             </div>
+          ) : (
+            duyurular.map(duyuru => (
+              <div key={duyuru.id} className="bg-slate-900 border border-slate-800 p-8 rounded-[2.5rem] shadow-xl relative overflow-hidden group hover:border-orange-500/50 transition-all">
+                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                  <span className="text-6xl">📢</span>
+                </div>
+                <div className="flex justify-between items-start mb-4">
+                  <span className="text-[10px] bg-orange-600/20 text-orange-400 px-4 py-1.5 rounded-full border border-orange-600/30">
+                    {duyuru.tarih}
+                  </span>
+                </div>
+                <h3 className="text-xl text-white mb-2 tracking-tight">{duyuru.baslik}</h3>
+                <p className="text-slate-400 text-sm normal-case font-normal leading-relaxed">{duyuru.icerik}</p>
+              </div>
+            ))
           )}
         </div>
+
       </div>
     </div>
+  );
+}
+
+export default function DuyurularPage() {
+  return (
+    <Suspense fallback={<div>Yükleniyor...</div>}>
+      <DuyurularContent />
+    </Suspense>
   );
 }

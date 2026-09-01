@@ -2,11 +2,10 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { collection, query, onSnapshot, orderBy, doc, getDoc } from "firebase/firestore";
-// Dosya derinliğine göre Firebase yolu ayarlandı
-import { auth, db } from "../../lib/firebase"; 
+// Firebase yolu, klasör derinliğine göre (3 seviye dışarı) düzeltildi.
+import { auth, db } from "../../../lib/firebase"; 
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
-// Geri dönüş bileşeni eklendi
 import DashboardReturn from "../../../components/DashboardReturn";
 
 function DuyurularContent() {
@@ -33,52 +32,42 @@ function DuyurularContent() {
     return () => unsubscribe();
   }, [router]);
 
-  if (!mounted || loading) return (
-    <div className="h-screen bg-black flex items-center justify-center text-white italic font-black uppercase tracking-widest text-center">
-      DUYURULAR YÜKLENİYOR...
-    </div>
-  );
+  if (!mounted || loading) return null;
 
   return (
     <div className="p-6 bg-[#050505] min-h-screen text-slate-200 font-sans italic font-black uppercase overflow-x-hidden">
       <div className="max-w-[1200px] mx-auto space-y-8">
         
-        {/* ÜST PANEL VE DİNAMİK BUTON */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-slate-900/50 p-8 rounded-[3rem] border border-slate-800 shadow-2xl">
           <div>
             <h1 className="text-3xl font-black tracking-tighter text-orange-500 uppercase italic">
               📢 İSG DUYURU MERKEZİ
             </h1>
-            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-[0.3em] mt-2">Önemli Bildirimler ve Güvenlik Uyarıları</p>
+            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-[0.3em] mt-2">Güvenlik Bildirimleri</p>
           </div>
           
           <DashboardReturn />
         </div>
 
-        {/* DUYURU LİSTESİ */}
         <div className="space-y-4">
           {duyurular.length === 0 ? (
             <div className="bg-slate-900 border border-slate-800 p-20 rounded-[3rem] text-center text-slate-600 font-black italic uppercase">
-              Henüz yayınlanmış bir duyuru bulunmuyor.
+              Henüz bir duyuru bulunmuyor.
             </div>
           ) : (
             duyurular.map(duyuru => (
-              <div key={duyuru.id} className="bg-slate-900 border border-slate-800 p-8 rounded-[2.5rem] shadow-xl relative overflow-hidden group hover:border-orange-500/50 transition-all">
-                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                  <span className="text-6xl">📢</span>
-                </div>
+              <div key={duyuru.id} className="bg-slate-900 border border-slate-800 p-8 rounded-[2.5rem] shadow-xl relative overflow-hidden">
                 <div className="flex justify-between items-start mb-4">
-                  <span className="text-[10px] bg-orange-600/20 text-orange-400 px-4 py-1.5 rounded-full border border-orange-600/30">
+                  <span className="text-[10px] bg-orange-600/20 text-orange-400 px-4 py-1.5 rounded-full border border-orange-600/30 font-bold italic">
                     {duyuru.tarih}
                   </span>
                 </div>
                 <h3 className="text-xl text-white mb-2 tracking-tight">{duyuru.baslik}</h3>
-                <p className="text-slate-400 text-sm normal-case font-normal leading-relaxed">{duyuru.icerik}</p>
+                <p className="text-slate-400 text-sm normal-case font-normal leading-relaxed italic">{duyuru.icerik}</p>
               </div>
             ))
           )}
         </div>
-
       </div>
     </div>
   );
@@ -86,7 +75,7 @@ function DuyurularContent() {
 
 export default function DuyurularPage() {
   return (
-    <Suspense fallback={<div>Yükleniyor...</div>}>
+    <Suspense fallback={null}>
       <DuyurularContent />
     </Suspense>
   );

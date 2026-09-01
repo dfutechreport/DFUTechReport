@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
-import { db, auth } from "@/firebase";
+// Firebase yolu orijinal dashboard dosyanızdaki çalışan yol ile eşitlendi.
+import { auth, db } from "../../lib/firebase"; 
 import { collection, query, onSnapshot, orderBy, limit, doc, getDoc, where } from "firebase/firestore";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";

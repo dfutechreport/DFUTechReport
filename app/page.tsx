@@ -27,21 +27,11 @@ export default function LoginPage() {
         const userRef = doc(db, "users", user.uid);
         const userSnap = await getDoc(userRef);
         if (userSnap.exists() && userSnap.data().isApproved) {
-                          const role = userSnap.data().role;
-        if (role === "admin") {
-          router.push("/admin");
-        } else if (role === "isg") {
-          router.push("/isg");
-        } else if (role === "ik") {
-          router.push("/admin/mesai");
-        } else if (role === "uretim") {
-          router.push("/admin/tamamlanan-isler");
-        } else if (role === "depo") {
-          router.push("/admin/yedek-parca");
-        } else {
-          router.push("/dashboard");
-        }
-        }
+          const role = userSnap.data().role;
+          if (role === "ik") router.push("/admin/mesai");
+          else if (role === "uretim") router.push("/admin/tamamlanan-isler");
+          else if (role === "admin") router.push("/admin");
+          else router.push("/dashboard");
         } else { setLoading(false); }
       } else { setLoading(false); }
     });

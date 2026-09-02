@@ -12,8 +12,6 @@ export default function TamamlananIsler() {
   const [userRole, setUserRole] = useState("");
   const [rawOrders, setRawOrders] = useState<any[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<any[]>([]);
-  const [showPendingModal, setShowPendingModal] = useState(false);
-  const [pendingOrders, setPendingOrders] = useState<any[]>([]);
   
   // Filtreler
   const [fYil, setFYil] = useState(new Date().getFullYear().toString());
@@ -48,11 +46,6 @@ export default function TamamlananIsler() {
       setLoading(true);
       const q = query(collection(db, "work_orders"), where("durum", "==", "Kapalı"));
       const snap = await getDocs(q);
-      
-      // Bekleyen işleri çek (durum == "Açık")
-      const pendingQ = query(collection(db, "work_orders"), where("durum", "==", "Açık"));
-      const pendingSnap = await getDocs(pendingQ);
-      setPendingOrders(pendingSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       const data = snap.docs.map((d): any => {
         const docData = d.data();
         const tDate = docData.tamamlanmaTarihi?.toDate ? docData.tamamlanmaTarihi.toDate() : new Date();
@@ -102,15 +95,7 @@ export default function TamamlananIsler() {
           <div className="flex gap-4">
             <Link href={userRole === "admin" ? "/admin" : "/dashboard"} className="bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase shadow-lg border border-slate-700 transition-all">Geri Dön</Link>
             {userRole === "uretim" && (
-              <div className="flex gap-2">
-                <button 
-                  onClick={() => setShowPendingModal(true)}
-                  className="bg-amber-600 hover:bg-amber-500 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase shadow-xl flex items-center gap-2"
-                >
-                  <span className="text-sm">⏳</span> Bekleyen İşler ({pendingOrders.length})
-                </button>
-                <Link href="/admin/is-emri-ac" className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase shadow-xl">+ Yeni İş Emri</Link>
-              </div>
+              <Link href="/admin/is-emri-ac" className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase shadow-xl">+ Yeni İş Emri</Link>
             )}
             {/* ÇIKIŞ YAP BUTONU */}
             <button 
@@ -157,67 +142,6 @@ export default function TamamlananIsler() {
           {filteredOrders.length === 0 && <div className="p-20 text-center text-slate-600 italic">Kriterlere uygun sonuç bulunamadı.</div>}
         </div>
       </div>
-    
-      {/* BEKLEYEN İŞLER MODAL */}
-      {showPendingModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-md" onClick={() => setShowPendingModal(false)}></div>
-          <div className="relative bg-slate-900 border border-slate-800 w-full max-w-4xl max-h-[80vh] overflow-hidden rounded-[2.5rem] shadow-2xl flex flex-col">
-            <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
-              <div>
-                <h2 className="text-xl font-black text-white uppercase tracking-widest flex items-center gap-3">
-                  <span className="text-amber-500">⏳</span> SAHA BİLDİRİMLERİ (BEKLEYEN)
-                </h2>
-                <p className="text-slate-500 text-[10px] font-bold mt-1 uppercase tracking-tighter">Henüz teknisyen tarafından kapatılmamış aktif iş emirleri</p>
-              </div>
-              <button onClick={() => setShowPendingModal(false)} className="text-slate-400 hover:text-white transition-colors text-2xl">✕</button>
-            </div>
-            
-            <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
-              {pendingOrders.length === 0 ? (
-                <div className="text-center py-20">
-                  <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Aktif bekleyen iş emri bulunamadı.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-4">
-                  {pendingOrders.map((order) => (
-                    <div key={order.id} className="bg-slate-800/40 border border-slate-700/50 p-6 rounded-3xl hover:bg-slate-800/60 transition-all">
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <span className="text-amber-500 text-[10px] font-black uppercase tracking-widest bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
-                            {order.hatAdi}
-                          </span>
-                          <h3 className="text-white font-black mt-2 uppercase tracking-wide">{order.ekipmanAdi}</h3>
-                        </div>
-                        <span className="text-slate-500 text-[9px] font-bold">{order.kayitZamani?.toDate ? order.kayitZamani.toDate().toLocaleString('tr-TR') : ''}</span>
-                      </div>
-                      <div className="bg-slate-950/50 p-4 rounded-2xl border border-slate-700/30">
-                        <p className="text-slate-300 text-xs leading-relaxed italic">
-                          <span className="text-indigo-400 font-bold not-italic uppercase text-[10px] block mb-1">Detay Açıklama:</span>
-                          {order.aciklama || "Açıklama belirtilmemiş."}
-                        </p>
-                      </div>
-                      <div className="mt-4 flex items-center gap-4 text-[10px] font-bold text-slate-500 uppercase">
-                        <span>Bildiren: <span className="text-slate-300">{order.bildirenKisi}</span></span>
-                        <span>Öncelik: <span className={order.oncelik === 'Kritik' ? 'text-red-500' : 'text-amber-400'}>{order.oncelik}</span></span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            
-            <div className="p-6 border-t border-slate-800 bg-slate-900/50 text-right">
-              <button 
-                onClick={() => setShowPendingModal(false)}
-                className="bg-slate-800 hover:bg-slate-700 text-white px-8 py-3 rounded-xl font-black text-[10px] uppercase transition-all"
-              >
-                KAPAT
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-</div>
+    </div>
   );
 }

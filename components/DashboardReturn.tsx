@@ -13,23 +13,30 @@ export default function DashboardReturn() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         const snap = await getDoc(doc(db, "users", user.uid));
-        if (snap.exists()) setUserRole(snap.data().role);
+        if (snap.exists()) {
+          const role = snap.data().role;
+          setUserRole(role ? role.toLowerCase().trim() : "");
+        }
       }
     });
     return () => unsubscribe();
   }, []);
 
   const handleBack = () => {
-    if (userRole === "admin") router.push("/admin");
-    else if (userRole === "isg") router.push("/isg");
-    else if (userRole === "ik") router.push("/admin/mesai");
-    else router.push("/dashboard");
+    switch (userRole) {
+      case "admin": router.push("/admin"); break;
+      case "isg": router.push("/isg"); break;
+      case "ik": router.push("/admin/mesai"); break;
+      case "depo": router.push("/admin/yedek-parca"); break;
+      case "uretim": router.push("/admin/tamamlanan-isler"); break;
+      default: router.push("/dashboard"); break;
+    }
   };
 
   return (
     <button 
       onClick={handleBack}
-      className="bg-slate-800 hover:bg-white hover:text-black px-10 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-2xl text-white"
+      className="bg-slate-800 hover:bg-white hover:text-black px-10 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-2xl text-white italic"
     >
       dashboarda dön
     </button>

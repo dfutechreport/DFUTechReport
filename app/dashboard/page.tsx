@@ -160,7 +160,7 @@ function DashboardIcerik() {
           <Link href="/dashboard/sayac" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">Sayaç Okuma</Link>
           <Link href="/dashboard/mesai" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">Mesai Girişi</Link>
           <Link href="/admin/eked" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">EKED Takip</Link>
-          <Link href="/dashboard/mesai" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">Mesailerim</Link>
+          <Link href="/admin/mesai" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">Mesailerim</Link>
           <Link href="/admin/is-listesi" className="bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-2xl text-[10px] font-bold uppercase text-slate-400 hover:border-blue-500 transition-all">Yapılan İşler</Link>
           <Link href="/admin/bakim-ligi" className="bg-yellow-500/10 border border-yellow-500/20 px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase text-yellow-500 italic">Bakım Ligi</Link>
           <button onClick={handleLogout} className="bg-red-900/20 border border-red-900/30 px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase text-red-500 hover:bg-red-600 transition-all ml-auto">Çıkış</button>

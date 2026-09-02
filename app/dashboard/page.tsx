@@ -49,7 +49,16 @@ function DashboardIcerik() {
     onAuthStateChanged(auth, async (u) => {
       if (u) {
         const userSnap = await getDoc(doc(db, "users", u.uid));
-        if (userSnap.exists()) { setUserName(userSnap.data().name || ""); setUserRole(userSnap.data().role || ""); }
+        if (userSnap.exists()) { 
+          const role = userSnap.data().role || "";
+          setUserName(userSnap.data().name || ""); 
+          setUserRole(role); 
+
+          // Güvenlik kısıtlaması: Belirli rollerin teknisyen dashboard'ına erişimi engellenir
+          if (role === "ik") { router.push("/admin/mesai"); return; }
+          if (role === "depo") { router.push("/admin/yedek-parca"); return; }
+          if (role === "isg") { router.push("/isg"); return; }
+        }
         await fetchSystemData();
       } else { window.location.href = "/"; }
       setLoading(false);

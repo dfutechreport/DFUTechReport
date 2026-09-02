@@ -27,7 +27,7 @@ export default function LoginPage() {
         const userRef = doc(db, "users", user.uid);
         const userSnap = await getDoc(userRef);
         if (userSnap.exists() && userSnap.data().isApproved) {
-          const role = userSnap.data().role;
+          const role = userSnap.data().role ? userSnap.data().role.toLowerCase().trim() : "";
           if (role === "ik") router.push("/admin/mesai");
           else if (role === "uretim") router.push("/admin/tamamlanan-isler");
           else if (role === "admin") router.push("/admin");

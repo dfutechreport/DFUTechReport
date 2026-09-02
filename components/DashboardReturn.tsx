@@ -23,13 +23,32 @@ export default function DashboardReturn() {
   }, []);
 
   const handleBack = () => {
-    switch (userRole) {
-      case "admin": router.push("/admin"); break;
-      case "isg": router.push("/isg"); break;
-      case "ik": router.push("/admin/mesai"); break;
-      case "depo": router.push("/admin/yedek-parca"); break;
-      case "uretim": router.push("/admin/tamamlanan-isler"); break;
-      default: router.push("/dashboard"); break;
+    if (!userRole) return;
+    const cleanRole = userRole.toLowerCase().trim();
+    
+    switch (cleanRole) {
+      case "admin": 
+        router.push("/admin"); 
+        break;
+      case "depo": 
+        router.push("/admin/yedek-parca"); 
+        break;
+      case "ik": 
+        router.push("/admin/mesai"); 
+        break;
+      case "isg": 
+        router.push("/isg"); 
+        break;
+      case "uretim": 
+        router.push("/admin/tamamlanan-isler"); 
+        break;
+      case "teknisyen":
+      case "operator":
+        router.push("/dashboard");
+        break;
+      default: 
+        router.push("/"); 
+        break;
     }
   };
 

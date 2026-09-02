@@ -50,11 +50,11 @@ function DashboardIcerik() {
       if (u) {
         const userSnap = await getDoc(doc(db, "users", u.uid));
         if (userSnap.exists()) { 
-          const role = userSnap.data().role || "";
+          const role = userSnap.data().role ? userSnap.data().role.toLowerCase().trim() : "";
           setUserName(userSnap.data().name || ""); 
           setUserRole(role); 
-
-          // Güvenlik kısıtlaması: Belirli rollerin teknisyen dashboard'ına erişimi engellenir
+          
+          // Yetkisiz rolleri dashboard'dan (teknisyen ekranı) uzaklaştır
           if (role === "ik") { router.push("/admin/mesai"); return; }
           if (role === "depo") { router.push("/admin/yedek-parca"); return; }
           if (role === "isg") { router.push("/isg"); return; }

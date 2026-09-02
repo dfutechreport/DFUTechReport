@@ -58,6 +58,7 @@ function DashboardIcerik() {
           if (role === "ik") { router.push("/admin/mesai"); return; }
           if (role === "depo") { router.push("/admin/yedek-parca"); return; }
           if (role === "isg") { router.push("/isg"); return; }
+          if (role === "uretim") { router.push("/admin/tamamlanan-isler"); return; }
         }
         await fetchSystemData();
       } else { window.location.href = "/"; }

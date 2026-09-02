@@ -109,7 +109,6 @@ export default function MesaiGiris() {
                 <option value="Normal Mesai">Normal Mesai</option>
                 <option value="İzin Mesaisi">Haftalık İzin Mesaisi</option>
                 <option value="Resmi Tatil">Resmi Tatil Mesaisi</option>
-                <option value="Vardiya Dönüşü">Vardiya Dönüşü</option>
               </select>
             </div>
             <div>

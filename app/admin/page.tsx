@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 export default function AdminDashboard() {
+  const [copySuccess, setCopySuccess] = useState(false);
   const dnaScript = `Get-ChildItem -Recurse -Include *.tsx,*.ts | ForEach-Object { 
     "--- FILE: $($_.FullName) ---\`n" | Out-File -Append PROJE_DOKUMU.txt
     Get-Content $_.FullName | Out-File -Append PROJE_DOKUMU.txt
@@ -81,7 +82,7 @@ export default function AdminDashboard() {
       const backupPayload = {
         database: dbBackup,
         system_metadata: {
-          version: "2.5.0-DNA",
+          version: "2.5.5-DNA",
           export_date: new Date().toISOString(),
           role_access_map: {
             admin: "/admin", ik: "/admin/mesai", depo: "/admin/yedek-parca",

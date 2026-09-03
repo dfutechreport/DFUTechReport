@@ -72,7 +72,7 @@ const [isAdmin, setIsAdmin] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
 
   const formatExcelTime = (val: any) => {
-    if (val === null || val === undefined || val === "") return "00:00";
+    if (!val) return "00:00";
     if (typeof val === 'string') {
       const m = val.match(/(\d{1,2})[:.](\d{1,2})/);
       return m ? `${m[1].padStart(2, '0')}:${m[2].padStart(2, '0')}` : "00:00";
@@ -105,8 +105,7 @@ const [isAdmin, setIsAdmin] = useState(false);
       const data: any[] = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
       const aylar: any = { "OCAK":"01","SUBAT":"02","MART":"03","NISAN":"04","MAYIS":"05","HAZIRAN":"06","TEMMUZ":"07","AGUSTOS":"08","EYLUL":"09","EKIM":"10","KASIM":"11","ARALIK":"12" };
       const mapped = data.map((row: any) => {
-        const ayRaw = String(getCol(row, "AY") || "");
-        const ay = aylar[norm(ayRaw)] || "01";
+        const ay = aylar[norm(getCol(row, "AY"))] || "01";
         const tarih = `${getCol(row, "YIL")||"2026"}-${ay}-${String(getCol(row, "GUN")||"01").padStart(2, '0')}`;
         const start = formatExcelTime(getCol(row, "BASLANGIC"));
         const end = formatExcelTime(getCol(row, "BITIS"));
@@ -114,17 +113,30 @@ const [isAdmin, setIsAdmin] = useState(false);
         const [h2, m2] = end.split(':').map(Number);
         let duration = (h2 * 60 + m2) - (h1 * 60 + m1);
         if (duration < 0) duration += 1440;
+
+        // Personel Eşleştirme - Kritik Kısım
         const p1 = String(getCol(row, "PERSONEL1") || "Sistem").trim();
+        const p2 = String(getCol(row, "PERSONEL2") || "").trim();
+        const p3 = String(getCol(row, "PERSONEL3") || "").trim();
+        const p4 = String(getCol(row, "PERSONEL4") || "").trim();
+
         return {
-          hatAdi: String(getCol(row, "HAT") || "").trim(), ekipmanAdi: String(getCol(row, "EKIPMAN") || "").trim(),
-          aciklama: getCol(row, "IS") || "-", baslangicSaati: start, bitisSaati: end, 
-          baslangicTarihi: tarih, bitisTarihi: tarih, toplamSureDakika: duration,
-          vardiya: getCol(row, "VARDIYA") || "08:00 - 16:00", isDuruslu: String(getCol(row, "DURUS") || "").toUpperCase() !== "YOK",
-          teknisyen: p1, yardimciTeknisyenler: [getCol(row, "PERSONEL2"), getCol(row, "PERSONEL3")].filter(p => p && p !== "-"),
-          bildirenKisi: p1, usedMaterials: [], durum: "Kapalı", kayitTarihi: new Date(), isImported: true
+          hatAdi: String(getCol(row, "HAT") || "").trim(),
+          ekipmanAdi: String(getCol(row, "EKIPMAN") || "").trim(),
+          aciklama: getCol(row, "IS") || "-",
+          baslangicTarihi: tarih, bitisTarihi: tarih,
+          baslangicSaati: start, bitisSaati: end,
+          toplamSureDakika: duration,
+          vardiya: getCol(row, "VARDIYA") || "08:00 - 16:00",
+          isDuruslu: String(getCol(row, "DURUS") || "").toUpperCase() !== "YOK",
+          teknisyen: p1,
+          yardimciTeknisyenler: [p2, p3, p4].filter(p => p && p !== "-" && p !== ""),
+          bildirenKisi: p1,
+          usedMaterials: [], durum: "Kapalı", kayitTarihi: new Date(), isImported: true
         };
       });
-      setImportPreview(mapped.filter(i => i.hatAdi)); setShowImportModal(true);
+      setImportPreview(mapped.filter(i => i.hatAdi));
+      setShowImportModal(true);
     };
     reader.readAsBinaryString(file);
   };
@@ -145,40 +157,30 @@ const [isAdmin, setIsAdmin] = useState(false);
     } catch (err) { alert(err); } finally { setIsImporting(false); }
   };
 
-  
   const clearOldImports = async () => {
-    if (!window.confirm("BELİRTİLEN PERSONELLER DIŞINDAKİ TÜM KAYITLAR SİLİNECEKTİR. EMİN MİSİNİZ?")) return;
+    if (!window.confirm("KORUNANLAR DIŞINDAKİ TÜM KAYITLAR SİLİNECEK. EMİN MİSİNİZ?")) return;
     setLoading(true);
     try {
       const snap = await getDocs(collection(db, "maintenance_logs"));
       const allDocs = snap.docs;
-      
       const allowedPeople = ["DFUTECHREPORT", "HALILCAKIR", "TEKNIKSERVIS"];
-      
       const toDelete = allDocs.filter(d => {
           const data = d.data();
           const bk = norm(data.bildirenKisi || "");
           const tk = norm(data.teknisyen || "");
-          
-          // Eğer bildiren veya yapan kişi izin verilen listede DEĞİLSE sil
           const isBkAllowed = allowedPeople.some(p => bk.includes(p));
           const isTkAllowed = allowedPeople.some(p => tk.includes(p));
-          
           return !isBkAllowed && !isTkAllowed;
       });
-
-      if (toDelete.length === 0) { alert("Silinecek (yabancı) kayıt bulunamadı."); setLoading(false); return; }
-
+      if (toDelete.length === 0) { alert("Silinecek kayıt bulunamadı."); setLoading(false); return; }
       for (let i = 0; i < toDelete.length; i += 500) {
         const batch = writeBatch(db);
         toDelete.slice(i, i + 500).forEach(d => batch.delete(d.ref));
         await batch.commit();
       }
-      alert(`${toDelete.length} adet yabancı kayıt başarıyla temizlendi.`);
-      window.location.reload();
+      alert(`${toDelete.length} kayıt temizlendi.`); window.location.reload();
     } catch (err) { alert("Hata: " + err); setLoading(false); }
   };
-
 
   const dnaScript = "Get-ChildItem -Recurse -Include *.tsx,*.ts | ForEach-Object { \"--- FILE: $($_.FullName) ---\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt; Get-Content $_.FullName | Out-File -Append PROJE_DOKUMU.txt; [char]96 + \"n\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt }";
   const handleCopyScript = () => { navigator.clipboard.writeText(dnaScript); setCopySuccess(true); setTimeout(() => setCopySuccess(false), 3000); };
@@ -192,7 +194,7 @@ const [isAdmin, setIsAdmin] = useState(false);
         const snap = await getDocs(collection(db, coll));
         dbBackup[coll] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       }
-      const payload = { database: dbBackup, dna: "ULTIMATE_V14", date: new Date().toISOString() };
+      const payload = { database: dbBackup, dna: "ULTIMATE_V15", date: new Date().toISOString() };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
@@ -423,24 +425,31 @@ const handleSystemReset = async () => {
       {showImportModal && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 text-white uppercase font-black italic">
           <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={() => !isImporting && setShowImportModal(false)}></div>
-          <div className="relative bg-slate-900 border-2 border-orange-500/30 w-full max-w-6xl max-h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col">
+          <div className="relative bg-slate-900 border-2 border-orange-500/30 w-full max-w-[90%] max-h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col">
             <div className="p-8 border-b border-orange-500/10 flex justify-between items-center bg-orange-500/5">
-              <div><h2 className="text-xl text-orange-500 tracking-widest">📊 EXCEL ÖNİZLEME (KPI UYUMLU)</h2><p className="text-[10px] text-slate-500 mt-1">Toplam {importPreview.length} kayıt.</p></div>
+              <div><h2 className="text-xl text-orange-500 tracking-widest">📊 EXCEL ÖNİZLEME (TAM KONTROL)</h2><p className="text-[10px] text-slate-500 mt-1">Toplam {importPreview.length} kayıt. Personeller ve Süreler analiz edildi.</p></div>
               <button onClick={() => !isImporting && setShowImportModal(false)} className="text-orange-500/50 hover:text-orange-500 text-2xl">✕</button>
             </div>
             <div className="p-6 overflow-y-auto flex-1">
               <table className="w-full text-left text-[10px]">
                 <thead className="sticky top-0 bg-slate-900 text-orange-500/70 border-b border-slate-800">
-                  <tr><th className="p-3">Tarih</th><th className="p-3">Başl - Bit</th><th className="p-3">Süre</th><th className="p-3">Hat</th><th className="p-3">Ekipman</th><th className="p-3">Duruş</th></tr>
+                  <tr>
+                    <th className="p-3">Tarih</th>
+                    <th className="p-3">Başl - Bit</th>
+                    <th className="p-3">Süre (DK)</th>
+                    <th className="p-3">Hat / Ekipman</th>
+                    <th className="p-3">SORUMLU PERSONEL</th>
+                    <th className="p-3">Duruş</th>
+                  </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800">
                   {importPreview.slice(0, 100).map((row, idx) => (
                     <tr key={idx} className="hover:bg-orange-500/5">
-                      <td className="p-3 text-slate-400">{row.baslangicTarihi}</td>
-                      <td className="p-3 text-indigo-400">{row.baslangicSaati} - {row.bitisSaati}</td>
-                      <td className="p-3 text-amber-500">{row.toplamSureDakika} DK</td>
-                      <td className="p-3 text-emerald-400 font-black">{row.hatAdi}</td>
-                      <td className="p-3 text-white">{row.ekipmanAdi}</td>
+                      <td className="p-3 text-slate-400 whitespace-nowrap">{row.baslangicTarihi}</td>
+                      <td className="p-3 text-indigo-400 whitespace-nowrap font-mono">{row.baslangicSaati} - {row.bitisSaati}</td>
+                      <td className="p-3 text-amber-500 font-black">{row.toplamSureDakika}</td>
+                      <td className="p-3 text-white"><span className="text-emerald-400">{row.hatAdi}</span> / {row.ekipmanAdi}</td>
+                      <td className="p-3 text-indigo-300 font-black uppercase underline decoration-indigo-500/30">{row.teknisyen}</td>
                       <td className="p-3">{row.isDuruslu ? '🔴 VAR' : '🟢 YOK'}</td>
                     </tr>
                   ))}
@@ -449,7 +458,9 @@ const handleSystemReset = async () => {
             </div>
             <div className="p-8 border-t border-slate-800 bg-slate-900/50 flex justify-end gap-4 text-[10px]">
               <button onClick={() => setShowImportModal(false)} disabled={isImporting} className="bg-slate-800 px-8 py-3 rounded-xl text-white">İPTAL</button>
-              <button onClick={confirmImport} disabled={isImporting} className="bg-orange-600 text-white px-10 py-3 rounded-xl shadow-xl">{isImporting ? '⏳ AKTARILIYOR...' : '🚀 AKTARIMI BAŞLAT'}</button>
+              <button onClick={confirmImport} disabled={isImporting} className="bg-orange-600 text-white px-10 py-3 rounded-xl shadow-xl flex items-center gap-2">
+                {isImporting ? '⏳ AKTARILIYOR...' : '🚀 AKTARIMI BAŞLAT'}
+              </button>
             </div>
           </div>
         </div>

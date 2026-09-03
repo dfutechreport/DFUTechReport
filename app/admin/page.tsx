@@ -8,8 +8,22 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 export default function AdminDashboard() {
+
+  const dnaScript = `Get-ChildItem -Recurse -Include *.tsx,*.ts | ForEach-Object { 
+    "--- FILE: $($_.FullName) ---`n" | Out-File -Append PROJE_DOKUMU.txt
+    Get-Content $_.FullName | Out-File -Append PROJE_DOKUMU.txt
+    "\`n\`n" | Out-File -Append PROJE_DOKUMU.txt 
+}`;
+
+  const handleCopyScript = () => {
+    navigator.clipboard.writeText(dnaScript);
+    setCopySuccess(true);
+    setTimeout(() => setCopySuccess(false), 3000);
+  };
+
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
   const [userRole, setUserRole] = useState(""); 
   const [userName, setUserName] = useState(""); 
   const [loading, setLoading] = useState(true);
@@ -65,9 +79,21 @@ export default function AdminDashboard() {
         const snap = await getDocs(collection(db, coll));
         dbBackup[coll] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       }
-      const codeRes = await fetch('/api/backup-all');
-      const codeData = await codeRes.json();
-      const blob = new Blob([JSON.stringify({ database: dbBackup, dna: codeData.codeDump }, null, 2)], { type: "application/json" });
+      
+      const backupPayload = {
+        database: dbBackup,
+        system_metadata: {
+          version: "2.5.0-DNA",
+          export_date: new Date().toISOString(),
+          role_access_map: {
+            admin: "/admin", ik: "/admin/mesai", depo: "/admin/yedek-parca",
+            uretim: "/admin/tamamlanan-isler", isg: "/isg", teknisyen: "/dashboard"
+          }
+        },
+        dna: "DFU_MASTER_DNA_SNAPSHOT"
+      };
+
+      const blob = new Blob([JSON.stringify(backupPayload, null, 2)], { type: "application/json" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
       link.download = `DFU_MASTER_FULL_SNAPSHOT.json`;
@@ -181,7 +207,13 @@ export default function AdminDashboard() {
           <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-12 bg-white rounded p-1" /><h1 className="text-2xl font-black uppercase text-indigo-400">Komuta Merkezi</h1></div>
           <div className="flex gap-3">
              <Link href="/dashboard" className="bg-indigo-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg">Vardiya Raporu</Link>
-             <button onClick={downloadFullSnapshot} className="bg-emerald-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg italic">💾 Sistem Yedeği</button>
+             <button onClick={downloadFullSnapshot} className="bg-emerald-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg italic font-black">💾 MASTER YEDEK (JSON)</button>
+             <button 
+                onClick={handleCopyScript} 
+                className={`${copySuccess ? 'bg-indigo-500' : 'bg-slate-800'} px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg border border-indigo-500/30 transition-all font-black`}
+             >
+               {copySuccess ? '✓ SCRİPT KOPYALANDI' : '🧬 SCRİPTİ KOPYALA'}
+             </button>
              <button onClick={()=>signOut(auth)} className="bg-red-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg">Çıkış</button>
           </div>
         </div>

@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useState } from "react";
 import * as XLSX from "xlsx";
+
+import { useEffect, useState } from "react";
 import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, setDoc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, db } from "../../lib/firebase"; 
@@ -14,14 +15,15 @@ export default function AdminDashboard() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
 
-  // PowerShell scripti (\u0060 = backtick)
-  const dnaScript = "Get-ChildItem -Recurse -Include *.tsx,*.ts | ForEach-Object { \"--- FILE: $($_.FullName) ---\u0060n\" | Out-File -Append PROJE_DOKUMU.txt; Get-Content $_.FullName | Out-File -Append PROJE_DOKUMU.txt; \"\u0060n\u0060n\" | Out-File -Append PROJE_DOKUMU.txt }";
+  // Script using String.fromCharCode to avoid backticks in source code
+  const dnaScript = "Get-ChildItem -Recurse -Include *.tsx,*.ts | ForEach-Object { \"--- FILE: $($_.FullName) ---\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt; Get-Content $_.FullName | Out-File -Append PROJE_DOKUMU.txt; [char]96 + \"n\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt }";
 
   const handleCopyScript = () => {
     navigator.clipboard.writeText(dnaScript);
     setCopySuccess(true);
     setTimeout(() => setCopySuccess(false), 3000);
   };
+
   const handleExcelImport = (e: any) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -30,34 +32,19 @@ export default function AdminDashboard() {
       const bstr = evt.target?.result;
       if (!bstr) return;
       const wb = XLSX.read(bstr, { type: 'binary' });
-      const wsname = wb.SheetNames[0];
-      const ws = wb.Sheets[wsname];
+      const ws = wb.Sheets[wb.SheetNames[0]];
       const data: any[] = XLSX.utils.sheet_to_json(ws);
-      
       const mapped = data.map((row: any) => {
-        const gun = row["GÜN"] || "";
-        const ayStr = String(row["AY"] || "");
-        const yil = row["YIL"] || "";
         const aylar: any = { "OCAK": "01", "ŞUBAT": "02", "MART": "03", "NİSAN": "04", "MAYIS": "05", "HAZİRAN": "06", "TEMMUZ": "07", "AĞUSTOS": "08", "EYLÜL": "09", "EKİM": "10", "KASIM": "11", "ARALIK": "12" };
-        const ay = aylar[ayStr.toUpperCase()] || "01";
-        const tarih = `${yil}-${ay}-${String(gun).padStart(2, '0')}`;
-
+        const ay = aylar[String(row["AY"] || "").toUpperCase()] || "01";
+        const tarih = `${row["YIL"] || "2026"}-${ay}-${String(row["GÜN"] || "01").padStart(2, '0')}`;
         return {
-          hatAdi: row["HAT"] || "-",
-          ekipmanAdi: row["EKİPMAN"] || "-",
-          aciklama: row["YAPILAN İŞ"] || "-",
-          baslangicTarihi: tarih,
-          bitisTarihi: tarih,
-          baslangicSaati: row["BAŞLANGIÇ SAATİ"] || "08:00",
-          bitisSaati: row["BİTİŞ SAATİ"] || "16:00",
-          vardiya: row["VARDİYA"] || "08:00 - 16:00",
-          isDuruslu: String(row["DURUŞ"]).toUpperCase() !== "YOK",
-          teknisyen: row["İŞİ YAPAN PERSONEL 1"] || "Excel Import",
+          hatAdi: row["HAT"] || "-", ekipmanAdi: row["EKİPMAN"] || "-", aciklama: row["YAPILAN İŞ"] || "-",
+          baslangicTarihi: tarih, bitisTarihi: tarih, baslangicSaati: row["BAŞLANGIÇ SAATİ"] || "08:00",
+          bitisSaati: row["BİTİŞ SAATİ"] || "16:00", vardiya: row["VARDİYA"] || "08:00-16:00",
+          isDuruslu: String(row["DURUŞ"]).toUpperCase() !== "YOK", teknisyen: row["İŞİ YAPAN PERSONEL 1"] || "Excel",
           yardimciTeknisyenler: [row["İŞİ YAPAN PERSONEL 2"], row["İŞİ YAPAN PERSONEL 3"], row["İŞİ YAPAN PERSONEL 4"]].filter(p => p && p !== "-"),
-          bildirenKisi: "Sistem (Excel Import)",
-          usedMaterials: [],
-          durum: "Kapalı",
-          kayitTarihi: new Date()
+          bildirenKisi: "Sistem (Import)", usedMaterials: [], durum: "Kapalı", kayitTarihi: new Date()
         };
       });
       setImportPreview(mapped.filter(i => i.hatAdi !== "-"));
@@ -70,23 +57,15 @@ export default function AdminDashboard() {
     if (!window.confirm(`${importPreview.length} adet kaydı aktarmak istediğinize emin misiniz?`)) return;
     setIsImporting(true);
     try {
-      const batchSize = 500;
-      for (let i = 0; i < importPreview.length; i += batchSize) {
-        const chunk = importPreview.slice(i, i + batchSize);
+      for (let i = 0; i < importPreview.length; i += 500) {
         const batch = writeBatch(db);
-        chunk.forEach(item => {
-          const docRef = doc(collection(db, "maintenance_logs"));
-          batch.set(docRef, item);
-        });
+        importPreview.slice(i, i + 500).forEach(item => batch.set(doc(collection(db, "maintenance_logs")), item));
         await batch.commit();
       }
       alert("Aktarım tamamlandı.");
       setShowImportModal(false);
       window.location.reload();
-    } catch (err) { alert("Hata: " + err); }
-    finally { setIsImporting(false); }
-  };
-//
+    } catch (err) { alert("Hata: " + err); } finally { setIsImporting(false); }
   };
 
   const router = useRouter();
@@ -148,7 +127,15 @@ export default function AdminDashboard() {
       }
       const codeRes = await fetch('/api/backup-all');
       const codeData = await codeRes.json();
-      const blob = new Blob([JSON.stringify({ database: dbBackup, dna: codeData.codeDump }, null, 2)], { type: "application/json" });
+      const backupPayload = {
+        database: dbBackup,
+        system_metadata: {
+          version: "2.6.0-DNA", export_date: new Date().toISOString(),
+          role_access_map: { admin: "/admin", ik: "/admin/mesai", depo: "/admin/yedek-parca", uretim: "/admin/tamamlanan-isler", isg: "/isg" }
+        },
+        dna: "DFU_MASTER_DNA_SNAPSHOT"
+      };
+      const blob = new Blob([JSON.stringify(backupPayload, null, 2)], { type: "application/json" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
       link.download = `DFU_MASTER_FULL_SNAPSHOT.json`;
@@ -267,11 +254,7 @@ export default function AdminDashboard() {
                <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleExcelImport} />
              </label>
              <button onClick={downloadFullSnapshot} className="bg-emerald-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg italic font-black">💾 MASTER YEDEK (JSON)</button>
-             <button 
-                onClick={handleCopyScript} 
-                type="button"
-                className={`${copySuccess ? 'bg-indigo-500' : 'bg-slate-800'} px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg border border-indigo-500/30 transition-all font-black`}
-             >
+             <button onClick={handleCopyScript} type="button" className={`${copySuccess ? 'bg-indigo-500' : 'bg-slate-800'} px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg border border-indigo-500/30 transition-all font-black`}>
                {copySuccess ? '✓ SCRİPT KOPYALANDI' : '🧬 SCRİPTİ KOPYALA'}
              </button>
              <button onClick={()=>signOut(auth)} className="bg-red-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg">Çıkış</button>
@@ -378,16 +361,13 @@ export default function AdminDashboard() {
         {showVakaModal && selectedVaka && (<div className="fixed inset-0 bg-black/90 backdrop-blur-md flex justify-center items-center z-[1000] p-4 font-bold italic"><div className="bg-slate-900 border border-slate-800 p-10 rounded-[50px] w-full max-w-2xl shadow-3xl relative overflow-hidden italic"><div className={`absolute top-0 left-0 w-full h-2 ${selectedVaka.ekipmanAdi === "KAR devreye alma" ? "bg-red-600 shadow-xl" : "bg-indigo-600 shadow-xl"}`}></div><h2 className="text-2xl font-black text-white mb-8 uppercase italic tracking-widest">Bildirim Detayı</h2><div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 mb-10 shadow-inner italic font-black uppercase italic font-black font-black uppercase"><p className="text-gray-300 text-sm italic font-black italic">"{selectedVaka.arizaDetayi || selectedVaka.aciklama || "Not yok."}"</p></div><button onClick={()=>setShowVakaModal(false)} className="w-full bg-slate-800 hover:bg-slate-700 py-4 rounded-2xl font-black uppercase text-xs transition shadow-2xl italic font-black uppercase italic uppercase">Kapat</button></div></div>)}
         {showRcaModal && selectedLogForRca && (<div className="fixed inset-0 bg-black/95 backdrop-blur-sm flex justify-center items-center z-[999] p-4 font-bold italic"><div className="bg-slate-900 border border-slate-800 p-10 rounded-[50px] w-full max-w-xl shadow-2xl relative"><h2 className="text-xl font-black text-white mb-8 uppercase text-center tracking-[0.2em]">Root Cause Analysis</h2><div className="space-y-6 italic"><div className="grid grid-cols-3 gap-2 italic">{RCA_CATEGORIES.map(c=>(<button key={c.id} onClick={()=>setRcaForm({...rcaForm, category:c.id})} className={`p-3 rounded-2xl text-[10px] font-black uppercase transition-all border ${rcaForm.category===c.id?'bg-indigo-600 border-indigo-400 text-white shadow-xl shadow-indigo-600/30':'bg-slate-950 border-slate-800 text-gray-500 hover:border-indigo-400'}`}>{c.label}</button>))}</div><textarea value={rcaForm.why} onChange={e=>setRcaForm({...rcaForm, why:e.target.value})} placeholder="Duruş nedenini detaylandırın..." className="w-full bg-slate-950 border border-slate-800 rounded-[30px] p-6 text-sm text-white outline-none focus:ring-2 ring-indigo-500 h-40 shadow-inner italic font-black" /><div className="flex gap-4 italic"><button onClick={()=>setShowRcaModal(false)} className="flex-1 bg-slate-800 py-4 rounded-[20px] font-black text-gray-400 text-xs uppercase">Vazgeç</button><button onClick={handleSaveRca} className="flex-1 bg-indigo-600 py-4 rounded-[20px] font-black text-white shadow-xl text-xs uppercase transition">Kaydet</button></div></div></div></div>)}
       </div>
-    
+
       {showImportModal && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={() => !isImporting && setShowImportModal(false)}></div>
           <div className="relative bg-slate-900 border-2 border-orange-500/30 w-full max-w-6xl max-h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col text-white">
-            <div className="p-8 border-b border-orange-500/10 flex justify-between items-center bg-orange-500/5">
-              <div>
-                <h2 className="text-xl font-black text-orange-500 uppercase tracking-widest flex items-center gap-3">📊 EXCEL ÖNİZLEME</h2>
-                <p className="text-[10px] text-slate-500 font-bold mt-1 uppercase italic tracking-tighter">Toplam {importPreview.length} kayıt analiz edildi.</p>
-              </div>
+            <div className="p-8 border-b border-orange-500/10 flex justify-between items-center bg-orange-500/5 uppercase font-black italic">
+              <div><h2 className="text-xl text-orange-500 tracking-widest">📊 EXCEL ÖNİZLEME</h2><p className="text-[10px] text-slate-500 mt-1">Toplam {importPreview.length} kayıt analiz edildi.</p></div>
               <button onClick={() => !isImporting && setShowImportModal(false)} className="text-orange-500/50 hover:text-orange-500 transition-colors text-2xl">✕</button>
             </div>
             <div className="p-6 overflow-y-auto flex-1">
@@ -417,6 +397,6 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
-</div>
+    </div>
   );
 }

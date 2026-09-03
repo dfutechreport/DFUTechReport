@@ -1,5 +1,23 @@
 "use client";
 import * as XLSX from "xlsx";
+import { useEffect, useState, Suspense } from "react";
+import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, setDoc, serverTimestamp, writeBatch } from "firebase/firestore";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { auth, db } from "../../lib/firebase"; 
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+
+// --- SABİTLER (GLOBAL SCOPE) ---
+const RCA_CATEGORIES = [
+  { id: "insan", label: "İnsan", color: "#3B82F6" }, 
+  { id: "makine", label: "Makine", color: "#EF4444" },
+  { id: "malzeme", label: "Malzeme", color: "#10B981" }, 
+  { id: "metot", label: "Metot", color: "#F59E0B" },
+  { id: "ortam", label: "Ortam", color: "#8B5CF6" }
+];
+
+
 import { useEffect, useState } from "react";
 import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, setDoc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { onAuthStateChanged, signOut } from "firebase/auth";
@@ -14,8 +32,7 @@ export default function AdminDashboard() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
 
-
-
+  // DNA Script - PowerShell (Unicode escape)
   const dnaScript = "Get-ChildItem -Recurse -Include *.tsx,*.ts | ForEach-Object { \"--- FILE: $($_.FullName) ---\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt; Get-Content $_.FullName | Out-File -Append PROJE_DOKUMU.txt; [char]96 + \"n\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt }";
 
   const handleCopyScript = () => {
@@ -42,10 +59,12 @@ export default function AdminDashboard() {
     const reader = new FileReader();
     reader.onload = (evt) => {
       const bstr = evt.target?.result;
+      if (!bstr) return;
       const wb = XLSX.read(bstr, { type: 'binary' });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const data: any[] = XLSX.utils.sheet_to_json(ws);
       const aylar: any = { "OCAK":"01","ŞUBAT":"02","MART":"03","NİSAN":"04","MAYIS":"05","HAZİRAN":"06","TEMMUZ":"07","AĞUSTOS":"08","EYLÜL":"09","EKİM":"10","KASIM":"11","ARALIK":"12" };
+      
       const mapped = data.map((row: any) => {
         const ay = aylar[String(row["AY"]||"").toUpperCase()] || "01";
         const tarih = `${row["YIL"]||"2026"}-${ay}-${String(row["GÜN"]||"01").padStart(2, '0')}`;
@@ -78,9 +97,7 @@ export default function AdminDashboard() {
         });
         await batch.commit();
       }
-      alert("Aktarım Başarılı");
-      setShowImportModal(false);
-      window.location.reload();
+      alert("Aktarım Başarılı"); setShowImportModal(false); window.location.reload();
     } catch (err) { alert(err); } finally { setIsImporting(false); }
   };
 
@@ -93,8 +110,7 @@ export default function AdminDashboard() {
       const batch = writeBatch(db);
       snap.docs.forEach(d => batch.delete(d.ref));
       await batch.commit();
-      alert("Temizlendi.");
-      window.location.reload();
+      alert("Temizlendi."); window.location.reload();
     } catch (err) { alert(err); setLoading(false); }
   };
 
@@ -139,7 +155,7 @@ export default function AdminDashboard() {
   const [grafikGaz, setGrafikGaz] = useState<any[]>([]);
   const [grafikSu, setGrafikSu] = useState<any[]>([]);
 
-
+  
 
   // --- ŞİFRE KORUMALI SNAPSHOT VE RESET ---
   const downloadFullSnapshot = async () => {
@@ -151,12 +167,8 @@ export default function AdminDashboard() {
         const snap = await getDocs(collection(db, coll));
         dbBackup[coll] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       }
-      const backupPayload = {
-        database: dbBackup,
-        system_metadata: { version: "2.8.5-DNA", export_date: new Date().toISOString(), role_access: { admin: "/admin", ik: "/admin/mesai", depo: "/admin/yedek-parca", isg: "/isg" } },
-        dna: "DFU_MASTER_DNA_SNAPSHOT"
-      };
-      const blob = new Blob([JSON.stringify(backupPayload, null, 2)], { type: "application/json" });
+      const payload = { database: dbBackup, metadata: { v: "2.9.0", date: new Date().toISOString() }, dna: "DFU_MASTER_DNA_SNAPSHOT" };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
       link.download = `DFU_MASTER_DNA_BACKUP.json`;
@@ -388,8 +400,8 @@ export default function AdminDashboard() {
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 text-white">
           <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={() => !isImporting && setShowImportModal(false)}></div>
           <div className="relative bg-slate-900 border-2 border-orange-500/30 w-full max-w-6xl max-h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col font-black uppercase italic">
-            <div className="p-8 border-b border-orange-500/10 flex justify-between items-center bg-orange-500/5">
-              <div><h2 className="text-xl text-orange-500 tracking-widest">📊 EXCEL ÖNİZLEME</h2><p className="text-[10px] text-slate-500 mt-1">Toplam {importPreview.length} kayıt.</p></div>
+            <div className="p-8 border-b border-orange-500/10 flex justify-between items-center bg-orange-500/5 tracking-widest">
+              <div><h2 className="text-xl text-orange-500">📊 EXCEL ÖNİZLEME</h2><p className="text-[10px] text-slate-500 mt-1">Toplam {importPreview.length} kayıt.</p></div>
               <button onClick={() => !isImporting && setShowImportModal(false)} className="text-orange-500/50 hover:text-orange-500 text-2xl">✕</button>
             </div>
             <div className="p-6 overflow-y-auto flex-1">

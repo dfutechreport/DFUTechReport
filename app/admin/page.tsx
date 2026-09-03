@@ -89,16 +89,27 @@ export default function AdminDashboard() {
   };
 
   const clearOldImports = async () => {
-    if (!window.confirm("Excel aktarımları silinecektir. Emin misiniz?")) return;
+    if (!window.confirm("Sistemdeki tüm Excel aktarımları silinecektir. Emin misiniz?")) return;
     setLoading(true);
     try {
       const q = query(collection(db, "maintenance_logs"), where("bildirenKisi", "in", ["Excel", "Sistem (Import)", "Sistem (Excel Import)"]));
       const snap = await getDocs(q);
-      const batch = writeBatch(db);
-      snap.docs.forEach(d => batch.delete(d.ref));
-      await batch.commit();
-      alert("Temizlendi."); window.location.reload();
-    } catch (err) { alert(err); setLoading(false); }
+      const allDocs = snap.docs;
+      
+      // Firebase 500 işlem limitini aşmamak için parçalı silme (Chunked Delete)
+      for (let i = 0; i < allDocs.length; i += 500) {
+        const batch = writeBatch(db);
+        const chunk = allDocs.slice(i, i + 500);
+        chunk.forEach(d => batch.delete(d.ref));
+        await batch.commit();
+      }
+      
+      alert(`${allDocs.length} adet kayıt başarıyla temizlendi.`);
+      window.location.reload();
+    } catch (err) { 
+      alert("Silme hatası: " + err); 
+      setLoading(false); 
+    }
   };
 
   const router = useRouter();

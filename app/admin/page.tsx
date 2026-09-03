@@ -10,8 +10,6 @@ import { useRouter } from "next/navigation";
 
 export default function AdminDashboard() {
   const router = useRouter();
-  export default function AdminDashboard() {
-  const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
   const [userRole, setUserRole] = useState("");
   const [userName, setUserName] = useState("");
@@ -21,6 +19,37 @@ export default function AdminDashboard() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
 
+  // States from original file
+  const [rawLogs, setRawLogs] = useState<any[]>([]);
+  const [rcaLogs, setRcaLogs] = useState<any[]>([]);
+  const [rawMeterLogs, setRawMeterLogs] = useState<any[]>([]);
+  const [aktifIsler, setAktifIsler] = useState<any[]>([]);
+  const [aktifIsgAlarmlari, setAktifIsgAlarmlari] = useState<any[]>([]);
+  const [aktifEked, setAktifEked] = useState<any[]>([]);
+  const [kpiOnayBekleyen, setKpiOnayBekleyen] = useState(0);
+  const [showEkedModal, setShowEkedModal] = useState(false);
+  const [selectedEked, setSelectedEked] = useState<any>(null);
+  const [selectedVaka, setSelectedVaka] = useState<any>(null);
+  const [showVakaModal, setShowVakaModal] = useState(false);
+  const [showRcaModal, setShowRcaModal] = useState(false);
+  const [selectedLogForRca, setSelectedLogForRca] = useState<any>(null);
+  const [rcaForm, setRcaForm] = useState({ category: "", why: "" });
+  const [filterYil, setFilterYil] = useState(new Date().getFullYear().toString());
+  const [filterElekSayac, setFilterElekSayac] = useState("");
+  const [filterGazSayac, setFilterGazSayac] = useState("");
+  const [filterSuSayac, setFilterSuSayac] = useState("");
+  const [elekSayacList, setElekSayacList] = useState<string[]>([]);
+  const [gazSayacList, setGazSayacList] = useState<string[]>([]);
+  const [suSayacList, setSuSayacList] = useState<string[]>([]);
+  const [kpiTotals, setKpiTotals] = useState({ is: 0, sure: 0, durus: 0, mttr: 0 });
+  const [grafikIsHatti, setGrafikIsHatti] = useState<any[]>([]);
+  const [personelPerformans, setPersonelPerformans] = useState<any[]>([]);
+  const [ekipmanPerformans, setEkipmanPerformans] = useState<any[]>([]);
+  const [grafikElek, setGrafikElek] = useState<any[]>([]);
+  const [grafikGaz, setGrafikGaz] = useState<any[]>([]);
+  const [grafikSu, setGrafikSu] = useState<any[]>([]);
+
+  // DNA Script - PowerShell
   const dnaScript = "Get-ChildItem -Recurse -Include *.tsx,*.ts | ForEach-Object { \"--- FILE: $($_.FullName) ---\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt; Get-Content $_.FullName | Out-File -Append PROJE_DOKUMU.txt; [char]96 + \"n\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt }";
 
   const handleCopyScript = () => {
@@ -103,7 +132,8 @@ export default function AdminDashboard() {
       window.location.reload();
     } catch (err) { alert(err); setLoading(false); }
   };
-const downloadFullSnapshot = async () => {
+
+  const downloadFullSnapshot = async () => {
     if (window.prompt("Yedekleme Şifresi:") !== "161004") return alert("Hatalı!");
     try {
       const collections = ["maintenance_logs", "work_orders", "spare_parts", "users", "assets", "eked_logs", "meter_logs", "overtime_logs", "kar_arsivi"];
@@ -112,17 +142,19 @@ const downloadFullSnapshot = async () => {
         const snap = await getDocs(collection(db, coll));
         dbBackup[coll] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       }
-      const codeRes = await fetch('/api/backup-all');
-      const codeData = await codeRes.json();
-      const blob = new Blob([JSON.stringify({ database: dbBackup, dna: codeData.codeDump }, null, 2)], { type: "application/json" });
+      const backupPayload = {
+        database: dbBackup,
+        system_metadata: { version: "2.8.0-DNA", export_date: new Date().toISOString(), role_access: { admin: "/admin", ik: "/admin/mesai", depo: "/admin/yedek-parca", isg: "/isg" } },
+        dna: "DFU_MASTER_DNA_SNAPSHOT"
+      };
+      const blob = new Blob([JSON.stringify(backupPayload, null, 2)], { type: "application/json" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = `DFU_MASTER_FULL_SNAPSHOT.json`;
+      link.download = `DFU_MASTER_DNA_BACKUP.json`;
       link.click();
     } catch (e) { alert("Hata!"); }
   };
-
-  const handleSystemReset = async () => {
+const handleSystemReset = async () => {
     if (window.confirm("RESET?") && window.prompt("RESET ŞİFRESİ:") === "161004") {
       setLoading(true);
       const targetColls = ["maintenance_logs", "work_orders", "meter_logs", "eked_logs", "overtime_logs", "kar_arsivi", "pano_takip", "root_cause_analysis"];
@@ -343,9 +375,9 @@ const downloadFullSnapshot = async () => {
       </div>
 
       {showImportModal && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 text-white">
           <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={() => !isImporting && setShowImportModal(false)}></div>
-          <div className="relative bg-slate-900 border-2 border-orange-500/30 w-full max-w-6xl max-h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col text-white">
+          <div className="relative bg-slate-900 border-2 border-orange-500/30 w-full max-w-6xl max-h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col">
             <div className="p-8 border-b border-orange-500/10 flex justify-between items-center bg-orange-500/5 font-black uppercase italic">
               <div><h2 className="text-xl text-orange-500 tracking-widest">📊 EXCEL ÖNİZLEME</h2><p className="text-[10px] text-slate-500 mt-1">Toplam {importPreview.length} kayıt.</p></div>
               <button onClick={() => !isImporting && setShowImportModal(false)} className="text-orange-500/50 hover:text-orange-500 text-2xl">✕</button>

@@ -8,7 +8,6 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pi
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-// --- SABİTLER (GLOBAL SCOPE) ---
 const RCA_CATEGORIES = [
   { id: "insan", label: "İnsan", color: "#3B82F6" }, 
   { id: "makine", label: "Makine", color: "#EF4444" },
@@ -16,23 +15,12 @@ const RCA_CATEGORIES = [
   { id: "metot", label: "Metot", color: "#F59E0B" },
   { id: "ortam", label: "Ortam", color: "#8B5CF6" }
 ];
-
-
-import { useEffect, useState } from "react";
-import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, setDoc, serverTimestamp, writeBatch } from "firebase/firestore";
-import { onAuthStateChanged, signOut } from "firebase/auth";
-import { auth, db } from "../../lib/firebase"; 
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-
 export default function AdminDashboard() {
   const [copySuccess, setCopySuccess] = useState(false);
   const [importPreview, setImportPreview] = useState<any[]>([]);
   const [showImportModal, setShowImportModal] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
 
-  // DNA Script - PowerShell (Unicode escape)
   const dnaScript = "Get-ChildItem -Recurse -Include *.tsx,*.ts | ForEach-Object { \"--- FILE: $($_.FullName) ---\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt; Get-Content $_.FullName | Out-File -Append PROJE_DOKUMU.txt; [char]96 + \"n\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt }";
 
   const handleCopyScript = () => {
@@ -64,7 +52,6 @@ export default function AdminDashboard() {
       const ws = wb.Sheets[wb.SheetNames[0]];
       const data: any[] = XLSX.utils.sheet_to_json(ws);
       const aylar: any = { "OCAK":"01","ŞUBAT":"02","MART":"03","NİSAN":"04","MAYIS":"05","HAZİRAN":"06","TEMMUZ":"07","AĞUSTOS":"08","EYLÜL":"09","EKİM":"10","KASIM":"11","ARALIK":"12" };
-      
       const mapped = data.map((row: any) => {
         const ay = aylar[String(row["AY"]||"").toUpperCase()] || "01";
         const tarih = `${row["YIL"]||"2026"}-${ay}-${String(row["GÜN"]||"01").padStart(2, '0')}`;
@@ -102,7 +89,7 @@ export default function AdminDashboard() {
   };
 
   const clearOldImports = async () => {
-    if (!window.confirm("TÜM Excel aktarımları silinecektir. Emin misiniz?")) return;
+    if (!window.confirm("Excel aktarımları silinecektir. Emin misiniz?")) return;
     setLoading(true);
     try {
       const q = query(collection(db, "maintenance_logs"), where("bildirenKisi", "in", ["Excel", "Sistem (Import)", "Sistem (Excel Import)"]));
@@ -167,7 +154,7 @@ export default function AdminDashboard() {
         const snap = await getDocs(collection(db, coll));
         dbBackup[coll] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       }
-      const payload = { database: dbBackup, metadata: { v: "2.9.0", date: new Date().toISOString() }, dna: "DFU_MASTER_DNA_SNAPSHOT" };
+      const payload = { database: dbBackup, system_dna: "V3.0", date: new Date().toISOString() };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);

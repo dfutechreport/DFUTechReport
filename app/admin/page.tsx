@@ -9,12 +9,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 const RCA_CATEGORIES = [
-  { id: "insan", label: "İnsan", color: "#3B82F6" }, { id: "makine", label: "Makine", color: "#EF4444" },
-  { id: "malzeme", label: "Malzeme", color: "#10B981" }, { id: "metot", label: "Metot", color: "#F59E0B" },
+  { id: "insan", label: "İnsan", color: "#3B82F6" }, 
+  { id: "makine", label: "Makine", color: "#EF4444" },
+  { id: "malzeme", label: "Malzeme", color: "#10B981" }, 
+  { id: "metot", label: "Metot", color: "#F59E0B" },
   { id: "ortam", label: "Ortam", color: "#8B5CF6" }
 ];
 
-export default function AdminDashboard() {
 export default function AdminDashboard() {
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
@@ -26,6 +27,37 @@ export default function AdminDashboard() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
 
+  // States from original file
+  const [rawLogs, setRawLogs] = useState<any[]>([]);
+  const [rcaLogs, setRcaLogs] = useState<any[]>([]);
+  const [rawMeterLogs, setRawMeterLogs] = useState<any[]>([]);
+  const [aktifIsler, setAktifIsler] = useState<any[]>([]);
+  const [aktifIsgAlarmlari, setAktifIsgAlarmlari] = useState<any[]>([]);
+  const [aktifEked, setAktifEked] = useState<any[]>([]);
+  const [kpiOnayBekleyen, setKpiOnayBekleyen] = useState(0);
+  const [showEkedModal, setShowEkedModal] = useState(false);
+  const [selectedEked, setSelectedEked] = useState<any>(null);
+  const [selectedVaka, setSelectedVaka] = useState<any>(null);
+  const [showVakaModal, setShowVakaModal] = useState(false);
+  const [showRcaModal, setShowRcaModal] = useState(false);
+  const [selectedLogForRca, setSelectedLogForRca] = useState<any>(null);
+  const [rcaForm, setRcaForm] = useState({ category: "", why: "" });
+  const [filterYil, setFilterYil] = useState(new Date().getFullYear().toString());
+  const [filterElekSayac, setFilterElekSayac] = useState("");
+  const [filterGazSayac, setFilterGazSayac] = useState("");
+  const [filterSuSayac, setFilterSuSayac] = useState("");
+  const [elekSayacList, setElekSayacList] = useState<string[]>([]);
+  const [gazSayacList, setGazSayacList] = useState<string[]>([]);
+  const [suSayacList, setSuSayacList] = useState<string[]>([]);
+  const [kpiTotals, setKpiTotals] = useState({ is: 0, sure: 0, durus: 0, mttr: 0 });
+  const [grafikIsHatti, setGrafikIsHatti] = useState<any[]>([]);
+  const [personelPerformans, setPersonelPerformans] = useState<any[]>([]);
+  const [ekipmanPerformans, setEkipmanPerformans] = useState<any[]>([]);
+  const [grafikElek, setGrafikElek] = useState<any[]>([]);
+  const [grafikGaz, setGrafikGaz] = useState<any[]>([]);
+  const [grafikSu, setGrafikSu] = useState<any[]>([]);
+
+  // Helpers
   const formatExcelTime = (val: any) => {
     if (!val) return "00:00";
     if (typeof val === 'string' && val.includes(':')) return val.trim().substring(0, 5);
@@ -38,12 +70,16 @@ export default function AdminDashboard() {
     return "00:00";
   };
 
+  const dnaScript = "Get-ChildItem -Recurse -Include *.tsx,*.ts | ForEach-Object { \"--- FILE: $($_.FullName) ---\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt; Get-Content $_.FullName | Out-File -Append PROJE_DOKUMU.txt; [char]96 + \"n\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt }";
+  const handleCopyScript = () => { navigator.clipboard.writeText(dnaScript); setCopySuccess(true); setTimeout(() => setCopySuccess(false), 3000); };
+
   const handleExcelImport = (e: any) => {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (evt) => {
       const bstr = evt.target?.result;
+      if (!bstr) return;
       const wb = XLSX.read(bstr, { type: 'binary' });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const data: any[] = XLSX.utils.sheet_to_json(ws);
@@ -53,18 +89,12 @@ export default function AdminDashboard() {
         const tarih = `${row["YIL"]||"2026"}-${ay}-${String(row["GÜN"]||"01").padStart(2, '0')}`;
         const p1 = String(row["İŞİ YAPAN PERSONEL 1"] || "").trim();
         return {
-          hatAdi: String(row["HAT"] || "").trim(),
-          ekipmanAdi: String(row["EKİPMAN"] || "").trim(),
-          aciklama: row["YAPILAN İŞ"] || "-",
-          baslangicTarihi: tarih, bitisTarihi: tarih,
-          baslangicSaati: formatExcelTime(row["BAŞLANGIÇ SAATİ"]),
-          bitisSaati: formatExcelTime(row["BİTİŞ SAATİ"]),
-          vardiya: row["VARDİYA"] || "08:00 - 16:00",
-          isDuruslu: String(row["DURUŞ"]).toUpperCase() !== "YOK",
-          teknisyen: p1 || "Excel Import",
-          yardimciTeknisyenler: [row["İŞİ YAPAN PERSONEL 2"], row["İŞİ YAPAN PERSONEL 3"], row["İŞİ YAPAN PERSONEL 4"]].filter(p => p && p !== "-"),
-          bildirenKisi: p1 || "Excel Import",
-          usedMaterials: [], durum: "Kapalı", kayitTarihi: new Date(), isImported: true
+          hatAdi: String(row["HAT"] || "").trim(), ekipmanAdi: String(row["EKİPMAN"] || "").trim(),
+          aciklama: row["YAPILAN İŞ"] || "-", baslangicTarihi: tarih, bitisTarihi: tarih,
+          baslangicSaati: formatExcelTime(row["BAŞLANGIÇ SAATİ"]), bitisSaati: formatExcelTime(row["BİTİŞ SAATİ"]),
+          vardiya: row["VARDİYA"] || "08:00 - 16:00", isDuruslu: String(row["DURUŞ"]).toUpperCase() !== "YOK",
+          teknisyen: p1 || "Excel Import", yardimciTeknisyenler: [row["İŞİ YAPAN PERSONEL 2"], row["İŞİ YAPAN PERSONEL 3"], row["İŞİ YAPAN PERSONEL 4"]].filter(p => p && p !== "-"),
+          bildirenKisi: p1 || "Excel Import", usedMaterials: [], durum: "Kapalı", kayitTarihi: new Date(), isImported: true
         };
       });
       setImportPreview(mapped.filter(i => i.hatAdi && i.hatAdi !== "-"));
@@ -109,53 +139,6 @@ export default function AdminDashboard() {
     } catch (err) { alert(err); setLoading(false); }
   };
 
-  const dnaScript = "Get-ChildItem -Recurse -Include *.tsx,*.ts | ForEach-Object { \"--- FILE: $($_.FullName) ---\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt; Get-Content $_.FullName | Out-File -Append PROJE_DOKUMU.txt; [char]96 + \"n\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt }";
-  const handleCopyScript = () => { navigator.clipboard.writeText(dnaScript); setCopySuccess(true); setTimeout(() => setCopySuccess(false), 3000); };
-
-  const router = useRouter();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [userRole, setUserRole] = useState(""); 
-  const [userName, setUserName] = useState(""); 
-  const [loading, setLoading] = useState(true);
-  
-  // VERİ HAVUZLARI
-  const [rawLogs, setRawLogs] = useState<any[]>([]);
-  const [rcaLogs, setRcaLogs] = useState<any[]>([]);
-  const [rawMeterLogs, setRawMeterLogs] = useState<any[]>([]);
-  const [aktifIsler, setAktifIsler] = useState<any[]>([]);
-  const [aktifIsgAlarmlari, setAktifIsgAlarmlari] = useState<any[]>([]);
-  const [aktifEked, setAktifEked] = useState<any[]>([]);
-  const [kpiOnayBekleyen, setKpiOnayBekleyen] = useState(0);
-
-  // MODAL VE FİLTRE STATE'LERİ
-  const [showEkedModal, setShowEkedModal] = useState(false);
-  const [selectedEked, setSelectedEked] = useState<any>(null);
-  const [selectedVaka, setSelectedVaka] = useState<any>(null);
-  const [showVakaModal, setShowVakaModal] = useState(false);
-  const [showRcaModal, setShowRcaModal] = useState(false);
-  const [selectedLogForRca, setSelectedLogForRca] = useState<any>(null);
-  const [rcaForm, setRcaForm] = useState({ category: "", why: "" });
-  
-  const [filterYil, setFilterYil] = useState(new Date().getFullYear().toString());
-  const [filterElekSayac, setFilterElekSayac] = useState("");
-  const [filterGazSayac, setFilterGazSayac] = useState("");
-  const [filterSuSayac, setFilterSuSayac] = useState("");
-  const [elekSayacList, setElekSayacList] = useState<string[]>([]);
-  const [gazSayacList, setGazSayacList] = useState<string[]>([]);
-  const [suSayacList, setSuSayacList] = useState<string[]>([]);
-
-  // HESAPLANAN VERİLER
-  const [kpiTotals, setKpiTotals] = useState({ is: 0, sure: 0, durus: 0, mttr: 0 });
-  const [grafikIsHatti, setGrafikIsHatti] = useState<any[]>([]);
-  const [personelPerformans, setPersonelPerformans] = useState<any[]>([]);
-  const [ekipmanPerformans, setEkipmanPerformans] = useState<any[]>([]);
-  const [grafikElek, setGrafikElek] = useState<any[]>([]);
-  const [grafikGaz, setGrafikGaz] = useState<any[]>([]);
-  const [grafikSu, setGrafikSu] = useState<any[]>([]);
-
-  
-
-  // --- ŞİFRE KORUMALI SNAPSHOT VE RESET ---
   const downloadFullSnapshot = async () => {
     if (window.prompt("Yedekleme Şifresi:") !== "161004") return alert("Hatalı!");
     try {
@@ -165,17 +148,15 @@ export default function AdminDashboard() {
         const snap = await getDocs(collection(db, coll));
         dbBackup[coll] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       }
-      const codeRes = await fetch('/api/backup-all');
-      const codeData = await codeRes.json();
-      const blob = new Blob([JSON.stringify({ database: dbBackup, dna: codeData.codeDump }, null, 2)], { type: "application/json" });
+      const payload = { database: dbBackup, dna: "V5.0", date: new Date().toISOString() };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = `DFU_MASTER_FULL_SNAPSHOT.json`;
+      link.download = `DFU_MASTER_DNA_BACKUP.json`;
       link.click();
     } catch (e) { alert("Hata!"); }
   };
-
-  const handleSystemReset = async () => {
+const handleSystemReset = async () => {
     if (window.confirm("RESET?") && window.prompt("RESET ŞİFRESİ:") === "161004") {
       setLoading(true);
       const targetColls = ["maintenance_logs", "work_orders", "meter_logs", "eked_logs", "overtime_logs", "kar_arsivi", "pano_takip", "root_cause_analysis"];
@@ -400,7 +381,7 @@ export default function AdminDashboard() {
           <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={() => !isImporting && setShowImportModal(false)}></div>
           <div className="relative bg-slate-900 border-2 border-orange-500/30 w-full max-w-6xl max-h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col font-black uppercase italic">
             <div className="p-8 border-b border-orange-500/10 flex justify-between items-center bg-orange-500/5">
-              <div><h2 className="text-xl text-orange-500">📊 EXCEL ÖNİZLEME</h2><p className="text-[10px] text-slate-500 mt-1">Toplam {importPreview.length} kayıt.</p></div>
+              <div><h2 className="text-xl text-orange-500 tracking-widest">📊 EXCEL ÖNİZLEME</h2><p className="text-[10px] text-slate-500 mt-1">Toplam {importPreview.length} kayıt.</p></div>
               <button onClick={() => !isImporting && setShowImportModal(false)} className="text-orange-500/50 hover:text-orange-500 text-2xl">✕</button>
             </div>
             <div className="p-6 overflow-y-auto flex-1">
@@ -413,7 +394,7 @@ export default function AdminDashboard() {
                     <tr key={idx} className="hover:bg-orange-500/5">
                       <td className="p-3 text-slate-400">{row.baslangicTarihi}</td>
                       <td className="p-3 text-indigo-400">{row.baslangicSaati} - {row.bitisSaati}</td>
-                      <td className="p-3 text-emerald-400">{row.hatAdi}</td>
+                      <td className="p-3 text-emerald-400 font-black">{row.hatAdi}</td>
                       <td className="p-3 text-white">{row.ekipmanAdi}</td>
                       <td className="p-3 text-slate-300 max-w-xs truncate">{row.aciklama}</td>
                       <td className="p-3">{row.isDuruslu ? '🔴 VAR' : '🟢 YOK'}</td>

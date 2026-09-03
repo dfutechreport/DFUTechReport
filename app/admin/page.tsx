@@ -27,7 +27,7 @@ export default function AdminDashboard() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
 
-  // States from original file
+  // States from original
   const [rawLogs, setRawLogs] = useState<any[]>([]);
   const [rcaLogs, setRcaLogs] = useState<any[]>([]);
   const [rawMeterLogs, setRawMeterLogs] = useState<any[]>([]);
@@ -57,9 +57,9 @@ export default function AdminDashboard() {
   const [grafikGaz, setGrafikGaz] = useState<any[]>([]);
   const [grafikSu, setGrafikSu] = useState<any[]>([]);
 
-  // Helpers
+  // RESILIENT HELPERS
   const formatExcelTime = (val: any) => {
-    if (!val) return "00:00";
+    if (val === null || val === undefined) return "00:00";
     if (typeof val === 'string' && val.includes(':')) return val.trim().substring(0, 5);
     if (typeof val === 'number') {
       const totalSeconds = Math.round(val * 24 * 60 * 60);
@@ -70,8 +70,10 @@ export default function AdminDashboard() {
     return "00:00";
   };
 
-  const dnaScript = "Get-ChildItem -Recurse -Include *.tsx,*.ts | ForEach-Object { \"--- FILE: $($_.FullName) ---\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt; Get-Content $_.FullName | Out-File -Append PROJE_DOKUMU.txt; [char]96 + \"n\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt }";
-  const handleCopyScript = () => { navigator.clipboard.writeText(dnaScript); setCopySuccess(true); setTimeout(() => setCopySuccess(false), 3000); };
+  const getCol = (row: any, search: string) => {
+    const key = Object.keys(row).find(k => k.replace(/\s+/g, '').toUpperCase() === search.replace(/\s+/g, '').toUpperCase());
+    return key ? row[key] : null;
+  };
 
   const handleExcelImport = (e: any) => {
     const file = e.target.files[0];
@@ -81,20 +83,34 @@ export default function AdminDashboard() {
       const bstr = evt.target?.result;
       if (!bstr) return;
       const wb = XLSX.read(bstr, { type: 'binary' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const data: any[] = XLSX.utils.sheet_to_json(ws);
+      const data: any[] = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
       const aylar: any = { "OCAK":"01","ŞUBAT":"02","MART":"03","NİSAN":"04","MAYIS":"05","HAZİRAN":"06","TEMMUZ":"07","AĞUSTOS":"08","EYLÜL":"09","EKİM":"10","KASIM":"11","ARALIK":"12" };
+      
       const mapped = data.map((row: any) => {
-        const ay = aylar[String(row["AY"]||"").toUpperCase()] || "01";
-        const tarih = `${row["YIL"]||"2026"}-${ay}-${String(row["GÜN"]||"01").padStart(2, '0')}`;
-        const p1 = String(row["İŞİ YAPAN PERSONEL 1"] || "").trim();
+        const ay = aylar[String(getCol(row, "AY")||"").toUpperCase()] || "01";
+        const tarih = `${getCol(row, "YIL")||"2026"}-${ay}-${String(getCol(row, "GÜN")||"01").padStart(2, '0')}`;
+        const start = formatExcelTime(getCol(row, "BAŞLANGIÇ SAATİ"));
+        const end = formatExcelTime(getCol(row, "BİTİŞ SAATİ"));
+        
+        // SÜRE HESAPLAMA (Minutes)
+        const [h1, m1] = start.split(':').map(Number);
+        const [h2, m2] = end.split(':').map(Number);
+        let duration = (h2 * 60 + m2) - (h1 * 60 + m1);
+        if (duration < 0) duration += 1440; // Gece vardiyası devri için
+
+        const p1 = String(getCol(row, "İŞİ YAPAN PERSONEL 1") || "").trim();
         return {
-          hatAdi: String(row["HAT"] || "").trim(), ekipmanAdi: String(row["EKİPMAN"] || "").trim(),
-          aciklama: row["YAPILAN İŞ"] || "-", baslangicTarihi: tarih, bitisTarihi: tarih,
-          baslangicSaati: formatExcelTime(row["BAŞLANGIÇ SAATİ"]), bitisSaati: formatExcelTime(row["BİTİŞ SAATİ"]),
-          vardiya: row["VARDİYA"] || "08:00 - 16:00", isDuruslu: String(row["DURUŞ"]).toUpperCase() !== "YOK",
-          teknisyen: p1 || "Excel Import", yardimciTeknisyenler: [row["İŞİ YAPAN PERSONEL 2"], row["İŞİ YAPAN PERSONEL 3"], row["İŞİ YAPAN PERSONEL 4"]].filter(p => p && p !== "-"),
-          bildirenKisi: p1 || "Excel Import", usedMaterials: [], durum: "Kapalı", kayitTarihi: new Date(), isImported: true
+          hatAdi: String(getCol(row, "HAT") || "").trim(),
+          ekipmanAdi: String(getCol(row, "EKİPMAN") || "").trim(),
+          aciklama: getCol(row, "YAPILAN İŞ") || "-",
+          baslangicTarihi: tarih, bitisTarihi: tarih,
+          baslangicSaati: start, bitisSaati: end,
+          toplamSure: duration, // KPI İÇİN KRİTİK
+          vardiya: getCol(row, "VARDİYA") || "08:00 - 16:00",
+          isDuruslu: String(getCol(row, "DURUŞ")).toUpperCase() !== "YOK",
+          teknisyen: p1 || "Excel",
+          yardimciTeknisyenler: [getCol(row, "İŞİ YAPAN PERSONEL 2"), getCol(row, "İŞİ YAPAN PERSONEL 3"), getCol(row, "İŞİ YAPAN PERSONEL 4")].filter(p => p && p !== "-"),
+          bildirenKisi: p1 || "Excel", usedMaterials: [], durum: "Kapalı", kayitTarihi: new Date(), isImported: true
         };
       });
       setImportPreview(mapped.filter(i => i.hatAdi && i.hatAdi !== "-"));
@@ -120,24 +136,32 @@ export default function AdminDashboard() {
   };
 
   const clearOldImports = async () => {
-    if (!window.confirm("TÜM Excel aktarımları temizlenecektir?")) return;
+    if (!window.confirm("DİKKAT: Sistemdeki TÜM Excel aktarımları silinecektir. Emin misiniz?")) return;
     setLoading(true);
     try {
-      let q = query(collection(db, "maintenance_logs"), where("isImported", "==", true));
-      let snap = await getDocs(q);
-      if (snap.empty) {
-        q = query(collection(db, "maintenance_logs"), where("bildirenKisi", "in", ["Excel Import", "Excel", "Sistem"]));
-        snap = await getDocs(q);
-      }
-      const allDocs = snap.docs;
-      for (let i = 0; i < allDocs.length; i += 500) {
+      // Çoklu filtreleme ile yakalama
+      const q1 = query(collection(db, "maintenance_logs"), where("isImported", "==", true));
+      const q2 = query(collection(db, "maintenance_logs"), where("bildirenKisi", "==", "Excel"));
+      const q3 = query(collection(db, "maintenance_logs"), where("bildirenKisi", "==", "Excel Import"));
+      
+      const snaps = await Promise.all([getDocs(q1), getDocs(q2), getDocs(q3)]);
+      const allDocs = [...snaps[0].docs, ...snaps[1].docs, ...snaps[2].docs];
+      
+      const uniqueDocs = Array.from(new Set(allDocs.map(d => d.id))).map(id => allDocs.find(d => d.id === id));
+
+      if (uniqueDocs.length === 0) { alert("Silinecek import kaydı bulunamadı."); setLoading(false); return; }
+
+      for (let i = 0; i < uniqueDocs.length; i += 500) {
         const batch = writeBatch(db);
-        allDocs.slice(i, i + 500).forEach(d => batch.delete(d.ref));
+        uniqueDocs.slice(i, i + 500).forEach(d => d && batch.delete(d.ref));
         await batch.commit();
       }
-      alert(`${allDocs.length} kayıt temizlendi.`); window.location.reload();
+      alert(`${uniqueDocs.length} kayıt temizlendi.`); window.location.reload();
     } catch (err) { alert(err); setLoading(false); }
   };
+
+  const dnaScript = "Get-ChildItem -Recurse -Include *.tsx,*.ts | ForEach-Object { \"--- FILE: $($_.FullName) ---\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt; Get-Content $_.FullName | Out-File -Append PROJE_DOKUMU.txt; [char]96 + \"n\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt }";
+  const handleCopyScript = () => { navigator.clipboard.writeText(dnaScript); setCopySuccess(true); setTimeout(() => setCopySuccess(false), 3000); };
 
   const downloadFullSnapshot = async () => {
     if (window.prompt("Yedekleme Şifresi:") !== "161004") return alert("Hatalı!");
@@ -148,7 +172,7 @@ export default function AdminDashboard() {
         const snap = await getDocs(collection(db, coll));
         dbBackup[coll] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       }
-      const payload = { database: dbBackup, dna: "V5.0", date: new Date().toISOString() };
+      const payload = { database: dbBackup, dna: "V6.0", date: new Date().toISOString() };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
@@ -381,22 +405,22 @@ const handleSystemReset = async () => {
           <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={() => !isImporting && setShowImportModal(false)}></div>
           <div className="relative bg-slate-900 border-2 border-orange-500/30 w-full max-w-6xl max-h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col font-black uppercase italic">
             <div className="p-8 border-b border-orange-500/10 flex justify-between items-center bg-orange-500/5">
-              <div><h2 className="text-xl text-orange-500 tracking-widest">📊 EXCEL ÖNİZLEME</h2><p className="text-[10px] text-slate-500 mt-1">Toplam {importPreview.length} kayıt.</p></div>
+              <div><h2 className="text-xl text-orange-500 tracking-widest">📊 EXCEL ÖNİZLEME (SÜRE HESAPLANDI)</h2><p className="text-[10px] text-slate-500 mt-1">Toplam {importPreview.length} kayıt.</p></div>
               <button onClick={() => !isImporting && setShowImportModal(false)} className="text-orange-500/50 hover:text-orange-500 text-2xl">✕</button>
             </div>
             <div className="p-6 overflow-y-auto flex-1">
               <table className="w-full text-left text-[10px] uppercase font-bold italic">
                 <thead className="sticky top-0 bg-slate-900 text-orange-500/70 border-b border-slate-800">
-                  <tr><th className="p-3">Tarih</th><th className="p-3">Başl - Bit</th><th className="p-3">Hat</th><th className="p-3">Ekipman</th><th className="p-3">Yapılan İş</th><th className="p-3">Duruş</th></tr>
+                  <tr><th className="p-3">Tarih</th><th className="p-3">Saat (Başl-Bit)</th><th className="p-3">Süre</th><th className="p-3">Hat</th><th className="p-3">Ekipman</th><th className="p-3">Duruş</th></tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800">
                   {importPreview.slice(0, 100).map((row, idx) => (
                     <tr key={idx} className="hover:bg-orange-500/5">
                       <td className="p-3 text-slate-400">{row.baslangicTarihi}</td>
                       <td className="p-3 text-indigo-400">{row.baslangicSaati} - {row.bitisSaati}</td>
-                      <td className="p-3 text-emerald-400 font-black">{row.hatAdi}</td>
+                      <td className="p-3 text-amber-500">{row.toplamSure} dk</td>
+                      <td className="p-3 text-emerald-400">{row.hatAdi}</td>
                       <td className="p-3 text-white">{row.ekipmanAdi}</td>
-                      <td className="p-3 text-slate-300 max-w-xs truncate">{row.aciklama}</td>
                       <td className="p-3">{row.isDuruslu ? '🔴 VAR' : '🟢 YOK'}</td>
                     </tr>
                   ))}

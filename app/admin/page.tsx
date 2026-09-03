@@ -145,27 +145,40 @@ const [isAdmin, setIsAdmin] = useState(false);
     } catch (err) { alert(err); } finally { setIsImporting(false); }
   };
 
+  
   const clearOldImports = async () => {
-    if (!window.confirm("TÜM SİSTEM TEMİZLENECEK. EMİN MİSİNİZ?")) return;
+    if (!window.confirm("BELİRTİLEN PERSONELLER DIŞINDAKİ TÜM KAYITLAR SİLİNECEKTİR. EMİN MİSİNİZ?")) return;
     setLoading(true);
     try {
       const snap = await getDocs(collection(db, "maintenance_logs"));
-      const toDelete = snap.docs.filter(d => {
+      const allDocs = snap.docs;
+      
+      const allowedPeople = ["DFUTECHREPORT", "HALILCAKIR", "TEKNIKSERVIS"];
+      
+      const toDelete = allDocs.filter(d => {
           const data = d.data();
-          const bk = norm(data.bildirenKisi);
-          const tk = norm(data.teknisyen);
-          const isHatalıZaman = !data.bitisSaati || data.bitisSaati === "00:00" || data.toplamSureDakika === 0;
-          return data.isImported === true || bk.includes("SISTEM") || bk.includes("IMPORT") || bk.includes("EXCEL") || (isHatalıZaman && bk === "SISTEM");
+          const bk = norm(data.bildirenKisi || "");
+          const tk = norm(data.teknisyen || "");
+          
+          // Eğer bildiren veya yapan kişi izin verilen listede DEĞİLSE sil
+          const isBkAllowed = allowedPeople.some(p => bk.includes(p));
+          const isTkAllowed = allowedPeople.some(p => tk.includes(p));
+          
+          return !isBkAllowed && !isTkAllowed;
       });
-      if (toDelete.length === 0) { alert("Silinecek kayıt bulunamadı."); setLoading(false); return; }
+
+      if (toDelete.length === 0) { alert("Silinecek (yabancı) kayıt bulunamadı."); setLoading(false); return; }
+
       for (let i = 0; i < toDelete.length; i += 500) {
         const batch = writeBatch(db);
         toDelete.slice(i, i + 500).forEach(d => batch.delete(d.ref));
         await batch.commit();
       }
-      alert(`${toDelete.length} kayıt temizlendi.`); window.location.reload();
+      alert(`${toDelete.length} adet yabancı kayıt başarıyla temizlendi.`);
+      window.location.reload();
     } catch (err) { alert("Hata: " + err); setLoading(false); }
   };
+
 
   const dnaScript = "Get-ChildItem -Recurse -Include *.tsx,*.ts | ForEach-Object { \"--- FILE: $($_.FullName) ---\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt; Get-Content $_.FullName | Out-File -Append PROJE_DOKUMU.txt; [char]96 + \"n\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt }";
   const handleCopyScript = () => { navigator.clipboard.writeText(dnaScript); setCopySuccess(true); setTimeout(() => setCopySuccess(false), 3000); };

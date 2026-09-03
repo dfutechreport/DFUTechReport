@@ -94,13 +94,7 @@ function ISGContent() {
           </div>
         </div>
       </div>
-    </div>
-  );
-}
 
-export default function ISGPage() {
-  return (
-    <Suspense fallback={<div>Yükleniyor...
       {/* --- EKED DETAY MODAL --- */}
       {showEkedModal && selectedEked && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -181,7 +175,14 @@ export default function ISGPage() {
           </div>
         </div>
       )}
-</div>}>
+
+    </div>
+  );
+}
+
+export default function ISGPage() {
+  return (
+    <Suspense fallback={<div>Yükleniyor...</div>}>
       <ISGContent />
     </Suspense>
   );

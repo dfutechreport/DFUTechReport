@@ -17,7 +17,6 @@ const RCA_CATEGORIES = [
 ];
 
 export default function AdminDashboard() {
-export default function AdminDashboard() {
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
   const [userRole, setUserRole] = useState("");
@@ -28,7 +27,7 @@ export default function AdminDashboard() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
 
-  // Original states
+  // States from original
   const [rawLogs, setRawLogs] = useState<any[]>([]);
   const [rcaLogs, setRcaLogs] = useState<any[]>([]);
   const [rawMeterLogs, setRawMeterLogs] = useState<any[]>([]);
@@ -61,21 +60,18 @@ export default function AdminDashboard() {
   const formatExcelTime = (val: any) => {
     if (val === null || val === undefined || val === "") return "00:00";
     if (typeof val === 'string') {
-      const match = val.match(/(\d{1,2})[:.](\d{1,2})/);
-      if (match) return `${match[1].padStart(2, '0')}:${match[2].padStart(2, '0')}`;
-      return "00:00";
+      const m = val.match(/(\d{1,2})[:.](\d{1,2})/);
+      return m ? `${m[1].padStart(2, '0')}:${m[2].padStart(2, '0')}` : "00:00";
     }
     if (typeof val === 'number') {
       const totalSeconds = Math.round(val * 24 * 60 * 60);
-      const h = Math.floor(totalSeconds / 3600);
-      const m = Math.floor((totalSeconds % 3600) / 60);
-      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      return `${String(Math.floor(totalSeconds / 3600)).padStart(2, '0')}:${String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0')}`;
     }
     return "00:00";
   };
 
   const getCol = (row: any, keyword: string) => {
-    const key = Object.keys(row).find(k => k.replace(/[\sİı]/g, 'I').toUpperCase().includes(keyword.replace(/[\sİı]/g, 'I').toUpperCase()));
+    const key = Object.keys(row).find(k => k.replace(/[\sİıŞşĞğÜüÖö]/g, 'I').toUpperCase().includes(keyword.toUpperCase()));
     return key ? row[key] : null;
   };
 
@@ -88,29 +84,22 @@ export default function AdminDashboard() {
       const wb = XLSX.read(bstr, { type: 'binary' });
       const data: any[] = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
       const aylar: any = { "OCAK":"01","ŞUBAT":"02","MART":"03","NİSAN":"04","MAYIS":"05","HAZİRAN":"06","TEMMUZ":"07","AĞUSTOS":"08","EYLÜL":"09","EKİM":"10","KASIM":"11","ARALIK":"12" };
-      
       const mapped = data.map((row: any) => {
         const ay = aylar[String(getCol(row, "AY")||"").toUpperCase()] || "01";
         const tarih = `${getCol(row, "YIL")||"2026"}-${ay}-${String(getCol(row, "GÜN")||"01").padStart(2, '0')}`;
-        const start = formatExcelTime(getCol(row, "BAŞLANGIÇ"));
-        const end = formatExcelTime(getCol(row, "BİTİŞ"));
-        
+        const start = formatExcelTime(getCol(row, "BASLANGIC"));
+        const end = formatExcelTime(getCol(row, "BITIS"));
         const [h1, m1] = start.split(':').map(Number);
         const [h2, m2] = end.split(':').map(Number);
         let duration = (h2 * 60 + m2) - (h1 * 60 + m1);
         if (duration < 0) duration += 1440;
-
         const p1 = String(getCol(row, "PERSONEL 1") || "Sistem").trim();
         return {
-          hatAdi: String(getCol(row, "HAT") || "").trim(),
-          ekipmanAdi: String(getCol(row, "EKİPMAN") || "").trim(),
-          aciklama: getCol(row, "İŞ") || "-",
-          baslangicTarihi: tarih, bitisTarihi: tarih,
-          baslangicSaati: start, bitisSaati: end,
-          toplamSure: duration, vardiya: getCol(row, "VARDİYA") || "08:00 - 16:00",
-          isDuruslu: String(getCol(row, "DURUŞ")).toUpperCase() !== "YOK",
-          teknisyen: p1,
-          yardimciTeknisyenler: [getCol(row, "PERSONEL 2"), getCol(row, "PERSONEL 3")].filter(p => p && p !== "-"),
+          hatAdi: String(getCol(row, "HAT") || "").trim(), ekipmanAdi: String(getCol(row, "EKIPMAN") || "").trim(),
+          aciklama: getCol(row, "IS") || "-", baslangicTarihi: tarih, bitisTarihi: tarih,
+          baslangicSaati: start, bitisSaati: end, toplamSure: duration,
+          vardiya: getCol(row, "VARDIYA") || "08:00 - 16:00", isDuruslu: String(getCol(row, "DURUS")).toUpperCase() !== "YOK",
+          teknisyen: p1, yardimciTeknisyenler: [getCol(row, "PERSONEL 2"), getCol(row, "PERSONEL 3")].filter(p => p && p !== "-"),
           bildirenKisi: p1, usedMaterials: [], durum: "Kapalı", kayitTarihi: new Date(), isImported: true
         };
       });
@@ -146,9 +135,7 @@ export default function AdminDashboard() {
           const bk = String(data.bildirenKisi || "").toLowerCase();
           return data.isImported === true || bk.includes("sistem") || bk.includes("excel") || bk.includes("import") || bk === "";
       });
-
-      if (toDelete.length === 0) { alert("Silinecek kayıt bulunamadı."); setLoading(false); return; }
-
+      if (toDelete.length === 0) { alert("Kayıt yok."); setLoading(false); return; }
       for (let i = 0; i < toDelete.length; i += 500) {
         const batch = writeBatch(db);
         toDelete.slice(i, i + 500).forEach(d => batch.delete(d.ref));
@@ -161,50 +148,6 @@ export default function AdminDashboard() {
   const dnaScript = "Get-ChildItem -Recurse -Include *.tsx,*.ts | ForEach-Object { \"--- FILE: $($_.FullName) ---\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt; Get-Content $_.FullName | Out-File -Append PROJE_DOKUMU.txt; [char]96 + \"n\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt }";
   const handleCopyScript = () => { navigator.clipboard.writeText(dnaScript); setCopySuccess(true); setTimeout(() => setCopySuccess(false), 3000); };
 
-  const router = useRouter();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [userRole, setUserRole] = useState(""); 
-  const [userName, setUserName] = useState(""); 
-  const [loading, setLoading] = useState(true);
-  
-  // VERİ HAVUZLARI
-  const [rawLogs, setRawLogs] = useState<any[]>([]);
-  const [rcaLogs, setRcaLogs] = useState<any[]>([]);
-  const [rawMeterLogs, setRawMeterLogs] = useState<any[]>([]);
-  const [aktifIsler, setAktifIsler] = useState<any[]>([]);
-  const [aktifIsgAlarmlari, setAktifIsgAlarmlari] = useState<any[]>([]);
-  const [aktifEked, setAktifEked] = useState<any[]>([]);
-  const [kpiOnayBekleyen, setKpiOnayBekleyen] = useState(0);
-
-  // MODAL VE FİLTRE STATE'LERİ
-  const [showEkedModal, setShowEkedModal] = useState(false);
-  const [selectedEked, setSelectedEked] = useState<any>(null);
-  const [selectedVaka, setSelectedVaka] = useState<any>(null);
-  const [showVakaModal, setShowVakaModal] = useState(false);
-  const [showRcaModal, setShowRcaModal] = useState(false);
-  const [selectedLogForRca, setSelectedLogForRca] = useState<any>(null);
-  const [rcaForm, setRcaForm] = useState({ category: "", why: "" });
-  
-  const [filterYil, setFilterYil] = useState(new Date().getFullYear().toString());
-  const [filterElekSayac, setFilterElekSayac] = useState("");
-  const [filterGazSayac, setFilterGazSayac] = useState("");
-  const [filterSuSayac, setFilterSuSayac] = useState("");
-  const [elekSayacList, setElekSayacList] = useState<string[]>([]);
-  const [gazSayacList, setGazSayacList] = useState<string[]>([]);
-  const [suSayacList, setSuSayacList] = useState<string[]>([]);
-
-  // HESAPLANAN VERİLER
-  const [kpiTotals, setKpiTotals] = useState({ is: 0, sure: 0, durus: 0, mttr: 0 });
-  const [grafikIsHatti, setGrafikIsHatti] = useState<any[]>([]);
-  const [personelPerformans, setPersonelPerformans] = useState<any[]>([]);
-  const [ekipmanPerformans, setEkipmanPerformans] = useState<any[]>([]);
-  const [grafikElek, setGrafikElek] = useState<any[]>([]);
-  const [grafikGaz, setGrafikGaz] = useState<any[]>([]);
-  const [grafikSu, setGrafikSu] = useState<any[]>([]);
-
-  
-
-  // --- ŞİFRE KORUMALI SNAPSHOT VE RESET ---
   const downloadFullSnapshot = async () => {
     if (window.prompt("Yedekleme Şifresi:") !== "161004") return alert("Hatalı!");
     try {
@@ -214,7 +157,7 @@ export default function AdminDashboard() {
         const snap = await getDocs(collection(db, coll));
         dbBackup[coll] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       }
-      const payload = { database: dbBackup, dna: "V_FINAL", date: new Date().toISOString() };
+      const payload = { database: dbBackup, dna: "ULTIMATE_V7", date: new Date().toISOString() };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
@@ -222,8 +165,7 @@ export default function AdminDashboard() {
       link.click();
     } catch (e) { alert("Hata!"); }
   };
-
-  const handleSystemReset = async () => {
+const handleSystemReset = async () => {
     if (window.confirm("RESET?") && window.prompt("RESET ŞİFRESİ:") === "161004") {
       setLoading(true);
       const targetColls = ["maintenance_logs", "work_orders", "meter_logs", "eked_logs", "overtime_logs", "kar_arsivi", "pano_takip", "root_cause_analysis"];
@@ -451,31 +393,8 @@ export default function AdminDashboard() {
               <div><h2 className="text-xl text-orange-500">📊 EXCEL ÖNİZLEME (KPI UYUMLU)</h2><p className="text-[10px] text-slate-500 mt-1">Toplam {importPreview.length} kayıt.</p></div>
               <button onClick={() => !isImporting && setShowImportModal(false)} className="text-orange-500/50 hover:text-orange-500 text-2xl">✕</button>
             </div>
-            <div className="p-6 overflow-y-auto flex-1">
-              <table className="w-full text-left text-[10px]">
-                <thead className="sticky top-0 bg-slate-900 text-orange-500/70 border-b border-slate-800">
-                  <tr><th className="p-3">Tarih</th><th className="p-3">Zaman</th><th className="p-3">Süre</th><th className="p-3">Hat</th><th className="p-3">Ekipman</th><th className="p-3">Duruş</th></tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800">
-                  {importPreview.slice(0, 100).map((row, idx) => (
-                    <tr key={idx} className="hover:bg-orange-500/5">
-                      <td className="p-3 text-slate-400">{row.baslangicTarihi}</td>
-                      <td className="p-3 text-indigo-400">{row.baslangicSaati} - {row.bitisSaati}</td>
-                      <td className="p-3 text-amber-500">{row.toplamSure} DK</td>
-                      <td className="p-3 text-emerald-400 font-black">{row.hatAdi}</td>
-                      <td className="p-3 text-white">{row.ekipmanAdi}</td>
-                      <td className="p-3">{row.isDuruslu ? '🔴 VAR' : '🟢 YOK'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="p-8 border-t border-slate-800 bg-slate-900/50 flex justify-end gap-4 text-[10px]">
-              <button onClick={() => setShowImportModal(false)} disabled={isImporting} className="bg-slate-800 px-8 py-3 rounded-xl text-white">İPTAL</button>
-              <button onClick={confirmImport} disabled={isImporting} className="bg-orange-600 text-white px-10 py-3 rounded-xl shadow-xl">
-                {isImporting ? '⏳ AKTARILIYOR...' : '🚀 AKTARIMI BAŞLAT'}
-              </button>
-            </div>
+            <div className="p-6 overflow-y-auto flex-1"><table className="w-full text-left text-[10px]"><thead className="sticky top-0 bg-slate-900 text-orange-500/70 border-b border-slate-800"><tr><th className="p-3">Tarih</th><th className="p-3">Zaman</th><th className="p-3">Süre</th><th className="p-3">Hat</th><th className="p-3">Ekipman</th><th className="p-3">Duruş</th></tr></thead><tbody className="divide-y divide-slate-800">{importPreview.slice(0, 100).map((row, idx) => (<tr key={idx} className="hover:bg-orange-500/5"><td className="p-3 text-slate-400">{row.baslangicTarihi}</td><td className="p-3 text-indigo-400">{row.baslangicSaati} - {row.bitisSaati}</td><td className="p-3 text-amber-500">{row.toplamSure} DK</td><td className="p-3 text-emerald-400 font-black">{row.hatAdi}</td><td className="p-3 text-white">{row.ekipmanAdi}</td><td className="p-3">{row.isDuruslu ? '🔴 VAR' : '🟢 YOK'}</td></tr>))}</tbody></table></div>
+            <div className="p-8 border-t border-slate-800 bg-slate-900/50 flex justify-end gap-4 text-[10px]"><button onClick={() => setShowImportModal(false)} disabled={isImporting} className="bg-slate-800 px-8 py-3 rounded-xl text-white">İPTAL</button><button onClick={confirmImport} disabled={isImporting} className="bg-orange-600 text-white px-10 py-3 rounded-xl shadow-xl">{isImporting ? '⏳ AKTARILIYOR...' : '🚀 AKTARIMI BAŞLAT'}</button></div>
           </div>
         </div>
       )}

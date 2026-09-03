@@ -405,15 +405,23 @@ export default function AdminDashboard() {
             <div className="p-6 overflow-y-auto flex-1">
               <table className="w-full text-left text-[10px] uppercase font-bold italic">
                 <thead className="sticky top-0 bg-slate-900 text-orange-500/70 border-b border-slate-800">
-                  <tr><th className="p-3">Tarih</th><th className="p-3">Hat / Ekipman</th><th className="p-3">Yapılan İş</th><th className="p-3">Teknisyen</th><th className="p-3">Duruş</th></tr>
+                  <tr>
+                    <th className="p-3">Tarih</th>
+                    <th className="p-3">Saat (Başl-Bit)</th>
+                    <th className="p-3">Hat</th>
+                    <th className="p-3">Ekipman</th>
+                    <th className="p-3">Yapılan İş</th>
+                    <th className="p-3">Duruş</th>
+                  </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800">
                   {importPreview.slice(0, 100).map((row, idx) => (
                     <tr key={idx} className="hover:bg-orange-500/5">
                       <td className="p-3 text-slate-400">{row.baslangicTarihi}</td>
-                      <td className="p-3 text-white">{row.hatAdi} - {row.ekipmanAdi}</td>
+                      <td className="p-3 text-indigo-400 font-mono">{row.baslangicSaati} - {row.bitisSaati}</td>
+                      <td className="p-3 text-emerald-400 font-black">{row.hatAdi}</td>
+                      <td className="p-3 text-white">{row.ekipmanAdi}</td>
                       <td className="p-3 text-slate-300 max-w-xs truncate">{row.aciklama}</td>
-                      <td className="p-3 text-indigo-400">{row.teknisyen}</td>
                       <td className="p-3">{row.isDuruslu ? '🔴 VAR' : '🟢 YOK'}</td>
                     </tr>
                   ))}

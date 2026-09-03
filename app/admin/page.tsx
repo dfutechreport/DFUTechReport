@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useState } from "react";
+import * as XLSX from "xlsx";
+import { useEffect, useState, Suspense } from "react";
 import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, setDoc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, db } from "../../lib/firebase"; 
@@ -9,54 +10,100 @@ import { useRouter } from "next/navigation";
 
 export default function AdminDashboard() {
   const router = useRouter();
+  export default function AdminDashboard() {
+  const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
-  const [userRole, setUserRole] = useState(""); 
-  const [userName, setUserName] = useState(""); 
+  const [userRole, setUserRole] = useState("");
+  const [userName, setUserName] = useState("");
   const [loading, setLoading] = useState(true);
-  
-  // VERİ HAVUZLARI
-  const [rawLogs, setRawLogs] = useState<any[]>([]);
-  const [rcaLogs, setRcaLogs] = useState<any[]>([]);
-  const [rawMeterLogs, setRawMeterLogs] = useState<any[]>([]);
-  const [aktifIsler, setAktifIsler] = useState<any[]>([]);
-  const [aktifIsgAlarmlari, setAktifIsgAlarmlari] = useState<any[]>([]);
-  const [aktifEked, setAktifEked] = useState<any[]>([]);
-  const [kpiOnayBekleyen, setKpiOnayBekleyen] = useState(0);
+  const [copySuccess, setCopySuccess] = useState(false);
+  const [importPreview, setImportPreview] = useState<any[]>([]);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
-  // MODAL VE FİLTRE STATE'LERİ
-  const [showEkedModal, setShowEkedModal] = useState(false);
-  const [selectedEked, setSelectedEked] = useState<any>(null);
-  const [selectedVaka, setSelectedVaka] = useState<any>(null);
-  const [showVakaModal, setShowVakaModal] = useState(false);
-  const [showRcaModal, setShowRcaModal] = useState(false);
-  const [selectedLogForRca, setSelectedLogForRca] = useState<any>(null);
-  const [rcaForm, setRcaForm] = useState({ category: "", why: "" });
-  
-  const [filterYil, setFilterYil] = useState(new Date().getFullYear().toString());
-  const [filterElekSayac, setFilterElekSayac] = useState("");
-  const [filterGazSayac, setFilterGazSayac] = useState("");
-  const [filterSuSayac, setFilterSuSayac] = useState("");
-  const [elekSayacList, setElekSayacList] = useState<string[]>([]);
-  const [gazSayacList, setGazSayacList] = useState<string[]>([]);
-  const [suSayacList, setSuSayacList] = useState<string[]>([]);
+  const dnaScript = "Get-ChildItem -Recurse -Include *.tsx,*.ts | ForEach-Object { \"--- FILE: $($_.FullName) ---\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt; Get-Content $_.FullName | Out-File -Append PROJE_DOKUMU.txt; [char]96 + \"n\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt }";
 
-  // HESAPLANAN VERİLER
-  const [kpiTotals, setKpiTotals] = useState({ is: 0, sure: 0, durus: 0, mttr: 0 });
-  const [grafikIsHatti, setGrafikIsHatti] = useState<any[]>([]);
-  const [personelPerformans, setPersonelPerformans] = useState<any[]>([]);
-  const [ekipmanPerformans, setEkipmanPerformans] = useState<any[]>([]);
-  const [grafikElek, setGrafikElek] = useState<any[]>([]);
-  const [grafikGaz, setGrafikGaz] = useState<any[]>([]);
-  const [grafikSu, setGrafikSu] = useState<any[]>([]);
+  const handleCopyScript = () => {
+    navigator.clipboard.writeText(dnaScript);
+    setCopySuccess(true);
+    setTimeout(() => setCopySuccess(false), 3000);
+  };
 
-  const RCA_CATEGORIES = [
-    { id: "insan", label: "İnsan", color: "#3B82F6" }, { id: "makine", label: "Makine", color: "#EF4444" },
-    { id: "malzeme", label: "Malzeme", color: "#10B981" }, { id: "metot", label: "Metot", color: "#F59E0B" },
-    { id: "ortam", label: "Ortam", color: "#8B5CF6" }
-  ];
+  const formatExcelTime = (val: any) => {
+    if (!val) return "00:00";
+    if (typeof val === 'string' && val.includes(':')) return val.substring(0, 5);
+    if (typeof val === 'number') {
+      const totalSeconds = Math.round(val * 24 * 60 * 60);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    }
+    return String(val);
+  };
 
-  // --- ŞİFRE KORUMALI SNAPSHOT VE RESET ---
-  const downloadFullSnapshot = async () => {
+  const handleExcelImport = (e: any) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const bstr = evt.target?.result;
+      const wb = XLSX.read(bstr, { type: 'binary' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const data: any[] = XLSX.utils.sheet_to_json(ws);
+      const aylar: any = { "OCAK":"01","ŞUBAT":"02","MART":"03","NİSAN":"04","MAYIS":"05","HAZİRAN":"06","TEMMUZ":"07","AĞUSTOS":"08","EYLÜL":"09","EKİM":"10","KASIM":"11","ARALIK":"12" };
+      
+      const mapped = data.map((row: any) => {
+        const ay = aylar[String(row["AY"]||"").toUpperCase()] || "01";
+        const tarih = `${row["YIL"]||"2026"}-${ay}-${String(row["GÜN"]||"01").padStart(2, '0')}`;
+        const p1 = String(row["İŞİ YAPAN PERSONEL 1"] || "").trim();
+        return {
+          hatAdi: String(row["HAT"] || "").trim(), ekipmanAdi: String(row["EKİPMAN"] || "").trim(),
+          aciklama: row["YAPILAN İŞ"] || "-", baslangicTarihi: tarih, bitisTarihi: tarih,
+          baslangicSaati: formatExcelTime(row["BAŞLANGIÇ SAATİ"]), bitisSaati: formatExcelTime(row["BİTİŞ SAATİ"]),
+          vardiya: row["VARDİYA"] || "08:00 - 16:00", isDuruslu: String(row["DURUŞ"]).toUpperCase() !== "YOK",
+          teknisyen: p1 || "Excel", bildirenKisi: p1 || "Excel",
+          yardimciTeknisyenler: [row["İŞİ YAPAN PERSONEL 2"], row["İŞİ YAPAN PERSONEL 3"], row["İŞİ YAPAN PERSONEL 4"]].filter(p => p && p !== "-"),
+          usedMaterials: [], durum: "Kapalı", kayitTarihi: new Date()
+        };
+      });
+      setImportPreview(mapped.filter(i => i.hatAdi && i.hatAdi !== "-"));
+      setShowImportModal(true);
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  const confirmImport = async () => {
+    if (!window.confirm(`${importPreview.length} kayıt aktarılsın mı?`)) return;
+    setIsImporting(true);
+    try {
+      for (let i = 0; i < importPreview.length; i += 500) {
+        const batch = writeBatch(db);
+        importPreview.slice(i, i + 500).forEach(item => {
+          const uId = `imp_${item.baslangicTarihi}_${item.hatAdi}_${item.ekipmanAdi}_${item.baslangicSaati}`.replace(/\s+/g, '_');
+          batch.set(doc(db, "maintenance_logs", uId), item);
+        });
+        await batch.commit();
+      }
+      alert("Aktarım Başarılı");
+      setShowImportModal(false);
+      window.location.reload();
+    } catch (err) { alert(err); } finally { setIsImporting(false); }
+  };
+
+  const clearOldImports = async () => {
+    if (!window.confirm("TÜM Excel aktarımları silinecektir. Emin misiniz?")) return;
+    setLoading(true);
+    try {
+      const q = query(collection(db, "maintenance_logs"), where("bildirenKisi", "in", ["Excel", "Sistem (Import)", "Sistem (Excel Import)"]));
+      const snap = await getDocs(q);
+      const batch = writeBatch(db);
+      snap.docs.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+      alert("Temizlendi.");
+      window.location.reload();
+    } catch (err) { alert(err); setLoading(false); }
+  };
+const downloadFullSnapshot = async () => {
     if (window.prompt("Yedekleme Şifresi:") !== "161004") return alert("Hatalı!");
     try {
       const collections = ["maintenance_logs", "work_orders", "spare_parts", "users", "assets", "eked_logs", "meter_logs", "overtime_logs", "kar_arsivi"];
@@ -181,7 +228,15 @@ export default function AdminDashboard() {
           <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-12 bg-white rounded p-1" /><h1 className="text-2xl font-black uppercase text-indigo-400">Komuta Merkezi</h1></div>
           <div className="flex gap-3">
              <Link href="/dashboard" className="bg-indigo-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg">Vardiya Raporu</Link>
-             <button onClick={downloadFullSnapshot} className="bg-emerald-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg italic">💾 Sistem Yedeği</button>
+             <button onClick={clearOldImports} className="bg-red-900 border border-red-500/30 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg font-black hover:bg-red-800">🗑️ ESKİ AKTARIMLARI TEMİZLE</button>
+             <label className="bg-orange-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg border border-orange-500/30 transition-all font-black cursor-pointer hover:bg-orange-500">
+               📊 EXCEL İÇE AKTAR
+               <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleExcelImport} />
+             </label>
+             <button onClick={downloadFullSnapshot} className="bg-emerald-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg italic font-black">💾 MASTER YEDEK (JSON)</button>
+             <button onClick={handleCopyScript} type="button" className={`${copySuccess ? 'bg-indigo-500' : 'bg-slate-800'} px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg border border-indigo-500/30 transition-all font-black`}>
+               {copySuccess ? '✓ SCRİPT KOPYALANDI' : '🧬 SCRİPTİ KOPYALA'}
+             </button>
              <button onClick={()=>signOut(auth)} className="bg-red-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg">Çıkış</button>
           </div>
         </div>
@@ -286,6 +341,42 @@ export default function AdminDashboard() {
         {showVakaModal && selectedVaka && (<div className="fixed inset-0 bg-black/90 backdrop-blur-md flex justify-center items-center z-[1000] p-4 font-bold italic"><div className="bg-slate-900 border border-slate-800 p-10 rounded-[50px] w-full max-w-2xl shadow-3xl relative overflow-hidden italic"><div className={`absolute top-0 left-0 w-full h-2 ${selectedVaka.ekipmanAdi === "KAR devreye alma" ? "bg-red-600 shadow-xl" : "bg-indigo-600 shadow-xl"}`}></div><h2 className="text-2xl font-black text-white mb-8 uppercase italic tracking-widest">Bildirim Detayı</h2><div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 mb-10 shadow-inner italic font-black uppercase italic font-black font-black uppercase"><p className="text-gray-300 text-sm italic font-black italic">"{selectedVaka.arizaDetayi || selectedVaka.aciklama || "Not yok."}"</p></div><button onClick={()=>setShowVakaModal(false)} className="w-full bg-slate-800 hover:bg-slate-700 py-4 rounded-2xl font-black uppercase text-xs transition shadow-2xl italic font-black uppercase italic uppercase">Kapat</button></div></div>)}
         {showRcaModal && selectedLogForRca && (<div className="fixed inset-0 bg-black/95 backdrop-blur-sm flex justify-center items-center z-[999] p-4 font-bold italic"><div className="bg-slate-900 border border-slate-800 p-10 rounded-[50px] w-full max-w-xl shadow-2xl relative"><h2 className="text-xl font-black text-white mb-8 uppercase text-center tracking-[0.2em]">Root Cause Analysis</h2><div className="space-y-6 italic"><div className="grid grid-cols-3 gap-2 italic">{RCA_CATEGORIES.map(c=>(<button key={c.id} onClick={()=>setRcaForm({...rcaForm, category:c.id})} className={`p-3 rounded-2xl text-[10px] font-black uppercase transition-all border ${rcaForm.category===c.id?'bg-indigo-600 border-indigo-400 text-white shadow-xl shadow-indigo-600/30':'bg-slate-950 border-slate-800 text-gray-500 hover:border-indigo-400'}`}>{c.label}</button>))}</div><textarea value={rcaForm.why} onChange={e=>setRcaForm({...rcaForm, why:e.target.value})} placeholder="Duruş nedenini detaylandırın..." className="w-full bg-slate-950 border border-slate-800 rounded-[30px] p-6 text-sm text-white outline-none focus:ring-2 ring-indigo-500 h-40 shadow-inner italic font-black" /><div className="flex gap-4 italic"><button onClick={()=>setShowRcaModal(false)} className="flex-1 bg-slate-800 py-4 rounded-[20px] font-black text-gray-400 text-xs uppercase">Vazgeç</button><button onClick={handleSaveRca} className="flex-1 bg-indigo-600 py-4 rounded-[20px] font-black text-white shadow-xl text-xs uppercase transition">Kaydet</button></div></div></div></div>)}
       </div>
+
+      {showImportModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={() => !isImporting && setShowImportModal(false)}></div>
+          <div className="relative bg-slate-900 border-2 border-orange-500/30 w-full max-w-6xl max-h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col text-white">
+            <div className="p-8 border-b border-orange-500/10 flex justify-between items-center bg-orange-500/5 font-black uppercase italic">
+              <div><h2 className="text-xl text-orange-500 tracking-widest">📊 EXCEL ÖNİZLEME</h2><p className="text-[10px] text-slate-500 mt-1">Toplam {importPreview.length} kayıt.</p></div>
+              <button onClick={() => !isImporting && setShowImportModal(false)} className="text-orange-500/50 hover:text-orange-500 text-2xl">✕</button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1">
+              <table className="w-full text-left text-[10px] uppercase font-bold italic">
+                <thead className="sticky top-0 bg-slate-900 text-orange-500/70 border-b border-slate-800">
+                  <tr><th className="p-3">Tarih</th><th className="p-3">Hat / Ekipman</th><th className="p-3">Yapılan İş</th><th className="p-3">Teknisyen</th><th className="p-3">Duruş</th></tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {importPreview.slice(0, 100).map((row, idx) => (
+                    <tr key={idx} className="hover:bg-orange-500/5">
+                      <td className="p-3 text-slate-400">{row.baslangicTarihi}</td>
+                      <td className="p-3 text-white">{row.hatAdi} - {row.ekipmanAdi}</td>
+                      <td className="p-3 text-slate-300 max-w-xs truncate">{row.aciklama}</td>
+                      <td className="p-3 text-indigo-400">{row.teknisyen}</td>
+                      <td className="p-3">{row.isDuruslu ? '🔴 VAR' : '🟢 YOK'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-8 border-t border-slate-800 bg-slate-900/50 flex justify-end gap-4 font-black uppercase text-[10px]">
+              <button onClick={() => setShowImportModal(false)} disabled={isImporting} className="bg-slate-800 px-8 py-3 rounded-xl text-white">İPTAL</button>
+              <button onClick={confirmImport} disabled={isImporting} className="bg-orange-600 text-white px-10 py-3 rounded-xl shadow-xl flex items-center gap-2">
+                {isImporting ? '⏳ AKTARILIYOR...' : '🚀 AKTARIMI BAŞLAT'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

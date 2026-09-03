@@ -18,123 +18,6 @@ const RCA_CATEGORIES = [
 
 export default function AdminDashboard() {
   const router = useRouter();
-
-  const [copySuccess, setCopySuccess] = useState(false);
-  const [importPreview, setImportPreview] = useState<any[]>([]);
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
-
-  const formatExcelTime = (val: any) => {
-    if (!val) return "00:00";
-    if (typeof val === 'string') {
-      const m = val.match(/(\d{1,2})[:.](\d{1,2})/);
-      return m ? `${m[1].padStart(2, '0')}:${m[2].padStart(2, '0')}` : "00:00";
-    }
-    if (typeof val === 'number') {
-      const totalSeconds = Math.round(val * 24 * 60 * 60);
-      const h = Math.floor(totalSeconds / 3600);
-      const m = Math.floor((totalSeconds % 3600) / 60);
-      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-    }
-    return "00:00";
-  };
-
-  const normalizedGetCol = (row: any, keyword: string) => {
-    const kNormalized = keyword.replace(/[\sİıŞşĞğÜüÖö]/g, '').toUpperCase();
-    const key = Object.keys(row).find(k => k.replace(/[\sİıŞşĞğÜüÖö]/g, '').toUpperCase().includes(kNormalized));
-    return key ? row[key] : null;
-  };
-
-  const handleExcelImport = (e: any) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const bstr = evt.target?.result;
-      if (!bstr) return;
-      const wb = XLSX.read(bstr, { type: 'binary' });
-      const data: any[] = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-      const aylar: any = { "OCAK":"01","ŞUBAT":"02","MART":"03","NİSAN":"04","MAYIS":"05","HAZİRAN":"06","TEMMUZ":"07","AĞUSTOS":"08","EYLÜL":"09","EKİM":"10","KASIM":"11","ARALIK":"12" };
-      const mapped = data.map((row: any) => {
-        const ay = aylar[String(normalizedGetCol(row, "AY")||"").toUpperCase()] || "01";
-        const tarih = `${normalizedGetCol(row, "YIL")||"2026"}-${ay}-${String(normalizedGetCol(row, "GÜN")||"01").padStart(2, '0')}`;
-        const start = formatExcelTime(normalizedGetCol(row, "BASLANGIC"));
-        const end = formatExcelTime(normalizedGetCol(row, "BITIS"));
-        const [h1, m1] = start.split(':').map(Number);
-        const [h2, m2] = end.split(':').map(Number);
-        let duration = (h2 * 60 + m2) - (h1 * 60 + m1);
-        if (duration < 0) duration += 1440;
-        const p1 = String(normalizedGetCol(row, "PERSONEL1") || "Sistem").trim();
-        return {
-          hatAdi: String(normalizedGetCol(row, "HAT") || "").trim(), ekipmanAdi: String(normalizedGetCol(row, "EKIPMAN") || "").trim(),
-          aciklama: normalizedGetCol(row, "YAPILANIS") || "-", baslangicTarihi: tarih, bitisTarihi: tarih,
-          baslangicSaati: start, bitisSaati: end, toplamSure: duration,
-          vardiya: normalizedGetCol(row, "VARDIYA") || "08:00 - 16:00", isDuruslu: String(normalizedGetCol(row, "DURUS") || "").toUpperCase() !== "YOK",
-          teknisyen: p1, yardimciTeknisyenler: [normalizedGetCol(row, "PERSONEL2"), normalizedGetCol(row, "PERSONEL3")].filter(p => p && p !== "-"),
-          bildirenKisi: p1, usedMaterials: [], durum: "Kapalı", kayitTarihi: new Date(), isImported: true
-        };
-      });
-      setImportPreview(mapped.filter(i => i.hatAdi)); setShowImportModal(true);
-    };
-    reader.readAsBinaryString(file);
-  };
-
-  const confirmImport = async () => {
-    if (!window.confirm("Aktarım başlatılsın mı?")) return;
-    setIsImporting(true);
-    try {
-      for (let i = 0; i < importPreview.length; i += 500) {
-        const batch = writeBatch(db);
-        importPreview.slice(i, i + 500).forEach(item => {
-          const uId = `imp_${item.baslangicTarihi}_${item.hatAdi}_${item.ekipmanAdi}_${item.baslangicSaati}`.replace(/\s+/g, '_');
-          batch.set(doc(db, "maintenance_logs", uId), item);
-        });
-        await batch.commit();
-      }
-      alert("Başarılı"); window.location.reload();
-    } catch (err) { alert(err); } finally { setIsImporting(false); }
-  };
-
-  const clearOldImports = async () => {
-    if (!window.confirm("SİSTEM TEMİZLENECEK. EMİN MİSİNİZ?")) return;
-    setLoading(true);
-    try {
-      const snap = await getDocs(collection(db, "maintenance_logs"));
-      const toDelete = snap.docs.filter(d => {
-          const data = d.data();
-          const bk = String(data.bildirenKisi || "").toUpperCase();
-          return data.isImported === true || bk.includes("SISTEM") || bk.includes("IMPORT") || bk.includes("EXCEL") || bk.includes("AKTARI") || bk === "" || bk === "-";
-      });
-      if (toDelete.length === 0) { alert("Kayıt yok."); setLoading(false); return; }
-      for (let i = 0; i < toDelete.length; i += 500) {
-        const batch = writeBatch(db);
-        toDelete.slice(i, i + 500).forEach(d => batch.delete(d.ref));
-        await batch.commit();
-      }
-      alert(`${toDelete.length} kayıt temizlendi.`); window.location.reload();
-    } catch (err) { alert(err); setLoading(false); }
-  };
-
-  const dnaScript = "Get-ChildItem -Recurse -Include *.tsx,*.ts | ForEach-Object { \"--- FILE: $($_.FullName) ---\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt; Get-Content $_.FullName | Out-File -Append PROJE_DOKUMU.txt; [char]96 + \"n\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt }";
-  const handleCopyScript = () => { navigator.clipboard.writeText(dnaScript); setCopySuccess(true); setTimeout(() => setCopySuccess(false), 3000); };
-
-  const downloadFullSnapshot = async () => {
-    if (window.prompt("Şifre:") !== "161004") return alert("Hatalı!");
-    try {
-      const collections = ["maintenance_logs", "work_orders", "spare_parts", "users", "assets", "eked_logs", "meter_logs", "overtime_logs", "kar_arsivi"];
-      let dbBackup: any = {};
-      for (const coll of collections) {
-        const snap = await getDocs(collection(db, coll));
-        dbBackup[coll] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      }
-      const payload = { database: dbBackup, dna: "V_ULTIMATE", date: new Date().toISOString() };
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = `DFU_MASTER_DNA_BACKUP.json`;
-      link.click();
-    } catch (e) { alert("Hata!"); }
-  };
 const [isAdmin, setIsAdmin] = useState(false);
   const [userRole, setUserRole] = useState(""); 
   const [userName, setUserName] = useState(""); 
@@ -175,25 +58,134 @@ const [isAdmin, setIsAdmin] = useState(false);
   const [grafikGaz, setGrafikGaz] = useState<any[]>([]);
   const [grafikSu, setGrafikSu] = useState<any[]>([]);
 
-  
+  const RCA_CATEGORIES = [
+    { id: "insan", label: "İnsan", color: "#3B82F6" }, { id: "makine", label: "Makine", color: "#EF4444" },
+    { id: "malzeme", label: "Malzeme", color: "#10B981" }, { id: "metot", label: "Metot", color: "#F59E0B" },
+    { id: "ortam", label: "Ortam", color: "#8B5CF6" }
+  ];
 
   // --- ŞİFRE KORUMALI SNAPSHOT VE RESET ---
   
+  const [copySuccess, setCopySuccess] = useState(false);
+  const [importPreview, setImportPreview] = useState<any[]>([]);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+
+  const formatExcelTime = (val: any) => {
+    if (val === null || val === undefined || val === "") return "00:00";
+    if (typeof val === 'string') {
+      const m = val.match(/(\d{1,2})[:.](\d{1,2})/);
+      return m ? `${m[1].padStart(2, '0')}:${m[2].padStart(2, '0')}` : "00:00";
+    }
+    if (typeof val === 'number') {
+      const totalSeconds = Math.round(val * 24 * 60 * 60);
+      const hours = Math.floor(totalSeconds / 3600);
+      const mins = Math.floor((totalSeconds % 3600) / 60);
+      return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+    }
+    return "00:00";
+  };
+
+  const normalizedGetCol = (row: any, keyword: string) => {
+    const kNormalized = keyword.replace(/[\sİıŞşĞğÜüÖö]/g, '').toUpperCase();
+    const key = Object.keys(row).find(k => k.replace(/[\sİıŞşĞğÜüÖö]/g, '').toUpperCase().includes(kNormalized));
+    return key ? row[key] : null;
+  };
+
+  const handleExcelImport = (e: any) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const bstr = evt.target?.result;
+      if (!bstr) return;
+      const wb = XLSX.read(bstr, { type: 'binary' });
+      const data: any[] = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+      const aylar: any = { "OCAK":"01","ŞUBAT":"02","MART":"03","NİSAN":"04","MAYIS":"05","HAZİRAN":"06","TEMMUZ":"07","AĞUSTOS":"08","EYLÜL":"09","EKİM":"10","KASIM":"11","ARALIK":"12" };
+      const mapped = data.map((row: any) => {
+        const ay = aylar[String(normalizedGetCol(row, "AY")||"").toUpperCase()] || "01";
+        const tarih = `${normalizedGetCol(row, "YIL")||"2026"}-${ay}-${String(normalizedGetCol(row, "GÜN")||"01").padStart(2, '0')}`;
+        const start = formatExcelTime(normalizedGetCol(row, "BASLANGIC"));
+        const end = formatExcelTime(normalizedGetCol(row, "BITIS"));
+        const [h1, m1] = start.split(':').map(Number);
+        const [h2, m2] = end.split(':').map(Number);
+        let duration = (h2 * 60 + m2) - (h1 * 60 + m1);
+        if (duration < 0) duration += 1440;
+        const p1 = String(normalizedGetCol(row, "PERSONEL1") || "Sistem").trim();
+        return {
+          hatAdi: String(normalizedGetCol(row, "HAT") || "").trim(), ekipmanAdi: String(normalizedGetCol(row, "EKIPMAN") || "").trim(),
+          aciklama: normalizedGetCol(row, "YAPILANIS") || "-", baslangicTarihi: tarih, bitisTarihi: tarih,
+          baslangicSaati: start, bitisSaati: end, toplamSure: duration,
+          vardiya: normalizedGetCol(row, "VARDIYA") || "08:00 - 16:00", isDuruslu: String(normalizedGetCol(row, "DURUS") || "").toUpperCase() !== "YOK",
+          teknisyen: p1, yardimciTeknisyenler: [normalizedGetCol(row, "PERSONEL2"), normalizedGetCol(row, "PERSONEL3")].filter(p => p && p !== "-"),
+          bildirenKisi: p1, usedMaterials: [], durum: "Kapalı", kayitTarihi: new Date(), isImported: true
+        };
+      });
+      setImportPreview(mapped.filter(i => i.hatAdi));
+      setShowImportModal(true);
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  const confirmImport = async () => {
+    if (!window.confirm(`${importPreview.length} kayıt aktarılsın mı?`)) return;
+    setIsImporting(true);
+    try {
+      for (let i = 0; i < importPreview.length; i += 500) {
+        const batch = writeBatch(db);
+        importPreview.slice(i, i + 500).forEach(item => {
+          const uId = `imp_${item.baslangicTarihi}_${item.hatAdi}_${item.ekipmanAdi}_${item.baslangicSaati}`.replace(/\s+/g, '_');
+          batch.set(doc(db, "maintenance_logs", uId), item);
+        });
+        await batch.commit();
+      }
+      alert("Başarılı"); window.location.reload();
+    } catch (err) { alert(err); } finally { setIsImporting(false); }
+  };
+
+  const clearOldImports = async () => {
+    if (!window.confirm("TÜM SİSTEM TEMİZLENECEK. EMİN MİSİNİZ?")) return;
+    setLoading(true);
+    try {
+      const snap = await getDocs(collection(db, "maintenance_logs"));
+      const allDocs = snap.docs;
+      const toDelete = allDocs.filter(d => {
+          const data = d.data();
+          const bk = String(data.bildirenKisi || "").toUpperCase();
+          const isImp = data.isImported === true;
+          return isImp || bk.includes("SISTEM") || bk.includes("IMPORT") || bk.includes("EXCEL") || bk.includes("AKTARI") || bk === "" || bk === "-";
+      });
+      if (toDelete.length === 0) { alert("Silinecek kayıt bulunamadı."); setLoading(false); return; }
+      for (let i = 0; i < toDelete.length; i += 500) {
+        const batch = writeBatch(db);
+        toDelete.slice(i, i + 500).forEach(d => batch.delete(d.ref));
+        await batch.commit();
+      }
+      alert(`${toDelete.length} kayıt temizlendi.`); window.location.reload();
+    } catch (err) { alert("Hata: " + err); setLoading(false); }
+  };
+
+  const dnaScript = "Get-ChildItem -Recurse -Include *.tsx,*.ts | ForEach-Object { \"--- FILE: $($_.FullName) ---\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt; Get-Content $_.FullName | Out-File -Append PROJE_DOKUMU.txt; [char]96 + \"n\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt }";
+  const handleCopyScript = () => { navigator.clipboard.writeText(dnaScript); setCopySuccess(true); setTimeout(() => setCopySuccess(false), 3000); };
+
+  const downloadFullSnapshot = async () => {
+    if (window.prompt("Şifre:") !== "161004") return alert("Hatalı!");
+    try {
+      const collections = ["maintenance_logs", "work_orders", "spare_parts", "users", "assets", "eked_logs", "meter_logs", "overtime_logs", "kar_arsivi"];
+      let dbBackup: any = {};
       for (const coll of collections) {
         const snap = await getDocs(collection(db, coll));
         dbBackup[coll] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       }
-      const codeRes = await fetch('/api/backup-all');
-      const codeData = await codeRes.json();
-      const blob = new Blob([JSON.stringify({ database: dbBackup, dna: codeData.codeDump }, null, 2)], { type: "application/json" });
+      const payload = { database: dbBackup, dna: "ULTIMATE_V12", date: new Date().toISOString() };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = `DFU_MASTER_FULL_SNAPSHOT.json`;
+      link.download = `DFU_MASTER_DNA_BACKUP.json`;
       link.click();
     } catch (e) { alert("Hata!"); }
   };
-
-  const handleSystemReset = async () => {
+const handleSystemReset = async () => {
     if (window.confirm("RESET?") && window.prompt("RESET ŞİFRESİ:") === "161004") {
       setLoading(true);
       const targetColls = ["maintenance_logs", "work_orders", "meter_logs", "eked_logs", "overtime_logs", "kar_arsivi", "pano_takip", "root_cause_analysis"];
@@ -418,14 +410,38 @@ const [isAdmin, setIsAdmin] = useState(false);
           <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={() => !isImporting && setShowImportModal(false)}></div>
           <div className="relative bg-slate-900 border-2 border-orange-500/30 w-full max-w-6xl max-h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col">
             <div className="p-8 border-b border-orange-500/10 flex justify-between items-center bg-orange-500/5">
-              <div><h2 className="text-xl text-orange-500">📊 EXCEL ÖNİZLEME (KPI UYUMLU)</h2><p className="text-[10px] text-slate-500 mt-1">Toplam {importPreview.length} kayıt.</p></div>
+              <div><h2 className="text-xl text-orange-500 tracking-widest">📊 EXCEL ÖNİZLEME (KPI UYUMLU)</h2><p className="text-[10px] text-slate-500 mt-1">Toplam {importPreview.length} kayıt.</p></div>
               <button onClick={() => !isImporting && setShowImportModal(false)} className="text-orange-500/50 hover:text-orange-500 text-2xl">✕</button>
             </div>
-            <div className="p-6 overflow-y-auto flex-1"><table className="w-full text-left text-[10px]"><thead className="sticky top-0 bg-slate-900 text-orange-500/70 border-b border-slate-800"><tr><th className="p-3">Tarih</th><th className="p-3">Başl - Bit</th><th className="p-3">Süre</th><th className="p-3">Hat</th><th className="p-3">Ekipman</th><th className="p-3">Duruş</th></tr></thead><tbody className="divide-y divide-slate-800">{importPreview.slice(0, 100).map((row, idx) => (<tr key={idx} className="hover:bg-orange-500/5"><td className="p-3 text-slate-400">{row.baslangicTarihi}</td><td className="p-3 text-indigo-400">{row.baslangicSaati} - {row.bitisSaati}</td><td className="p-3 text-amber-500">{row.toplamSure} DK</td><td className="p-3 text-emerald-400 font-black">{row.hatAdi}</td><td className="p-3 text-white">{row.ekipmanAdi}</td><td className="p-3">{row.isDuruslu ? '🔴 VAR' : '🟢 YOK'}</td></tr>))}</tbody></table></div>
-            <div className="p-8 border-t border-slate-800 bg-slate-900/50 flex justify-end gap-4 text-[10px]"><button onClick={() => setShowImportModal(false)} disabled={isImporting} className="bg-slate-800 px-8 py-3 rounded-xl text-white">İPTAL</button><button onClick={confirmImport} disabled={isImporting} className="bg-orange-600 text-white px-10 py-3 rounded-xl shadow-xl">{isImporting ? '⏳ AKTARILIYOR...' : '🚀 AKTARIMI BAŞLAT'}</button></div>
+            <div className="p-6 overflow-y-auto flex-1">
+              <table className="w-full text-left text-[10px]">
+                <thead className="sticky top-0 bg-slate-900 text-orange-500/70 border-b border-slate-800">
+                  <tr><th className="p-3">Tarih</th><th className="p-3">Zaman</th><th className="p-3">Süre</th><th className="p-3">Hat</th><th className="p-3">Ekipman</th><th className="p-3">Duruş</th></tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {importPreview.slice(0, 100).map((row, idx) => (
+                    <tr key={idx} className="hover:bg-orange-500/5">
+                      <td className="p-3 text-slate-400">{row.baslangicTarihi}</td>
+                      <td className="p-3 text-indigo-400">{row.baslangicSaati} - {row.bitisSaati}</td>
+                      <td className="p-3 text-amber-500">{row.toplamSure} DK</td>
+                      <td className="p-3 text-emerald-400 font-black">{row.hatAdi}</td>
+                      <td className="p-3 text-white">{row.ekipmanAdi}</td>
+                      <td className="p-3">{row.isDuruslu ? '🔴 VAR' : '🟢 YOK'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-8 border-t border-slate-800 bg-slate-900/50 flex justify-end gap-4 text-[10px]">
+              <button onClick={() => setShowImportModal(false)} disabled={isImporting} className="bg-slate-800 px-8 py-3 rounded-xl text-white">İPTAL</button>
+              <button onClick={confirmImport} disabled={isImporting} className="bg-orange-600 text-white px-10 py-3 rounded-xl shadow-xl flex items-center gap-2">
+                {isImporting ? '⏳ AKTARILIYOR...' : '🚀 AKTARIMI BAŞLAT'}
+              </button>
+            </div>
           </div>
         </div>
       )}
     </div>
   );
+}
 }

@@ -88,9 +88,12 @@ const [isAdmin, setIsAdmin] = useState(false);
 
   const norm = (s: any) => String(s || "").replace(/[İIı]/g, 'I').replace(/[ŞŞ]/g, 'S').replace(/[ĞĞ]/g, 'G').replace(/[ÜÜ]/g, 'U').replace(/[ÖÖ]/g, 'O').replace(/[ÇÇ]/g, 'C').replace(/\s/g, '').toUpperCase();
 
-  const getCol = (row: any, keyword: string) => {
+  const getCol = (row: any, keyword: string, exact: boolean = false) => {
     const kNorm = norm(keyword);
-    const key = Object.keys(row).find(k => norm(k).includes(kNorm));
+    const key = Object.keys(row).find(k => {
+      const keyNorm = norm(k);
+      return exact ? keyNorm === kNorm : keyNorm.includes(kNorm);
+    });
     return key ? row[key] : null;
   };
 
@@ -103,36 +106,35 @@ const [isAdmin, setIsAdmin] = useState(false);
       if (!bstr) return;
       const wb = XLSX.read(bstr, { type: 'binary' });
       const data: any[] = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-      const aylar: any = { "OCAK":"01","SUBAT":"02","MART":"03","NISAN":"04","MAYIS":"05","HAZIRAN":"06","TEMMUZ":"07","AGUSTOS":"08","EYLUL":"09","EKIM":"10","KASIM":"11","ARALIK":"12" };
+      const aylar: any = { "OCAK":"01","SUBAT":"02","MART":"03","NISAN":"04","MAYIS":"05","HAZİRAN":"06","TEMMUZ":"07","AGUSTOS":"08","EYLUL":"09","EKIM":"10","KASIM":"11","ARALIK":"12" };
+      
       const mapped = data.map((row: any) => {
-        const ay = aylar[norm(getCol(row, "AY"))] || "01";
+        const ay = aylar[norm(getCol(row, "AY", true))] || "01";
         const tarih = `${getCol(row, "YIL")||"2026"}-${ay}-${String(getCol(row, "GUN")||"01").padStart(2, '0')}`;
         const start = formatExcelTime(getCol(row, "BASLANGIC"));
         const end = formatExcelTime(getCol(row, "BITIS"));
+        
         const [h1, m1] = start.split(':').map(Number);
         const [h2, m2] = end.split(':').map(Number);
         let duration = (h2 * 60 + m2) - (h1 * 60 + m1);
         if (duration < 0) duration += 1440;
 
-        // Personel Eşleştirme - Kritik Kısım
         const p1 = String(getCol(row, "PERSONEL1") || "Sistem").trim();
-        const p2 = String(getCol(row, "PERSONEL2") || "").trim();
-        const p3 = String(getCol(row, "PERSONEL3") || "").trim();
-        const p4 = String(getCol(row, "PERSONEL4") || "").trim();
+        // AÇIKLAMA İÇİN ÖZEL ANAHTAR: "YAPILANIS" (IS ile karışmaması için)
+        const aciklamaVerisi = getCol(row, "YAPILANIS") || getCol(row, "ACIKLAMA") || "-";
 
         return {
           hatAdi: String(getCol(row, "HAT") || "").trim(),
           ekipmanAdi: String(getCol(row, "EKIPMAN") || "").trim(),
-          aciklama: getCol(row, "IS") || "-",
+          aciklama: String(aciklamaVerisi), // Sayısal gelirse string'e zorla
           baslangicTarihi: tarih, bitisTarihi: tarih,
           baslangicSaati: start, bitisSaati: end,
           toplamSureDakika: duration,
           vardiya: getCol(row, "VARDIYA") || "08:00 - 16:00",
           isDuruslu: String(getCol(row, "DURUS") || "").toUpperCase() !== "YOK",
           teknisyen: p1,
-          yardimciTeknisyenler: [p2, p3, p4].filter(p => p && p !== "-" && p !== ""),
-          bildirenKisi: p1,
-          usedMaterials: [], durum: "Kapalı", kayitTarihi: new Date(), isImported: true
+          yardimciTeknisyenler: [getCol(row, "PERSONEL2"), getCol(row, "PERSONEL3")].filter(p => p && p !== "-"),
+          bildirenKisi: p1, usedMaterials: [], durum: "Kapalı", kayitTarihi: new Date(), isImported: true
         };
       });
       setImportPreview(mapped.filter(i => i.hatAdi));
@@ -163,22 +165,28 @@ const [isAdmin, setIsAdmin] = useState(false);
     try {
       const snap = await getDocs(collection(db, "maintenance_logs"));
       const allDocs = snap.docs;
-      const allowedPeople = ["DFUTECHREPORT", "HALILCAKIR", "TEKNIKSERVIS"];
+      // Korunacak tam normalize isimler
+      const allowed = ["DFUTECHREPORT", "HALILCAKIR", "TEKNIKSERVIS"];
+      
       const toDelete = allDocs.filter(d => {
           const data = d.data();
           const bk = norm(data.bildirenKisi || "");
           const tk = norm(data.teknisyen || "");
-          const isBkAllowed = allowedPeople.some(p => bk.includes(p));
-          const isTkAllowed = allowedPeople.some(p => tk.includes(p));
-          return !isBkAllowed && !isTkAllowed;
+          // Eğer ikisinden biri bile izinli değilse SİL
+          const isBkOk = allowed.some(a => bk.includes(a));
+          const isTkOk = allowed.some(a => tk.includes(a));
+          return !isBkOk && !isTkOk;
       });
-      if (toDelete.length === 0) { alert("Silinecek kayıt bulunamadı."); setLoading(false); return; }
+
+      if (toDelete.length === 0) { alert("Silinecek yabancı kayıt bulunamadı."); setLoading(false); return; }
+
       for (let i = 0; i < toDelete.length; i += 500) {
         const batch = writeBatch(db);
         toDelete.slice(i, i + 500).forEach(d => batch.delete(d.ref));
         await batch.commit();
       }
-      alert(`${toDelete.length} kayıt temizlendi.`); window.location.reload();
+      alert(`${toDelete.length} adet yabancı kayıt başarıyla temizlendi.`);
+      window.location.reload();
     } catch (err) { alert("Hata: " + err); setLoading(false); }
   };
 
@@ -194,7 +202,7 @@ const [isAdmin, setIsAdmin] = useState(false);
         const snap = await getDocs(collection(db, coll));
         dbBackup[coll] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       }
-      const payload = { database: dbBackup, dna: "ULTIMATE_V15", date: new Date().toISOString() };
+      const payload = { database: dbBackup, dna: "ULTIMATE_V16", date: new Date().toISOString() };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
@@ -427,41 +435,30 @@ const handleSystemReset = async () => {
           <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={() => !isImporting && setShowImportModal(false)}></div>
           <div className="relative bg-slate-900 border-2 border-orange-500/30 w-full max-w-[90%] max-h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col">
             <div className="p-8 border-b border-orange-500/10 flex justify-between items-center bg-orange-500/5">
-              <div><h2 className="text-xl text-orange-500 tracking-widest">📊 EXCEL ÖNİZLEME (TAM KONTROL)</h2><p className="text-[10px] text-slate-500 mt-1">Toplam {importPreview.length} kayıt. Personeller ve Süreler analiz edildi.</p></div>
+              <div><h2 className="text-xl text-orange-500 tracking-widest">📊 EXCEL ÖNİZLEME (TAM KONTROL)</h2><p className="text-[10px] text-slate-500 mt-1">Toplam {importPreview.length} kayıt.</p></div>
               <button onClick={() => !isImporting && setShowImportModal(false)} className="text-orange-500/50 hover:text-orange-500 text-2xl">✕</button>
             </div>
             <div className="p-6 overflow-y-auto flex-1">
               <table className="w-full text-left text-[10px]">
                 <thead className="sticky top-0 bg-slate-900 text-orange-500/70 border-b border-slate-800">
-                  <tr>
-                    <th className="p-3">Tarih</th>
-                    <th className="p-3">Başl - Bit</th>
-                    <th className="p-3">Süre (DK)</th>
-                    <th className="p-3">Hat / Ekipman</th>
-                    <th className="p-3">SORUMLU PERSONEL</th>
-                    <th className="p-3">Duruş</th>
-                  </tr>
+                  <tr><th className="p-3">Tarih</th><th className="p-3">Başl - Bit</th><th className="p-3">Süre</th><th className="p-3">Hat / Ekipman</th><th className="p-3">SORUMLU</th><th className="p-3">Açıklama</th><th className="p-3">Duruş</th></tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800">
                   {importPreview.slice(0, 100).map((row, idx) => (
                     <tr key={idx} className="hover:bg-orange-500/5">
                       <td className="p-3 text-slate-400 whitespace-nowrap">{row.baslangicTarihi}</td>
-                      <td className="p-3 text-indigo-400 whitespace-nowrap font-mono">{row.baslangicSaati} - {row.bitisSaati}</td>
-                      <td className="p-3 text-amber-500 font-black">{row.toplamSureDakika}</td>
+                      <td className="p-3 text-indigo-400 whitespace-nowrap">{row.baslangicSaati} - {row.bitisSaati}</td>
+                      <td className="p-3 text-amber-500">{row.toplamSureDakika}</td>
                       <td className="p-3 text-white"><span className="text-emerald-400">{row.hatAdi}</span> / {row.ekipmanAdi}</td>
-                      <td className="p-3 text-indigo-300 font-black uppercase underline decoration-indigo-500/30">{row.teknisyen}</td>
+                      <td className="p-3 text-indigo-300 font-black">{row.teknisyen}</td>
+                      <td className="p-3 text-slate-400 max-w-xs truncate">{row.aciklama}</td>
                       <td className="p-3">{row.isDuruslu ? '🔴 VAR' : '🟢 YOK'}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <div className="p-8 border-t border-slate-800 bg-slate-900/50 flex justify-end gap-4 text-[10px]">
-              <button onClick={() => setShowImportModal(false)} disabled={isImporting} className="bg-slate-800 px-8 py-3 rounded-xl text-white">İPTAL</button>
-              <button onClick={confirmImport} disabled={isImporting} className="bg-orange-600 text-white px-10 py-3 rounded-xl shadow-xl flex items-center gap-2">
-                {isImporting ? '⏳ AKTARILIYOR...' : '🚀 AKTARIMI BAŞLAT'}
-              </button>
-            </div>
+            <div className="p-8 border-t border-slate-800 bg-slate-900/50 flex justify-end gap-4 text-[10px]"><button onClick={() => setShowImportModal(false)} disabled={isImporting} className="bg-slate-800 px-8 py-3 rounded-xl text-white">İPTAL</button><button onClick={confirmImport} disabled={isImporting} className="bg-orange-600 text-white px-10 py-3 rounded-xl shadow-xl">{isImporting ? '⏳ AKTARILIYOR...' : '🚀 AKTARIMI BAŞLAT'}</button></div>
           </div>
         </div>
       )}

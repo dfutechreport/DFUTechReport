@@ -8,9 +8,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 export default function AdminDashboard() {
-
   const dnaScript = `Get-ChildItem -Recurse -Include *.tsx,*.ts | ForEach-Object { 
-    "--- FILE: $($_.FullName) ---`n" | Out-File -Append PROJE_DOKUMU.txt
+    "--- FILE: $($_.FullName) ---\`n" | Out-File -Append PROJE_DOKUMU.txt
     Get-Content $_.FullName | Out-File -Append PROJE_DOKUMU.txt
     "\`n\`n" | Out-File -Append PROJE_DOKUMU.txt 
 }`;
@@ -23,7 +22,6 @@ export default function AdminDashboard() {
 
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
-  const [copySuccess, setCopySuccess] = useState(false);
   const [userRole, setUserRole] = useState(""); 
   const [userName, setUserName] = useState(""); 
   const [loading, setLoading] = useState(true);
@@ -210,6 +208,7 @@ export default function AdminDashboard() {
              <button onClick={downloadFullSnapshot} className="bg-emerald-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg italic font-black">💾 MASTER YEDEK (JSON)</button>
              <button 
                 onClick={handleCopyScript} 
+                type="button"
                 className={`${copySuccess ? 'bg-indigo-500' : 'bg-slate-800'} px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg border border-indigo-500/30 transition-all font-black`}
              >
                {copySuccess ? '✓ SCRİPT KOPYALANDI' : '🧬 SCRİPTİ KOPYALA'}

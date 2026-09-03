@@ -22,11 +22,6 @@ function ISGContent() {
   const [ekedLogs, setEkedLogs] = useState<any[]>([]);
   const [aktifIsler, setAktifIsler] = useState<any[]>([]);
   const [isgAlarmlari, setIsgAlarmlari] = useState<any[]>([]);
-  const [selectedEked, setSelectedEked] = useState<any>(null);
-  const [showEkedModal, setShowEkedModal] = useState(false);
-  const [selectedWork, setSelectedWork] = useState<any>(null);
-  const [showWorkModal, setShowWorkModal] = useState(false);
-
 
   useEffect(() => {
     setMounted(true);
@@ -75,21 +70,21 @@ function ISGContent() {
             <h2 className="text-lg text-red-500 mb-6 underline decoration-red-600 tracking-widest">🚨 İSG ALARMLARI</h2>
             <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
               {isgAlarmlari.length === 0 ? <p className="text-gray-600 py-10 text-center font-black italic">Aktif Alarm Yok</p> : 
-                isgAlarmlari.map(wo => <div key={wo.id} onClick={() => { setSelectedWork(wo); setShowWorkModal(true); }} className="bg-red-950/20 p-5 rounded-3xl border border-red-900/30 text-[10px] italic font-black text-red-200 uppercase tracking-tighter cursor-pointer hover:bg-red-900/40 hover:scale-[1.02] transition-all">{wo.aciklama}</div>)}
+                isgAlarmlari.map(wo => <div key={wo.id} className="bg-red-950/20 p-5 rounded-3xl border border-red-900/30 text-[10px] italic font-black text-red-200 uppercase tracking-tighter">{wo.aciklama}</div>)}
             </div>
           </div>
           <div className="bg-neutral-900 border-2 border-yellow-900/40 p-8 rounded-[3.5rem] shadow-2xl">
             <h2 className="text-lg text-yellow-500 mb-6 underline decoration-yellow-600 tracking-widest">🔐 AKTİF EKED</h2>
             <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 italic font-black text-yellow-100 uppercase tracking-tighter">
               {ekedLogs.length === 0 ? <p className="text-gray-600 py-10 text-center font-black italic">Bildirim Yok</p> : 
-                ekedLogs.map(log => <div key={log.id} onClick={() => { setSelectedEked(log); setShowEkedModal(true); }} className="bg-yellow-950/20 p-5 rounded-3xl border border-yellow-900/30 text-[10px] cursor-pointer hover:bg-yellow-900/40 hover:scale-[1.02] transition-all">{log.yer}</div>)}
+                ekedLogs.map(log => <div key={log.id} className="bg-yellow-950/20 p-5 rounded-3xl border border-yellow-900/30 text-[10px]">{log.yer}</div>)}
             </div>
           </div>
           <div className="bg-neutral-900 border-2 border-indigo-900/40 p-8 rounded-[3.5rem] shadow-2xl">
             <h2 className="text-lg text-indigo-400 mb-6 underline decoration-indigo-600 tracking-widest">📡 SAHA BİLDİRİMLERİ</h2>
             <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 italic font-black text-indigo-100 uppercase tracking-tighter">
               {aktifIsler.length === 0 ? <p className="text-gray-600 py-10 text-center font-black italic">Bildirim Yok</p> : 
-                aktifIsler.map(wo => <div key={wo.id} onClick={() => { setSelectedWork(wo); setShowWorkModal(true); }} className="bg-indigo-950/20 p-5 rounded-3xl border border-indigo-900/30 text-[10px] cursor-pointer hover:bg-indigo-900/40 hover:scale-[1.02] transition-all">{wo.ekipmanAdi} - {wo.hatAdi}</div>)}
+                aktifIsler.map(wo => <div key={wo.id} className="bg-indigo-950/20 p-5 rounded-3xl border border-indigo-900/30 text-[10px]">{wo.ekipmanAdi} - {wo.hatAdi}</div>)}
             </div>
           </div>
         </div>
@@ -100,88 +95,7 @@ function ISGContent() {
 
 export default function ISGPage() {
   return (
-    <Suspense fallback={<div>Yükleniyor...
-      {/* --- EKED DETAY MODAL --- */}
-      {showEkedModal && selectedEked && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={() => setShowEkedModal(false)}></div>
-          <div className="relative bg-neutral-900 border-2 border-yellow-900/40 w-full max-w-2xl rounded-[3rem] shadow-[0_0_100px_rgba(234,179,8,0.1)] overflow-hidden flex flex-col">
-            <div className="p-8 border-b border-yellow-900/20 flex justify-between items-center">
-              <h2 className="text-xl font-black text-yellow-500 uppercase tracking-[0.2em] flex items-center gap-3">
-                <span>🔐</span> EKED AKTİF KİLİT DETAYI
-              </h2>
-              <button onClick={() => setShowEkedModal(false)} className="text-yellow-500/50 hover:text-yellow-500 transition-colors text-2xl">✕</button>
-            </div>
-            <div className="p-10 space-y-8 overflow-y-auto">
-              <div className="grid grid-cols-2 gap-8">
-                <div>
-                  <label className="text-[10px] text-yellow-500/50 font-black tracking-widest block mb-2">BÖLGE / YER</label>
-                  <div className="bg-yellow-950/20 border border-yellow-900/30 p-4 rounded-2xl text-white font-black uppercase italic">{selectedEked.yer}</div>
-                </div>
-                <div>
-                  <label className="text-[10px] text-yellow-500/50 font-black tracking-widest block mb-2">SORUMLU PERSONEL</label>
-                  <div className="bg-yellow-950/20 border border-yellow-900/30 p-4 rounded-2xl text-white font-black uppercase italic">{selectedEked.personel}</div>
-                </div>
-              </div>
-              <div>
-                <label className="text-[10px] text-yellow-500/50 font-black tracking-widest block mb-2">BAŞLANGIÇ ZAMANI</label>
-                <div className="bg-yellow-950/20 border border-yellow-900/30 p-4 rounded-2xl text-white font-black uppercase italic tracking-widest">
-                  {selectedEked.baslangicTarihi} | {selectedEked.baslangicSaati}
-                </div>
-              </div>
-              {selectedEked.aciklama && (
-                <div>
-                  <label className="text-[10px] text-yellow-500/50 font-black tracking-widest block mb-2">EK NOTLAR</label>
-                  <div className="bg-yellow-950/20 border border-yellow-900/30 p-4 rounded-2xl text-white/70 text-[11px] font-bold italic leading-relaxed">
-                    {selectedEked.aciklama}
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="p-8 border-t border-yellow-900/20 bg-yellow-950/10 text-center">
-              <p className="text-[9px] text-yellow-500/40 font-black tracking-[0.3em] uppercase animate-pulse">BU EKİPMANIN ENERJİSİ ŞU AN KESİKTİR - MÜDAHALE YASAKTIR</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* --- İSG ALARM / SAHA BİLDİRİM DETAY MODAL --- */}
-      {showWorkModal && selectedWork && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={() => setShowWorkModal(false)}></div>
-          <div className={`relative bg-neutral-900 border-2 ${selectedWork.ekipmanAdi === "KAR devreye alma" ? 'border-red-900/40' : 'border-indigo-900/40'} w-full max-w-2xl rounded-[3rem] shadow-2xl overflow-hidden flex flex-col`}>
-            <div className={`p-8 border-b ${selectedWork.ekipmanAdi === "KAR devreye alma" ? 'border-red-900/20' : 'border-indigo-900/20'} flex justify-between items-center`}>
-              <h2 className={`text-xl font-black ${selectedWork.ekipmanAdi === "KAR devreye alma" ? 'text-red-500' : 'text-indigo-400'} uppercase tracking-[0.2em] flex items-center gap-3`}>
-                <span>{selectedWork.ekipmanAdi === "KAR devreye alma" ? '🚨' : '📡'}</span> {selectedWork.ekipmanAdi === "KAR devreye alma" ? 'KRİTİK İSG ALARMI' : 'SAHA BİLDİRİM DETAYI'}
-              </h2>
-              <button onClick={() => setShowWorkModal(false)} className="text-gray-500 hover:text-white transition-colors text-2xl">✕</button>
-            </div>
-            <div className="p-10 space-y-8 overflow-y-auto">
-              <div className="grid grid-cols-2 gap-8">
-                <div>
-                  <label className="text-[10px] text-gray-500 font-black tracking-widest block mb-2">HAT / EKİPMAN</label>
-                  <div className="bg-white/5 border border-white/10 p-4 rounded-2xl text-white font-black uppercase italic">{selectedWork.hatAdi} - {selectedWork.ekipmanAdi}</div>
-                </div>
-                <div>
-                  <label className="text-[10px] text-gray-500 font-black tracking-widest block mb-2">BİLDİREN KİŞİ</label>
-                  <div className="bg-white/5 border border-white/10 p-4 rounded-2xl text-white font-black uppercase italic">{selectedWork.bildirenKisi}</div>
-                </div>
-              </div>
-              <div>
-                <label className="text-[10px] text-gray-500 font-black tracking-widest block mb-2">DETAYLI AÇIKLAMA</label>
-                <div className={`${selectedWork.ekipmanAdi === "KAR devreye alma" ? 'bg-red-950/20 border-red-900/30 text-red-200' : 'bg-indigo-950/20 border-indigo-900/30 text-indigo-100'} border p-6 rounded-3xl text-sm font-black italic leading-relaxed uppercase tracking-tighter`}>
-                  {selectedWork.aciklama}
-                </div>
-              </div>
-              <div className="flex justify-between items-center pt-4 opacity-50 text-[10px] font-black uppercase italic tracking-[0.2em]">
-                <span>Öncelik: {selectedWork.oncelik}</span>
-                <span>Durum: {selectedWork.durum}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-</div>}>
+    <Suspense fallback={<div>Yükleniyor...</div>}>
       <ISGContent />
     </Suspense>
   );

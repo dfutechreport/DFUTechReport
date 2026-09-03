@@ -86,7 +86,7 @@ const [isAdmin, setIsAdmin] = useState(false);
     return "00:00";
   };
 
-  const norm = (s: any) => String(s || "").replace(/[İIı]/g, 'I').replace(/[\sŞşĞğÜüÖö]/g, '').toUpperCase();
+  const norm = (s: any) => String(s || "").replace(/[İIı]/g, 'I').replace(/[ŞŞ]/g, 'S').replace(/[ĞĞ]/g, 'G').replace(/[ÜÜ]/g, 'U').replace(/[ÖÖ]/g, 'O').replace(/[ÇÇ]/g, 'C').replace(/\s/g, '').toUpperCase();
 
   const getCol = (row: any, keyword: string) => {
     const kNorm = norm(keyword);
@@ -103,10 +103,11 @@ const [isAdmin, setIsAdmin] = useState(false);
       if (!bstr) return;
       const wb = XLSX.read(bstr, { type: 'binary' });
       const data: any[] = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-      const aylar: any = { "OCAK":"01","ŞUBAT":"02","MART":"03","NİSAN":"04","MAYIS":"05","HAZİRAN":"06","TEMMUZ":"07","AĞUSTOS":"08","EYLÜL":"09","EKİM":"10","KASIM":"11","ARALIK":"12" };
+      const aylar: any = { "OCAK":"01","SUBAT":"02","MART":"03","NISAN":"04","MAYIS":"05","HAZIRAN":"06","TEMMUZ":"07","AGUSTOS":"08","EYLUL":"09","EKIM":"10","KASIM":"11","ARALIK":"12" };
       const mapped = data.map((row: any) => {
-        const ay = aylar[norm(getCol(row, "AY"))] || "01";
-        const tarih = `${getCol(row, "YIL")||"2026"}-${ay}-${String(getCol(row, "GÜN")||"01").padStart(2, '0')}`;
+        const ayRaw = String(getCol(row, "AY") || "");
+        const ay = aylar[norm(ayRaw)] || "01";
+        const tarih = `${getCol(row, "YIL")||"2026"}-${ay}-${String(getCol(row, "GUN")||"01").padStart(2, '0')}`;
         const start = formatExcelTime(getCol(row, "BASLANGIC"));
         const end = formatExcelTime(getCol(row, "BITIS"));
         const [h1, m1] = start.split(':').map(Number);
@@ -116,8 +117,8 @@ const [isAdmin, setIsAdmin] = useState(false);
         const p1 = String(getCol(row, "PERSONEL1") || "Sistem").trim();
         return {
           hatAdi: String(getCol(row, "HAT") || "").trim(), ekipmanAdi: String(getCol(row, "EKIPMAN") || "").trim(),
-          aciklama: getCol(row, "IS") || "-", baslangicTarihi: tarih, bitisTarihi: tarih,
-          baslangicSaati: start, bitisSaati: end, toplamSure: duration,
+          aciklama: getCol(row, "IS") || "-", baslangicSaati: start, bitisSaati: end, 
+          baslangicTarihi: tarih, bitisTarihi: tarih, toplamSureDakika: duration,
           vardiya: getCol(row, "VARDIYA") || "08:00 - 16:00", isDuruslu: String(getCol(row, "DURUS") || "").toUpperCase() !== "YOK",
           teknisyen: p1, yardimciTeknisyenler: [getCol(row, "PERSONEL2"), getCol(row, "PERSONEL3")].filter(p => p && p !== "-"),
           bildirenKisi: p1, usedMaterials: [], durum: "Kapalı", kayitTarihi: new Date(), isImported: true
@@ -153,7 +154,8 @@ const [isAdmin, setIsAdmin] = useState(false);
           const data = d.data();
           const bk = norm(data.bildirenKisi);
           const tk = norm(data.teknisyen);
-          return data.isImported === true || bk.includes("SISTEM") || bk.includes("IMPORT") || bk.includes("EXCEL") || bk.includes("AKTARI") || bk === "" || tk.includes("SISTEM") || tk.includes("IMPORT");
+          const isHatalıZaman = !data.bitisSaati || data.bitisSaati === "00:00" || data.toplamSureDakika === 0;
+          return data.isImported === true || bk.includes("SISTEM") || bk.includes("IMPORT") || bk.includes("EXCEL") || (isHatalıZaman && bk === "SISTEM");
       });
       if (toDelete.length === 0) { alert("Silinecek kayıt bulunamadı."); setLoading(false); return; }
       for (let i = 0; i < toDelete.length; i += 500) {
@@ -177,7 +179,7 @@ const [isAdmin, setIsAdmin] = useState(false);
         const snap = await getDocs(collection(db, coll));
         dbBackup[coll] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       }
-      const payload = { database: dbBackup, dna: "ULTIMATE_V13", date: new Date().toISOString() };
+      const payload = { database: dbBackup, dna: "ULTIMATE_V14", date: new Date().toISOString() };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
@@ -416,14 +418,14 @@ const handleSystemReset = async () => {
             <div className="p-6 overflow-y-auto flex-1">
               <table className="w-full text-left text-[10px]">
                 <thead className="sticky top-0 bg-slate-900 text-orange-500/70 border-b border-slate-800">
-                  <tr><th className="p-3">Tarih</th><th className="p-3">Zaman</th><th className="p-3">Süre</th><th className="p-3">Hat</th><th className="p-3">Ekipman</th><th className="p-3">Duruş</th></tr>
+                  <tr><th className="p-3">Tarih</th><th className="p-3">Başl - Bit</th><th className="p-3">Süre</th><th className="p-3">Hat</th><th className="p-3">Ekipman</th><th className="p-3">Duruş</th></tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800">
                   {importPreview.slice(0, 100).map((row, idx) => (
                     <tr key={idx} className="hover:bg-orange-500/5">
                       <td className="p-3 text-slate-400">{row.baslangicTarihi}</td>
                       <td className="p-3 text-indigo-400">{row.baslangicSaati} - {row.bitisSaati}</td>
-                      <td className="p-3 text-amber-500">{row.toplamSure} DK</td>
+                      <td className="p-3 text-amber-500">{row.toplamSureDakika} DK</td>
                       <td className="p-3 text-emerald-400 font-black">{row.hatAdi}</td>
                       <td className="p-3 text-white">{row.ekipmanAdi}</td>
                       <td className="p-3">{row.isDuruslu ? '🔴 VAR' : '🟢 YOK'}</td>
@@ -434,9 +436,7 @@ const handleSystemReset = async () => {
             </div>
             <div className="p-8 border-t border-slate-800 bg-slate-900/50 flex justify-end gap-4 text-[10px]">
               <button onClick={() => setShowImportModal(false)} disabled={isImporting} className="bg-slate-800 px-8 py-3 rounded-xl text-white">İPTAL</button>
-              <button onClick={confirmImport} disabled={isImporting} className="bg-orange-600 text-white px-10 py-3 rounded-xl shadow-xl flex items-center gap-2">
-                {isImporting ? '⏳ AKTARILIYOR...' : '🚀 AKTARIMI BAŞLAT'}
-              </button>
+              <button onClick={confirmImport} disabled={isImporting} className="bg-orange-600 text-white px-10 py-3 rounded-xl shadow-xl">{isImporting ? '⏳ AKTARILIYOR...' : '🚀 AKTARIMI BAŞLAT'}</button>
             </div>
           </div>
         </div>

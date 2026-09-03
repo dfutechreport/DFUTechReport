@@ -79,16 +79,18 @@ const [isAdmin, setIsAdmin] = useState(false);
     }
     if (typeof val === 'number') {
       const totalSeconds = Math.round(val * 24 * 60 * 60);
-      const hours = Math.floor(totalSeconds / 3600);
-      const mins = Math.floor((totalSeconds % 3600) / 60);
-      return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+      const h = Math.floor(totalSeconds / 3600);
+      const m = Math.floor((totalSeconds % 3600) / 60);
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     }
     return "00:00";
   };
 
-  const normalizedGetCol = (row: any, keyword: string) => {
-    const kNormalized = keyword.replace(/[\sİıŞşĞğÜüÖö]/g, '').toUpperCase();
-    const key = Object.keys(row).find(k => k.replace(/[\sİıŞşĞğÜüÖö]/g, '').toUpperCase().includes(kNormalized));
+  const norm = (s: any) => String(s || "").replace(/[İIı]/g, 'I').replace(/[\sŞşĞğÜüÖö]/g, '').toUpperCase();
+
+  const getCol = (row: any, keyword: string) => {
+    const kNorm = norm(keyword);
+    const key = Object.keys(row).find(k => norm(k).includes(kNorm));
     return key ? row[key] : null;
   };
 
@@ -103,26 +105,25 @@ const [isAdmin, setIsAdmin] = useState(false);
       const data: any[] = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
       const aylar: any = { "OCAK":"01","ŞUBAT":"02","MART":"03","NİSAN":"04","MAYIS":"05","HAZİRAN":"06","TEMMUZ":"07","AĞUSTOS":"08","EYLÜL":"09","EKİM":"10","KASIM":"11","ARALIK":"12" };
       const mapped = data.map((row: any) => {
-        const ay = aylar[String(normalizedGetCol(row, "AY")||"").toUpperCase()] || "01";
-        const tarih = `${normalizedGetCol(row, "YIL")||"2026"}-${ay}-${String(normalizedGetCol(row, "GÜN")||"01").padStart(2, '0')}`;
-        const start = formatExcelTime(normalizedGetCol(row, "BASLANGIC"));
-        const end = formatExcelTime(normalizedGetCol(row, "BITIS"));
+        const ay = aylar[norm(getCol(row, "AY"))] || "01";
+        const tarih = `${getCol(row, "YIL")||"2026"}-${ay}-${String(getCol(row, "GÜN")||"01").padStart(2, '0')}`;
+        const start = formatExcelTime(getCol(row, "BASLANGIC"));
+        const end = formatExcelTime(getCol(row, "BITIS"));
         const [h1, m1] = start.split(':').map(Number);
         const [h2, m2] = end.split(':').map(Number);
         let duration = (h2 * 60 + m2) - (h1 * 60 + m1);
         if (duration < 0) duration += 1440;
-        const p1 = String(normalizedGetCol(row, "PERSONEL1") || "Sistem").trim();
+        const p1 = String(getCol(row, "PERSONEL1") || "Sistem").trim();
         return {
-          hatAdi: String(normalizedGetCol(row, "HAT") || "").trim(), ekipmanAdi: String(normalizedGetCol(row, "EKIPMAN") || "").trim(),
-          aciklama: normalizedGetCol(row, "YAPILANIS") || "-", baslangicTarihi: tarih, bitisTarihi: tarih,
+          hatAdi: String(getCol(row, "HAT") || "").trim(), ekipmanAdi: String(getCol(row, "EKIPMAN") || "").trim(),
+          aciklama: getCol(row, "IS") || "-", baslangicTarihi: tarih, bitisTarihi: tarih,
           baslangicSaati: start, bitisSaati: end, toplamSure: duration,
-          vardiya: normalizedGetCol(row, "VARDIYA") || "08:00 - 16:00", isDuruslu: String(normalizedGetCol(row, "DURUS") || "").toUpperCase() !== "YOK",
-          teknisyen: p1, yardimciTeknisyenler: [normalizedGetCol(row, "PERSONEL2"), normalizedGetCol(row, "PERSONEL3")].filter(p => p && p !== "-"),
+          vardiya: getCol(row, "VARDIYA") || "08:00 - 16:00", isDuruslu: String(getCol(row, "DURUS") || "").toUpperCase() !== "YOK",
+          teknisyen: p1, yardimciTeknisyenler: [getCol(row, "PERSONEL2"), getCol(row, "PERSONEL3")].filter(p => p && p !== "-"),
           bildirenKisi: p1, usedMaterials: [], durum: "Kapalı", kayitTarihi: new Date(), isImported: true
         };
       });
-      setImportPreview(mapped.filter(i => i.hatAdi));
-      setShowImportModal(true);
+      setImportPreview(mapped.filter(i => i.hatAdi)); setShowImportModal(true);
     };
     reader.readAsBinaryString(file);
   };
@@ -139,7 +140,7 @@ const [isAdmin, setIsAdmin] = useState(false);
         });
         await batch.commit();
       }
-      alert("Başarılı"); window.location.reload();
+      alert("Aktarım Başarılı"); setShowImportModal(false); window.location.reload();
     } catch (err) { alert(err); } finally { setIsImporting(false); }
   };
 
@@ -148,12 +149,11 @@ const [isAdmin, setIsAdmin] = useState(false);
     setLoading(true);
     try {
       const snap = await getDocs(collection(db, "maintenance_logs"));
-      const allDocs = snap.docs;
-      const toDelete = allDocs.filter(d => {
+      const toDelete = snap.docs.filter(d => {
           const data = d.data();
-          const bk = String(data.bildirenKisi || "").toUpperCase();
-          const isImp = data.isImported === true;
-          return isImp || bk.includes("SISTEM") || bk.includes("IMPORT") || bk.includes("EXCEL") || bk.includes("AKTARI") || bk === "" || bk === "-";
+          const bk = norm(data.bildirenKisi);
+          const tk = norm(data.teknisyen);
+          return data.isImported === true || bk.includes("SISTEM") || bk.includes("IMPORT") || bk.includes("EXCEL") || bk.includes("AKTARI") || bk === "" || tk.includes("SISTEM") || tk.includes("IMPORT");
       });
       if (toDelete.length === 0) { alert("Silinecek kayıt bulunamadı."); setLoading(false); return; }
       for (let i = 0; i < toDelete.length; i += 500) {
@@ -177,7 +177,7 @@ const [isAdmin, setIsAdmin] = useState(false);
         const snap = await getDocs(collection(db, coll));
         dbBackup[coll] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       }
-      const payload = { database: dbBackup, dna: "ULTIMATE_V12", date: new Date().toISOString() };
+      const payload = { database: dbBackup, dna: "ULTIMATE_V13", date: new Date().toISOString() };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
@@ -443,5 +443,4 @@ const handleSystemReset = async () => {
       )}
     </div>
   );
-}
 }

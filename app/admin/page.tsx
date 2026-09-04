@@ -300,16 +300,19 @@ const handleSystemReset = async () => {
   return (
     <div className="min-h-screen bg-[#020617] text-white p-4 md:p-8 font-sans overflow-x-hidden italic font-bold">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-10 border-b border-gray-800 pb-5 no-print">
-          <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-12 bg-white rounded p-1" /><h1 className="text-2xl font-black uppercase text-indigo-400">Komuta Merkezi</h1></div>
-          <div className="flex gap-3 items-center">
-             <button onClick={() => setShowKpiModal(true)} className="bg-indigo-500 hover:bg-indigo-400 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase shadow-lg border-2 border-white/20 animate-pulse">📈 KPI ANALİZ</button>
-             <Link href="/dashboard" className="bg-slate-800 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg">Vardiya Raporu</Link>
-             <button onClick={clearOldImports} className="bg-red-900 border border-red-500/30 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg font-black hover:bg-red-800">🗑️ TEMİZLE</button>
-             <label className="bg-orange-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg border border-orange-500/30 transition-all font-black cursor-pointer hover:bg-orange-500">📊 IMPORT <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleExcelImport} /></label>
-             <button onClick={downloadFullSnapshot} className="bg-emerald-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg italic font-black">💾 YEDEK</button>
-             <button onClick={handleCopyScript} type="button" className={`${copySuccess ? 'bg-indigo-500' : 'bg-slate-800'} px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg border border-indigo-500/30 transition-all font-black`}>{copySuccess ? '✓ KOPYALANDI' : '🧬 DNA'}</button>
-             <button onClick={()=>signOut(auth)} className="bg-red-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg">Çıkış</button>
+        <div className="flex flex-col lg:flex-row justify-between items-center gap-6 mb-10 border-b border-gray-800 pb-8 no-print">
+          <div className="flex items-center gap-4 w-full lg:w-auto justify-center lg:justify-start">
+            <img src="/dfulogo.png" className="h-12 bg-white rounded p-1" />
+            <h1 className="text-xl md:text-2xl font-black uppercase text-indigo-400 tracking-tighter">Komuta Merkezi</h1>
+          </div>
+          <div className="flex flex-wrap justify-center lg:justify-end gap-2 md:gap-3 w-full lg:w-auto">
+             <button onClick={() => setShowKpiModal(true)} className="bg-indigo-500 hover:bg-indigo-400 text-white px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border-2 border-white/20 animate-pulse">📈 KPI ANALİZ</button>
+             <Link href="/dashboard" className="bg-slate-800 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] uppercase shadow-lg">Vardiya Raporu</Link>
+             <button onClick={clearOldImports} className="bg-red-900 border border-red-500/30 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] uppercase shadow-lg font-black hover:bg-red-800">🗑️ TEMİZLE</button>
+             <label className="bg-orange-600 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] uppercase shadow-lg border border-orange-500/30 transition-all font-black cursor-pointer hover:bg-orange-500">📊 IMPORT <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleExcelImport} /></label>
+             <button onClick={downloadFullSnapshot} className="bg-emerald-600 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] uppercase shadow-lg italic font-black">💾 YEDEK</button>
+             <button onClick={handleCopyScript} type="button" className={`${copySuccess ? 'bg-indigo-500' : 'bg-slate-800'} px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] uppercase shadow-lg border border-indigo-500/30 transition-all font-black`}>{copySuccess ? '✓ KOPYALANDI' : '🧬 DNA'}</button>
+             <button onClick={()=>signOut(auth)} className="bg-red-600 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] uppercase shadow-lg">Çıkış</button>
           </div>
         </div>
 

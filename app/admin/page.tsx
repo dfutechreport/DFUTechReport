@@ -421,7 +421,7 @@ const handleSystemReset = async () => {
                       <Tooltip contentStyle={{backgroundColor:'rgba(15, 23, 42, 0.9)', border:'1px solid rgba(99, 102, 241, 0.5)', borderRadius:'20px', backdropFilter: 'blur(10px)'}} />
                       <Area yAxisId="right" type="monotone" name="İş Adedi" dataKey="adet" fill="#6366f133" stroke="#6366f1" />
                       <Bar yAxisId="left" dataKey="sure" name="Toplam Süre (DK)" fill="#818cf8" radius={[10, 10, 0, 0]} barSize={35} />
-                    </BarChart>
+                    
                   </ComposedChart>
                 </div>
               </div>

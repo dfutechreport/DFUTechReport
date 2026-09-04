@@ -423,6 +423,7 @@ const handleSystemReset = async () => {
                       <Bar yAxisId="left" dataKey="sure" name="Toplam Süre (DK)" fill="#818cf8" radius={[10, 10, 0, 0]} barSize={35} />
                     
                   </ComposedChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
             </div>
@@ -485,4 +486,5 @@ const handleSystemReset = async () => {
       )}
     </div>
   );
+}
 }

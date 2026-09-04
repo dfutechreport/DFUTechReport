@@ -1,13 +1,12 @@
 "use client";
+
 import { useState, useEffect } from "react";
-import { collection, getDocs, addDoc, doc, getDoc, updateDoc, deleteDoc, query, orderBy, serverTimestamp } from "firebase/firestore";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { collection, getDocs, addDoc, doc, getDoc, updateDoc, deleteDoc, query, orderBy } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../../../lib/firebase";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 export default function SayacOkuma() {
-  const router = useRouter();
   const [userRole, setUserRole] = useState("");
   const [userName, setUserName] = useState("");
   const [loading, setLoading] = useState(true);
@@ -19,31 +18,9 @@ export default function SayacOkuma() {
   const [girisDegerleri, setGirisDegerleri] = useState<Record<string, string>>({});
   const [seciliTarih, setSeciliTarih] = useState(new Date().toISOString().split('T')[0]);
 
-  const handleLogout = async () => {
-    if (window.confirm("Oturum kapatılacaktır?")) {
-      await signOut(auth);
-      router.push("/");
-    }
-  };
-
-  const handleBack = () => {
-    const role = userRole ? userRole.toLowerCase().trim() : "";
-    if (role === "admin") router.push("/admin");
-    else if (role === "ik") router.push("/admin/mesai");
-    else if (role === "depo") router.push("/admin/yedek-parca");
-    else if (role === "isg") router.push("/isg");
-    else if (role === "uretim") router.push("/admin/tamamlanan-isler");
-    else router.push("/dashboard");
-  };
-"use client";
-
-import { useState, useEffect } from "react";
-import { collection, getDocs, addDoc, doc, getDoc, updateDoc, deleteDoc, query, orderBy } from "firebase/firestore";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth, db } from "../../../lib/firebase";
-import Link from "next/link";
-
-
+  const [yeniSayacAdi, setYeniSayacAdi] = useState("");
+  const [editModal, setEditModal] = useState(false);
+  const [duzenlenenLog, setDuzenlenenLog] = useState<any>(null);
 
   const fetchVeriler = async () => {
     try {

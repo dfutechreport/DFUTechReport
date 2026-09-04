@@ -79,6 +79,8 @@ const [isAdmin, setIsAdmin] = useState(false);
   const [kpiFHat, setKpiFHat] = useState("");
   const [kpiFPersonel, setKpiFPersonel] = useState("");
   const [kpiFDurus, setKpiFDurus] = useState("HEPSİ");
+  const [showMeterImportModal, setShowMeterImportModal] = useState(false);
+  const [isMeterImporting, setIsMeterImporting] = useState(false);
 
   const formatExcelTime = (val: any) => {
     if (val === null || val === undefined || val === "") return "00:00";
@@ -212,6 +214,103 @@ const handleSystemReset = async () => {
     }
   };
 
+  
+  const handleMeterDataImport = async (files: FileList) => {
+    if (files.length === 0) return;
+    setIsMeterImporting(true);
+    try {
+      if (!window.confirm("DİKKAT: Bu işlem mevcut tüm sayaç verilerini silecek ve Excel'den yenilerini yükleyecektir. Emin misiniz?")) {
+        setIsMeterImporting(false);
+        return;
+      }
+
+      // 1. MEVCUT VERİLERİ TEMİZLE (Parçalı Silme)
+      const logSnap = await getDocs(collection(db, "meter_logs"));
+      const allDocs = logSnap.docs;
+      for (let i = 0; i < allDocs.length; i += 500) {
+        const batch = writeBatch(db);
+        allDocs.slice(i, i + 500).forEach(d => batch.delete(d.ref));
+        await batch.commit();
+      }
+
+      const uniqueMeters: Record<string, string[]> = { "Elektrik": [], "Su": [], "Doğalgaz": [] };
+      const allLogs: any[] = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data);
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+        let type = "Su"; // Default
+        const fn = file.name.toUpperCase();
+        if (fn.includes("ELEK")) type = "Elektrik";
+        else if (fn.includes("DOGAL") || fn.includes("DOĞAL")) type = "Doğalgaz";
+        else if (fn.includes("SU")) type = "Su";
+
+        jsonData.forEach(row => {
+          const rawTs = row["Zaman damgası"];
+          if (!rawTs) return;
+          let dateStr = "";
+          try {
+            if (typeof rawTs === 'number') {
+              const d = new Date((rawTs - 25569) * 86400 * 1000);
+              dateStr = d.toISOString().split('T')[0];
+            } else {
+              dateStr = new Date(rawTs).toISOString().split('T')[0];
+            }
+          } catch(e) { return; }
+
+          Object.keys(row).forEach(key => {
+            if (key !== "Zaman damgası" && key !== "id") {
+              const val = Number(row[key]);
+              if (!isNaN(val)) {
+                if (!uniqueMeters[type].includes(key)) uniqueMeters[type].push(key);
+                allLogs.push({
+                  sayacAdi: key,
+                  deger: val,
+                  tarih: dateStr,
+                  tip: type,
+                  personel: "Sistem Aktarımı",
+                  timestamp: serverTimestamp()
+                });
+              }
+            }
+          });
+        });
+      }
+
+      // 2. YENİ VERİLERİ YÜKLE (Batch)
+      for (let i = 0; i < allLogs.length; i += 500) {
+        const subBatch = writeBatch(db);
+        allLogs.slice(i, i + 500).forEach(log => {
+          const newRef = doc(collection(db, "meter_logs"));
+          subBatch.set(newRef, log);
+        });
+        await subBatch.commit();
+      }
+
+      // 3. SAYAÇ TANIMLARINI OLUŞTUR (Dashboard uyumu için)
+      const meterBatch = writeBatch(db);
+      for (const [tip, adlar] of Object.entries(uniqueMeters)) {
+        for (const ad of adlar) {
+          const mId = `${tip}_${ad}`.replace(/\s+/g, '_').replace(/[İIıŞşĞğÜüÖöÇç]/g, 'x');
+          meterBatch.set(doc(db, "meters", mId), { adi: ad, tip: tip }, { merge: true });
+        }
+      }
+      await meterBatch.commit();
+
+      alert(`${allLogs.length} adet veri başarıyla yüklendi.`);
+      setShowMeterImportModal(false);
+      window.location.reload();
+    } catch (e: any) {
+      alert("Hata: " + e.message);
+    } finally {
+      setIsMeterImporting(false);
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -250,6 +349,103 @@ const handleSystemReset = async () => {
     } catch (e) { console.error(e); }
   };
 
+  
+  const handleMeterDataImport = async (files: FileList) => {
+    if (files.length === 0) return;
+    setIsMeterImporting(true);
+    try {
+      if (!window.confirm("DİKKAT: Bu işlem mevcut tüm sayaç verilerini silecek ve Excel'den yenilerini yükleyecektir. Emin misiniz?")) {
+        setIsMeterImporting(false);
+        return;
+      }
+
+      // 1. MEVCUT VERİLERİ TEMİZLE (Parçalı Silme)
+      const logSnap = await getDocs(collection(db, "meter_logs"));
+      const allDocs = logSnap.docs;
+      for (let i = 0; i < allDocs.length; i += 500) {
+        const batch = writeBatch(db);
+        allDocs.slice(i, i + 500).forEach(d => batch.delete(d.ref));
+        await batch.commit();
+      }
+
+      const uniqueMeters: Record<string, string[]> = { "Elektrik": [], "Su": [], "Doğalgaz": [] };
+      const allLogs: any[] = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data);
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+        let type = "Su"; // Default
+        const fn = file.name.toUpperCase();
+        if (fn.includes("ELEK")) type = "Elektrik";
+        else if (fn.includes("DOGAL") || fn.includes("DOĞAL")) type = "Doğalgaz";
+        else if (fn.includes("SU")) type = "Su";
+
+        jsonData.forEach(row => {
+          const rawTs = row["Zaman damgası"];
+          if (!rawTs) return;
+          let dateStr = "";
+          try {
+            if (typeof rawTs === 'number') {
+              const d = new Date((rawTs - 25569) * 86400 * 1000);
+              dateStr = d.toISOString().split('T')[0];
+            } else {
+              dateStr = new Date(rawTs).toISOString().split('T')[0];
+            }
+          } catch(e) { return; }
+
+          Object.keys(row).forEach(key => {
+            if (key !== "Zaman damgası" && key !== "id") {
+              const val = Number(row[key]);
+              if (!isNaN(val)) {
+                if (!uniqueMeters[type].includes(key)) uniqueMeters[type].push(key);
+                allLogs.push({
+                  sayacAdi: key,
+                  deger: val,
+                  tarih: dateStr,
+                  tip: type,
+                  personel: "Sistem Aktarımı",
+                  timestamp: serverTimestamp()
+                });
+              }
+            }
+          });
+        });
+      }
+
+      // 2. YENİ VERİLERİ YÜKLE (Batch)
+      for (let i = 0; i < allLogs.length; i += 500) {
+        const subBatch = writeBatch(db);
+        allLogs.slice(i, i + 500).forEach(log => {
+          const newRef = doc(collection(db, "meter_logs"));
+          subBatch.set(newRef, log);
+        });
+        await subBatch.commit();
+      }
+
+      // 3. SAYAÇ TANIMLARINI OLUŞTUR (Dashboard uyumu için)
+      const meterBatch = writeBatch(db);
+      for (const [tip, adlar] of Object.entries(uniqueMeters)) {
+        for (const ad of adlar) {
+          const mId = `${tip}_${ad}`.replace(/\s+/g, '_').replace(/[İIıŞşĞğÜüÖöÇç]/g, 'x');
+          meterBatch.set(doc(db, "meters", mId), { adi: ad, tip: tip }, { merge: true });
+        }
+      }
+      await meterBatch.commit();
+
+      alert(`${allLogs.length} adet veri başarıyla yüklendi.`);
+      setShowMeterImportModal(false);
+      window.location.reload();
+    } catch (e: any) {
+      alert("Hata: " + e.message);
+    } finally {
+      setIsMeterImporting(false);
+    }
+  };
+
   useEffect(() => {
     if (rawLogs.length === 0) return;
     let isC=0, suC=0, duC=0; const hD:any = {}, pD:any = {}, eD:any = {};
@@ -269,6 +465,103 @@ const handleSystemReset = async () => {
     setPersonelPerformans(Object.keys(pD).map(k=>({ isim: k, ...pD[k] })).sort((a,b)=> b.isSayisi - a.isSayisi));
     setEkipmanPerformans(Object.keys(eD).map(k=>({ ekipman: k, ...eD[k] })).sort((a,b)=>b.count-a.count).slice(0, 5));
   }, [rawLogs, filterYil]);
+
+  
+  const handleMeterDataImport = async (files: FileList) => {
+    if (files.length === 0) return;
+    setIsMeterImporting(true);
+    try {
+      if (!window.confirm("DİKKAT: Bu işlem mevcut tüm sayaç verilerini silecek ve Excel'den yenilerini yükleyecektir. Emin misiniz?")) {
+        setIsMeterImporting(false);
+        return;
+      }
+
+      // 1. MEVCUT VERİLERİ TEMİZLE (Parçalı Silme)
+      const logSnap = await getDocs(collection(db, "meter_logs"));
+      const allDocs = logSnap.docs;
+      for (let i = 0; i < allDocs.length; i += 500) {
+        const batch = writeBatch(db);
+        allDocs.slice(i, i + 500).forEach(d => batch.delete(d.ref));
+        await batch.commit();
+      }
+
+      const uniqueMeters: Record<string, string[]> = { "Elektrik": [], "Su": [], "Doğalgaz": [] };
+      const allLogs: any[] = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data);
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+        let type = "Su"; // Default
+        const fn = file.name.toUpperCase();
+        if (fn.includes("ELEK")) type = "Elektrik";
+        else if (fn.includes("DOGAL") || fn.includes("DOĞAL")) type = "Doğalgaz";
+        else if (fn.includes("SU")) type = "Su";
+
+        jsonData.forEach(row => {
+          const rawTs = row["Zaman damgası"];
+          if (!rawTs) return;
+          let dateStr = "";
+          try {
+            if (typeof rawTs === 'number') {
+              const d = new Date((rawTs - 25569) * 86400 * 1000);
+              dateStr = d.toISOString().split('T')[0];
+            } else {
+              dateStr = new Date(rawTs).toISOString().split('T')[0];
+            }
+          } catch(e) { return; }
+
+          Object.keys(row).forEach(key => {
+            if (key !== "Zaman damgası" && key !== "id") {
+              const val = Number(row[key]);
+              if (!isNaN(val)) {
+                if (!uniqueMeters[type].includes(key)) uniqueMeters[type].push(key);
+                allLogs.push({
+                  sayacAdi: key,
+                  deger: val,
+                  tarih: dateStr,
+                  tip: type,
+                  personel: "Sistem Aktarımı",
+                  timestamp: serverTimestamp()
+                });
+              }
+            }
+          });
+        });
+      }
+
+      // 2. YENİ VERİLERİ YÜKLE (Batch)
+      for (let i = 0; i < allLogs.length; i += 500) {
+        const subBatch = writeBatch(db);
+        allLogs.slice(i, i + 500).forEach(log => {
+          const newRef = doc(collection(db, "meter_logs"));
+          subBatch.set(newRef, log);
+        });
+        await subBatch.commit();
+      }
+
+      // 3. SAYAÇ TANIMLARINI OLUŞTUR (Dashboard uyumu için)
+      const meterBatch = writeBatch(db);
+      for (const [tip, adlar] of Object.entries(uniqueMeters)) {
+        for (const ad of adlar) {
+          const mId = `${tip}_${ad}`.replace(/\s+/g, '_').replace(/[İIıŞşĞğÜüÖöÇç]/g, 'x');
+          meterBatch.set(doc(db, "meters", mId), { adi: ad, tip: tip }, { merge: true });
+        }
+      }
+      await meterBatch.commit();
+
+      alert(`${allLogs.length} adet veri başarıyla yüklendi.`);
+      setShowMeterImportModal(false);
+      window.location.reload();
+    } catch (e: any) {
+      alert("Hata: " + e.message);
+    } finally {
+      setIsMeterImporting(false);
+    }
+  };
 
   useEffect(() => {
     if (rawMeterLogs.length === 0) return;
@@ -534,6 +827,19 @@ const handleSystemReset = async () => {
             <div className="p-8 border-t border-slate-800 bg-slate-900/50 flex justify-end gap-4 text-[10px] font-black uppercase"><button onClick={() => setShowImportModal(false)} disabled={isImporting} className="bg-slate-800 px-8 py-3 rounded-xl text-white hover:bg-slate-700">İPTAL</button><button onClick={confirmImport} disabled={isImporting} className="bg-orange-600 text-white px-10 py-3 rounded-xl shadow-xl hover:bg-orange-500 flex items-center gap-2">
                 {isImporting ? '⏳ AKTARILIYOR...' : '🚀 AKTARIMI BAŞLAT'}
               </button></div>
+          </div>
+        </div>
+      )}
+
+      {showMeterImportModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/95 backdrop-blur-xl" onClick={() => !isMeterImporting && setShowMeterImportModal(false)}></div>
+          <div className="relative bg-slate-900 border-2 border-emerald-500/30 w-full max-w-md rounded-[3rem] shadow-2xl p-10 flex flex-col items-center text-center">
+            <h2 className="text-xl font-black text-white uppercase tracking-widest mb-6">Sayaç DNA Aktarımı</h2>
+            <p className="text-xs text-slate-400 mb-8 uppercase font-bold italic">Lütfen Elektrik, Su ve Doğalgaz dosyalarını seçin.</p>
+            <input type="file" multiple accept=".xlsx, .xls" onChange={(e) => e.target.files && handleMeterDataImport(e.target.files)} disabled={isMeterImporting} className="w-full text-xs text-slate-500 file:bg-emerald-600 file:text-white file:border-0 file:py-3 file:px-6 file:rounded-full file:font-black file:uppercase cursor-pointer" />
+            {isMeterImporting && <div className="mt-8 text-[10px] text-emerald-400 font-black animate-pulse">VERİLER YAZILIYOR, LÜTFEN BEKLEYİN...</div>}
+            {!isMeterImporting && <button onClick={() => setShowMeterImportModal(false)} className="mt-8 text-[10px] text-slate-600 uppercase font-black">KAPAT</button>}
           </div>
         </div>
       )}

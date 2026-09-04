@@ -17,6 +17,11 @@ export default function SayacOkuma() {
   const [gecmisOkumalar, setGecmisOkumalar] = useState<any[]>([]);
   const [girisDegerleri, setGirisDegerleri] = useState<Record<string, string>>({});
   const [seciliTarih, setSeciliTarih] = useState(new Date().toISOString().split('T')[0]);
+  
+  // FIXED: Geri eklenen eksik state'ler
+  const [yeniSayacAdi, setYeniSayacAdi] = useState("");
+  const [editModal, setEditModal] = useState(false);
+  const [duzenlenenLog, setDuzenlenenLog] = useState<any>(null);
 
   const handleLogout = async () => {
     if (window.confirm("Oturum kapatılacaktır?")) { await signOut(auth); router.push("/"); }

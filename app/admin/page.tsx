@@ -448,9 +448,7 @@ const handleSystemReset = async () => {
                         const groups: any = {};
                         filtered.forEach(f => {
                           const key = kpiFHat ? f.ekipmanAdi : f.hatAdi;
-                          if(!groups[key]) groups[key] = { name: key, sure: 0, logs: [] };
-                          groups[key].sure += Number(f.toplamSureDakika) || 0;
-                          groups[key].logs.push(f);
+                          if(!groups[key]) groups[key] = { name: key, sure: 0, adet: 0, logs: [] }; groups[key].sure += Number(f.toplamSureDakika) || 0; groups[key].adet += 1; groups[key].logs.push(f);
                         });
                         return Object.values(groups).sort((a:any, b:any) => b.sure - a.sure);
                       })()}
@@ -468,13 +466,13 @@ const handleSystemReset = async () => {
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                       <XAxis dataKey="name" stroke="#94a3b8" fontSize={9} tickLine={false} axisLine={false} tick={{fill: '#94a3b8'}} />
-                      <YAxis stroke="#94a3b8" fontSize={9} tickLine={false} axisLine={false} />
+                      <YAxis yAxisId="left" stroke="#94a3b8" fontSize={9} tickLine={false} axisLine={false} /> <YAxis yAxisId="right" orientation="right" stroke="#6366f1" fontSize={9} tickLine={false} axisLine={false} />
                       <Tooltip 
                         contentStyle={{backgroundColor:'rgba(15, 23, 42, 0.9)', border:'1px solid rgba(99, 102, 241, 0.5)', borderRadius:'20px', backdropFilter: 'blur(10px)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)'}}
                         itemStyle={{color: '#818cf8', fontWeight: 'bold'}}
                       />
-                      <Area type="monotone" dataKey="sure" fill="url(#areaGradient)" stroke="#6366f1" strokeWidth={2} />
-                      <Bar dataKey="sure" fill="url(#barGradient)" radius={[15, 15, 0, 0]} barSize={35} animationDuration={1500} />
+                      <Area yAxisId="right" type="monotone" name="İş Adedi" dataKey="adet" fill="url(#areaGradient)" stroke="#6366f1" strokeWidth={2} />
+                      <Bar yAxisId="left" dataKey="sure" name="Toplam Süre (DK)" fill="url(#barGradient)" radius={[15, 15, 0, 0]} barSize={35} animationDuration={1500} />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>

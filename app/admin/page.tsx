@@ -555,7 +555,7 @@ const handleSystemReset = async () => {
                         });
                         return Object.values(groups).sort((a:any, b:any) => b.sure - a.sure);
                       })()}
-                      onClick={(data) => {
+                      onClick={(data: any) => {
                         if(data && data.activePayload) {
                           setSelectedKpiLogDetails(data.activePayload[0].payload.logs);
                           setShowKpiDetailWindow(true);

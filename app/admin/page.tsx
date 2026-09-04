@@ -470,7 +470,7 @@ const handleSystemReset = async () => {
                       <XAxis dataKey="name" stroke="#94a3b8" fontSize={9} tickLine={false} axisLine={false} tick={{fill: '#94a3b8'}} />
                       <YAxis stroke="#94a3b8" fontSize={9} tickLine={false} axisLine={false} />
                       <Tooltip 
-                        contentStyle={{backgroundColor:'rgba(15, 23, 42, 0.9)', border:'1px solid rgba(99, 102, 241, 0.5)', borderRadius:'20px', backdropBlur: '10px', boxShadow: '0 20px 50px rgba(0,0,0,0.5)'}}
+                        contentStyle={{backgroundColor:'rgba(15, 23, 42, 0.9)', border:'1px solid rgba(99, 102, 241, 0.5)', borderRadius:'20px', backdropFilter: 'blur(10px)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)'}}
                         itemStyle={{color: '#818cf8', fontWeight: 'bold'}}
                       />
                       <Area type="monotone" dataKey="sure" fill="url(#areaGradient)" stroke="#6366f1" strokeWidth={2} />

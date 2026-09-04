@@ -12,7 +12,6 @@ export default function SayacOkuma() {
   const [userName, setUserName] = useState("");
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
   const [aktifSekme, setAktifSekme] = useState("Elektrik");
   const [sayaclar, setSayaclar] = useState<any[]>([]);
   const [gecmisOkumalar, setGecmisOkumalar] = useState<any[]>([]);
@@ -20,10 +19,7 @@ export default function SayacOkuma() {
   const [seciliTarih, setSeciliTarih] = useState(new Date().toISOString().split('T')[0]);
 
   const handleLogout = async () => {
-    if (window.confirm("Oturum kapatılacaktır?")) {
-      await signOut(auth);
-      router.push("/");
-    }
+    if (window.confirm("Oturum kapatılacaktır?")) { await signOut(auth); router.push("/"); }
   };
 
   const handleBack = () => {
@@ -35,17 +31,7 @@ export default function SayacOkuma() {
     else if (role === "uretim") router.push("/admin/tamamlanan-isler");
     else router.push("/dashboard");
   };
-"use client";
-
-import { useState, useEffect } from "react";
-import { collection, getDocs, addDoc, doc, getDoc, updateDoc, deleteDoc, query, orderBy } from "firebase/firestore";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth, db } from "../../../lib/firebase";
-import Link from "next/link";
-
-
-
-  const fetchVeriler = async () => {
+const fetchVeriler = async () => {
     try {
       const sayacSnap = await getDocs(collection(db, "meters"));
       setSayaclar(sayacSnap.docs.map(d => ({ id: d.id, ...d.data() })));

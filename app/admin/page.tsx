@@ -4,26 +4,28 @@ import { useEffect, useState, Suspense } from "react";
 import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, setDoc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, db } from "../../lib/firebase"; 
-import { ComposedChart, BarChart, Bar, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid } from 'recharts';
+import { BarChart, Bar, Area, ComposedChart, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid } from 'recharts';
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 const RCA_CATEGORIES = [
-  { id: "insan", label: "İnsan", color: "#3B82F6" }, 
-  { id: "makine", label: "Makine", color: "#EF4444" },
-  { id: "malzeme", label: "Malzeme", color: "#10B981" }, 
-  { id: "metot", label: "Metot", color: "#F59E0B" },
+  { id: "insan", label: "İnsan", color: "#3B82F6" }, { id: "makine", label: "Makine", color: "#EF4444" },
+  { id: "malzeme", label: "Malzeme", color: "#10B981" }, { id: "metot", label: "Metot", color: "#F59E0B" },
   { id: "ortam", label: "Ortam", color: "#8B5CF6" }
 ];
 
 export default function AdminDashboard() {
   const router = useRouter();
-const [isAdmin, setIsAdmin] = useState(false);
-  const [userRole, setUserRole] = useState(""); 
-  const [userName, setUserName] = useState(""); 
+
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [userRole, setUserRole] = useState("");
+  const [userName, setUserName] = useState("");
   const [loading, setLoading] = useState(true);
-  
-  // VERİ HAVUZLARI
+  const [copySuccess, setCopySuccess] = useState(false);
+  const [importPreview, setImportPreview] = useState<any[]>([]);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+
   const [rawLogs, setRawLogs] = useState<any[]>([]);
   const [rcaLogs, setRcaLogs] = useState<any[]>([]);
   const [rawMeterLogs, setRawMeterLogs] = useState<any[]>([]);
@@ -31,8 +33,6 @@ const [isAdmin, setIsAdmin] = useState(false);
   const [aktifIsgAlarmlari, setAktifIsgAlarmlari] = useState<any[]>([]);
   const [aktifEked, setAktifEked] = useState<any[]>([]);
   const [kpiOnayBekleyen, setKpiOnayBekleyen] = useState(0);
-
-  // MODAL VE FİLTRE STATE'LERİ
   const [showEkedModal, setShowEkedModal] = useState(false);
   const [selectedEked, setSelectedEked] = useState<any>(null);
   const [selectedVaka, setSelectedVaka] = useState<any>(null);
@@ -40,7 +40,6 @@ const [isAdmin, setIsAdmin] = useState(false);
   const [showRcaModal, setShowRcaModal] = useState(false);
   const [selectedLogForRca, setSelectedLogForRca] = useState<any>(null);
   const [rcaForm, setRcaForm] = useState({ category: "", why: "" });
-  
   const [filterYil, setFilterYil] = useState(new Date().getFullYear().toString());
   const [filterElekSayac, setFilterElekSayac] = useState("");
   const [filterGazSayac, setFilterGazSayac] = useState("");
@@ -48,8 +47,6 @@ const [isAdmin, setIsAdmin] = useState(false);
   const [elekSayacList, setElekSayacList] = useState<string[]>([]);
   const [gazSayacList, setGazSayacList] = useState<string[]>([]);
   const [suSayacList, setSuSayacList] = useState<string[]>([]);
-
-  // HESAPLANAN VERİLER
   const [kpiTotals, setKpiTotals] = useState({ is: 0, sure: 0, durus: 0, mttr: 0 });
   const [grafikIsHatti, setGrafikIsHatti] = useState<any[]>([]);
   const [personelPerformans, setPersonelPerformans] = useState<any[]>([]);
@@ -57,19 +54,6 @@ const [isAdmin, setIsAdmin] = useState(false);
   const [grafikElek, setGrafikElek] = useState<any[]>([]);
   const [grafikGaz, setGrafikGaz] = useState<any[]>([]);
   const [grafikSu, setGrafikSu] = useState<any[]>([]);
-
-  const RCA_CATEGORIES = [
-    { id: "insan", label: "İnsan", color: "#3B82F6" }, { id: "makine", label: "Makine", color: "#EF4444" },
-    { id: "malzeme", label: "Malzeme", color: "#10B981" }, { id: "metot", label: "Metot", color: "#F59E0B" },
-    { id: "ortam", label: "Ortam", color: "#8B5CF6" }
-  ];
-
-  // --- ŞİFRE KORUMALI SNAPSHOT VE RESET ---
-  
-  const [copySuccess, setCopySuccess] = useState(false);
-  const [importPreview, setImportPreview] = useState<any[]>([]);
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
 
   const [showKpiModal, setShowKpiModal] = useState(false);
   const [selectedKpiLogDetails, setSelectedKpiLogDetails] = useState<any[]>([]);
@@ -83,16 +67,14 @@ const [isAdmin, setIsAdmin] = useState(false);
   const [isMeterImporting, setIsMeterImporting] = useState(false);
 
   const formatExcelTime = (val: any) => {
-    if (val === null || val === undefined || val === "") return "00:00";
+    if (!val) return "00:00";
     if (typeof val === 'string') {
       const m = val.match(/(\d{1,2})[:.](\d{1,2})/);
       return m ? `${m[1].padStart(2, '0')}:${m[2].padStart(2, '0')}` : "00:00";
     }
     if (typeof val === 'number') {
       const totalSeconds = Math.round(val * 24 * 60 * 60);
-      const h = Math.floor(totalSeconds / 3600);
-      const m = Math.floor((totalSeconds % 3600) / 60);
-      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      return `${String(Math.floor(totalSeconds / 3600)).padStart(2, '0')}:${String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0')}`;
     }
     return "00:00";
   };
@@ -114,7 +96,7 @@ const [isAdmin, setIsAdmin] = useState(false);
       if (!bstr) return;
       const wb = XLSX.read(bstr, { type: 'binary' });
       const data: any[] = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-      const aylar: any = { "OCAK":"01","SUBAT":"02","MART":"03","NISAN":"04","MAYIS":"05","HAZIRAN":"06","TEMMUZ":"07","AGUSTOS":"08","EYLUL":"09","EKIM":"10","KASIM":"11","ARALIK":"12" };
+      const aylar: any = { "OCAK":"01","SUBAT":"02","MART":"03","NISAN":"04","MAYIS":"05","HAZİRAN":"06","TEMMUZ":"07","AGUSTOS":"08","EYLUL":"09","EKIM":"10","KASIM":"11","ARALIK":"12" };
       const mapped = data.map((row: any) => {
         const ayRaw = String(getCol(row, "AY") || "");
         const ay = aylar[norm(ayRaw)] || "01";
@@ -141,7 +123,7 @@ const [isAdmin, setIsAdmin] = useState(false);
   };
 
   const confirmImport = async () => {
-    if (!window.confirm(`${importPreview.length} kayıt aktarılsın mı?`)) return;
+    if (!window.confirm("Aktarım başlatılsın mı?")) return;
     setIsImporting(true);
     try {
       for (let i = 0; i < importPreview.length; i += 500) {
@@ -157,31 +139,77 @@ const [isAdmin, setIsAdmin] = useState(false);
   };
 
   const clearOldImports = async () => {
-    if (!window.confirm("TÜM SİSTEM TEMİZLENECEK. EMİN MİSİNİZ?")) return;
+    if (!window.confirm("KORUNANLAR DIŞINDAKİ TÜM KAYITLAR SİLİNECEK?")) return;
     setLoading(true);
     try {
       const snap = await getDocs(collection(db, "maintenance_logs"));
-      const allDocs = snap.docs;
       const allowed = ["DFUTECHREPORT", "HALILCAKIR", "TEKNIKSERVIS"];
-      const toDelete = allDocs.filter(d => {
+      const toDelete = snap.docs.filter(d => {
           const data = d.data();
           const bk = norm(data.bildirenKisi);
           const tk = norm(data.teknisyen);
           const isAllowed = allowed.some(a => bk.includes(a) || tk.includes(a));
           return !isAllowed || data.isImported === true;
       });
-      if (toDelete.length === 0) { alert("Silinecek kayıt bulunamadı."); setLoading(false); return; }
       for (let i = 0; i < toDelete.length; i += 500) {
         const batch = writeBatch(db);
         toDelete.slice(i, i + 500).forEach(d => batch.delete(d.ref));
         await batch.commit();
       }
-      alert(`${toDelete.length} kayıt temizlendi.`); window.location.reload();
+      alert(`${toDelete.length} kayıt silindi.`); window.location.reload();
     } catch (err) { alert("Hata: " + err); setLoading(false); }
   };
 
-  const dnaScript = "Get-ChildItem -Recurse -Include *.tsx,*.ts | ForEach-Object { \"--- FILE: $($_.FullName) ---\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt; Get-Content $_.FullName | Out-File -Append PROJE_DOKUMU.txt; [char]96 + \"n\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt }";
-  const handleCopyScript = () => { navigator.clipboard.writeText(dnaScript); setCopySuccess(true); setTimeout(() => setCopySuccess(false), 3000); };
+  const handleMeterDataImport = async (files: FileList) => {
+    if (files.length === 0) return;
+    setIsMeterImporting(true);
+    try {
+      if (!window.confirm("Mevcut sayaç verileri silinecektir?")) { setIsMeterImporting(false); return; }
+      const logSnap = await getDocs(collection(db, "meter_logs"));
+      const allLogDocs = logSnap.docs;
+      for (let i = 0; i < allLogDocs.length; i += 500) {
+        const b = writeBatch(db);
+        allLogDocs.slice(i, i + 500).forEach(d => b.delete(d.ref));
+        await b.commit();
+      }
+      const uniqueMeters: Record<string, string[]> = { "Elektrik": [], "Su": [], "Doğalgaz": [] };
+      const allLogs: any[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const workbook = XLSX.read(await file.arrayBuffer());
+        const data: any[] = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+        let type = file.name.toUpperCase().includes("ELEK") ? "Elektrik" : file.name.toUpperCase().includes("DOGAL") || file.name.toUpperCase().includes("DOĞAL") ? "Doğalgaz" : "Su";
+        data.forEach(row => {
+          const rawTs = row["Zaman damgası"];
+          const dateStr = typeof rawTs === 'number' ? new Date((rawTs - 25569) * 86400 * 1000).toISOString().split('T')[0] : new Date(rawTs).toISOString().split('T')[0];
+          Object.keys(row).forEach(key => {
+            if (key !== "Zaman damgası" && !isNaN(Number(row[key]))) {
+              if (!uniqueMeters[type].includes(key)) uniqueMeters[type].push(key);
+              allLogs.push({ sayacAdi: key, deger: Number(row[key]), tarih: dateStr, tip: type, personel: "Sistem", timestamp: serverTimestamp() });
+            }
+          });
+        });
+      }
+      for (let i = 0; i < allLogs.length; i += 500) {
+        const b = writeBatch(db);
+        allLogs.slice(i, i + 500).forEach(l => b.set(doc(collection(db, "meter_logs")), l));
+        await b.commit();
+      }
+      const mBatch = writeBatch(db);
+      for (const [t, ads] of Object.entries(uniqueMeters)) {
+        for (const ad of ads) mBatch.set(doc(db, "meters", `${t}_${ad}`.replace(/\s+/g,'_')), { adi: ad, tip: t }, { merge: true });
+      }
+      await mBatch.commit();
+      alert("Sayaçlar güncellendi."); window.location.reload();
+    } catch (e: any) { alert(e.message); } finally { setIsMeterImporting(false); }
+  };
+
+  const handleCopyScript = () => {
+    const dnaScript = "Get-ChildItem -Recurse -Include *.tsx,*.ts | ForEach-Object { \"--- FILE: $($_.FullName) ---\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt; Get-Content $_.FullName | Out-File -Append PROJE_DOKUMU.txt; [char]96 + \"n\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt }";
+    navigator.clipboard.writeText(dnaScript);
+    setCopySuccess(true);
+    setTimeout(() => setCopySuccess(false), 3000);
+  };
 
   const downloadFullSnapshot = async () => {
     if (window.prompt("Şifre:") !== "161004") return alert("Hatalı!");
@@ -192,12 +220,10 @@ const [isAdmin, setIsAdmin] = useState(false);
         const snap = await getDocs(collection(db, coll));
         dbBackup[coll] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       }
-      const payload = { database: dbBackup, dna: "ULTIMATE_V23", date: new Date().toISOString() };
+      const payload = { database: dbBackup, dna: "ULTIMATE_V27", date: new Date().toISOString() };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = `DFU_MASTER_DNA_BACKUP.json`;
-      link.click();
+      const link = document.createElement("a"); link.href = URL.createObjectURL(blob);
+      link.download = `DFU_MASTER_DNA_BACKUP.json`; link.click();
     } catch (e) { alert("Hata!"); }
   };
 const handleSystemReset = async () => {
@@ -211,103 +237,6 @@ const handleSystemReset = async () => {
         await batch.commit();
       }
       window.location.reload();
-    }
-  };
-
-  
-  const handleMeterDataImport = async (files: FileList) => {
-    if (files.length === 0) return;
-    setIsMeterImporting(true);
-    try {
-      if (!window.confirm("DİKKAT: Bu işlem mevcut tüm sayaç verilerini silecek ve Excel'den yenilerini yükleyecektir. Emin misiniz?")) {
-        setIsMeterImporting(false);
-        return;
-      }
-
-      // 1. MEVCUT VERİLERİ TEMİZLE (Parçalı Silme)
-      const logSnap = await getDocs(collection(db, "meter_logs"));
-      const allDocs = logSnap.docs;
-      for (let i = 0; i < allDocs.length; i += 500) {
-        const batch = writeBatch(db);
-        allDocs.slice(i, i + 500).forEach(d => batch.delete(d.ref));
-        await batch.commit();
-      }
-
-      const uniqueMeters: Record<string, string[]> = { "Elektrik": [], "Su": [], "Doğalgaz": [] };
-      const allLogs: any[] = [];
-
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const data = await file.arrayBuffer();
-        const workbook = XLSX.read(data);
-        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
-
-        let type = "Su"; // Default
-        const fn = file.name.toUpperCase();
-        if (fn.includes("ELEK")) type = "Elektrik";
-        else if (fn.includes("DOGAL") || fn.includes("DOĞAL")) type = "Doğalgaz";
-        else if (fn.includes("SU")) type = "Su";
-
-        jsonData.forEach(row => {
-          const rawTs = row["Zaman damgası"];
-          if (!rawTs) return;
-          let dateStr = "";
-          try {
-            if (typeof rawTs === 'number') {
-              const d = new Date((rawTs - 25569) * 86400 * 1000);
-              dateStr = d.toISOString().split('T')[0];
-            } else {
-              dateStr = new Date(rawTs).toISOString().split('T')[0];
-            }
-          } catch(e) { return; }
-
-          Object.keys(row).forEach(key => {
-            if (key !== "Zaman damgası" && key !== "id") {
-              const val = Number(row[key]);
-              if (!isNaN(val)) {
-                if (!uniqueMeters[type].includes(key)) uniqueMeters[type].push(key);
-                allLogs.push({
-                  sayacAdi: key,
-                  deger: val,
-                  tarih: dateStr,
-                  tip: type,
-                  personel: "Sistem Aktarımı",
-                  timestamp: serverTimestamp()
-                });
-              }
-            }
-          });
-        });
-      }
-
-      // 2. YENİ VERİLERİ YÜKLE (Batch)
-      for (let i = 0; i < allLogs.length; i += 500) {
-        const subBatch = writeBatch(db);
-        allLogs.slice(i, i + 500).forEach(log => {
-          const newRef = doc(collection(db, "meter_logs"));
-          subBatch.set(newRef, log);
-        });
-        await subBatch.commit();
-      }
-
-      // 3. SAYAÇ TANIMLARINI OLUŞTUR (Dashboard uyumu için)
-      const meterBatch = writeBatch(db);
-      for (const [tip, adlar] of Object.entries(uniqueMeters)) {
-        for (const ad of adlar) {
-          const mId = `${tip}_${ad}`.replace(/\s+/g, '_').replace(/[İIıŞşĞğÜüÖöÇç]/g, 'x');
-          meterBatch.set(doc(db, "meters", mId), { adi: ad, tip: tip }, { merge: true });
-        }
-      }
-      await meterBatch.commit();
-
-      alert(`${allLogs.length} adet veri başarıyla yüklendi.`);
-      setShowMeterImportModal(false);
-      window.location.reload();
-    } catch (e: any) {
-      alert("Hata: " + e.message);
-    } finally {
-      setIsMeterImporting(false);
     }
   };
 
@@ -325,273 +254,9 @@ const handleSystemReset = async () => {
       }
       setLoading(false);
     });
-    return () => unsubscribe();
-  }, [router]);
-
-  const fetchRcaData = async () => {
-    const snap = await getDocs(collection(db, "root_cause_analysis"));
-    setRcaLogs(snap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
-  };
-
-  const fetchInitialData = async () => {
-    try {
-      const wSnap = await getDocs(query(collection(db, "work_orders"), where("durum", "==", "Açık")));
-      const wData = wSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-      setAktifIsgAlarmlari(wData.filter(d => d.ekipmanAdi === "KAR devreye alma"));
-      setAktifIsler(wData.filter(d => d.ekipmanAdi !== "KAR devreye alma"));
-      const ekedSnap = await getDocs(query(collection(db, "eked_logs"), where("durum", "==", "Açık")));
-      setAktifEked(ekedSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
-      const logsSnap = await getDocs(collection(db, "maintenance_logs"));
-      setRawLogs(logsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
-      const mSnap = await getDocs(query(collection(db, "meter_logs"), orderBy("tarih", "asc")));
-      setRawMeterLogs(mSnap.docs.map(d => d.data()));
-      setKpiOnayBekleyen((await getDocs(query(collection(db, "users"), where("isApproved", "==", false)))).size);
-    } catch (e) { console.error(e); }
-  };
-
   
-  const handleMeterDataImport = async (files: FileList) => {
-    if (files.length === 0) return;
-    setIsMeterImporting(true);
-    try {
-      if (!window.confirm("DİKKAT: Bu işlem mevcut tüm sayaç verilerini silecek ve Excel'den yenilerini yükleyecektir. Emin misiniz?")) {
-        setIsMeterImporting(false);
-        return;
-      }
-
-      // 1. MEVCUT VERİLERİ TEMİZLE (Parçalı Silme)
-      const logSnap = await getDocs(collection(db, "meter_logs"));
-      const allDocs = logSnap.docs;
-      for (let i = 0; i < allDocs.length; i += 500) {
-        const batch = writeBatch(db);
-        allDocs.slice(i, i + 500).forEach(d => batch.delete(d.ref));
-        await batch.commit();
-      }
-
-      const uniqueMeters: Record<string, string[]> = { "Elektrik": [], "Su": [], "Doğalgaz": [] };
-      const allLogs: any[] = [];
-
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const data = await file.arrayBuffer();
-        const workbook = XLSX.read(data);
-        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
-
-        let type = "Su"; // Default
-        const fn = file.name.toUpperCase();
-        if (fn.includes("ELEK")) type = "Elektrik";
-        else if (fn.includes("DOGAL") || fn.includes("DOĞAL")) type = "Doğalgaz";
-        else if (fn.includes("SU")) type = "Su";
-
-        jsonData.forEach(row => {
-          const rawTs = row["Zaman damgası"];
-          if (!rawTs) return;
-          let dateStr = "";
-          try {
-            if (typeof rawTs === 'number') {
-              const d = new Date((rawTs - 25569) * 86400 * 1000);
-              dateStr = d.toISOString().split('T')[0];
-            } else {
-              dateStr = new Date(rawTs).toISOString().split('T')[0];
-            }
-          } catch(e) { return; }
-
-          Object.keys(row).forEach(key => {
-            if (key !== "Zaman damgası" && key !== "id") {
-              const val = Number(row[key]);
-              if (!isNaN(val)) {
-                if (!uniqueMeters[type].includes(key)) uniqueMeters[type].push(key);
-                allLogs.push({
-                  sayacAdi: key,
-                  deger: val,
-                  tarih: dateStr,
-                  tip: type,
-                  personel: "Sistem Aktarımı",
-                  timestamp: serverTimestamp()
-                });
-              }
-            }
-          });
-        });
-      }
-
-      // 2. YENİ VERİLERİ YÜKLE (Batch)
-      for (let i = 0; i < allLogs.length; i += 500) {
-        const subBatch = writeBatch(db);
-        allLogs.slice(i, i + 500).forEach(log => {
-          const newRef = doc(collection(db, "meter_logs"));
-          subBatch.set(newRef, log);
-        });
-        await subBatch.commit();
-      }
-
-      // 3. SAYAÇ TANIMLARINI OLUŞTUR (Dashboard uyumu için)
-      const meterBatch = writeBatch(db);
-      for (const [tip, adlar] of Object.entries(uniqueMeters)) {
-        for (const ad of adlar) {
-          const mId = `${tip}_${ad}`.replace(/\s+/g, '_').replace(/[İIıŞşĞğÜüÖöÇç]/g, 'x');
-          meterBatch.set(doc(db, "meters", mId), { adi: ad, tip: tip }, { merge: true });
-        }
-      }
-      await meterBatch.commit();
-
-      alert(`${allLogs.length} adet veri başarıyla yüklendi.`);
-      setShowMeterImportModal(false);
-      window.location.reload();
-    } catch (e: any) {
-      alert("Hata: " + e.message);
-    } finally {
-      setIsMeterImporting(false);
-    }
-  };
-
-  useEffect(() => {
-    if (rawLogs.length === 0) return;
-    let isC=0, suC=0, duC=0; const hD:any = {}, pD:any = {}, eD:any = {};
-    rawLogs.forEach((l: any) => {
-      const d = l.kayitTarihi?.toDate ? l.kayitTarihi.toDate() : new Date(l.kayitTarihi);
-      const s = Number(l.toplamSureDakika) || 0;
-      if (d.getFullYear().toString() === filterYil) {
-        isC++; suC += s; hD[l.hatAdi] = (hD[l.hatAdi] || 0) + 1;
-        if(l.isDuruslu) duC += s;
-      }
-      const crew = Array.isArray(l.yardimciTeknisyenler) ? [l.bildirenKisi, ...l.yardimciTeknisyenler] : [l.bildirenKisi];
-      crew.forEach((p: string) => { if(p) { if (!pD[p]) pD[p] = { isSayisi: 0, eforDk: 0 }; pD[p].isSayisi++; pD[p].eforDk += s; } });
-      if (l.isDuruslu) { if (!eD[l.ekipmanAdi]) eD[l.ekipmanAdi] = { count: 0, sure: 0 }; eD[l.ekipmanAdi].count++; eD[l.ekipmanAdi].sure += s; }
-    });
-    setKpiTotals({ is: isC, sure: suC, durus: duC, mttr: isC > 0 ? (suC/isC) : 0 });
-    setGrafikIsHatti(Object.keys(hD).map(k=>({ isim: k, adet: hD[k] })));
-    setPersonelPerformans(Object.keys(pD).map(k=>({ isim: k, ...pD[k] })).sort((a,b)=> b.isSayisi - a.isSayisi));
-    setEkipmanPerformans(Object.keys(eD).map(k=>({ ekipman: k, ...eD[k] })).sort((a,b)=>b.count-a.count).slice(0, 5));
-  }, [rawLogs, filterYil]);
-
-  
-  const handleMeterDataImport = async (files: FileList) => {
-    if (files.length === 0) return;
-    setIsMeterImporting(true);
-    try {
-      if (!window.confirm("DİKKAT: Bu işlem mevcut tüm sayaç verilerini silecek ve Excel'den yenilerini yükleyecektir. Emin misiniz?")) {
-        setIsMeterImporting(false);
-        return;
-      }
-
-      // 1. MEVCUT VERİLERİ TEMİZLE (Parçalı Silme)
-      const logSnap = await getDocs(collection(db, "meter_logs"));
-      const allDocs = logSnap.docs;
-      for (let i = 0; i < allDocs.length; i += 500) {
-        const batch = writeBatch(db);
-        allDocs.slice(i, i + 500).forEach(d => batch.delete(d.ref));
-        await batch.commit();
-      }
-
-      const uniqueMeters: Record<string, string[]> = { "Elektrik": [], "Su": [], "Doğalgaz": [] };
-      const allLogs: any[] = [];
-
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const data = await file.arrayBuffer();
-        const workbook = XLSX.read(data);
-        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
-
-        let type = "Su"; // Default
-        const fn = file.name.toUpperCase();
-        if (fn.includes("ELEK")) type = "Elektrik";
-        else if (fn.includes("DOGAL") || fn.includes("DOĞAL")) type = "Doğalgaz";
-        else if (fn.includes("SU")) type = "Su";
-
-        jsonData.forEach(row => {
-          const rawTs = row["Zaman damgası"];
-          if (!rawTs) return;
-          let dateStr = "";
-          try {
-            if (typeof rawTs === 'number') {
-              const d = new Date((rawTs - 25569) * 86400 * 1000);
-              dateStr = d.toISOString().split('T')[0];
-            } else {
-              dateStr = new Date(rawTs).toISOString().split('T')[0];
-            }
-          } catch(e) { return; }
-
-          Object.keys(row).forEach(key => {
-            if (key !== "Zaman damgası" && key !== "id") {
-              const val = Number(row[key]);
-              if (!isNaN(val)) {
-                if (!uniqueMeters[type].includes(key)) uniqueMeters[type].push(key);
-                allLogs.push({
-                  sayacAdi: key,
-                  deger: val,
-                  tarih: dateStr,
-                  tip: type,
-                  personel: "Sistem Aktarımı",
-                  timestamp: serverTimestamp()
-                });
-              }
-            }
-          });
-        });
-      }
-
-      // 2. YENİ VERİLERİ YÜKLE (Batch)
-      for (let i = 0; i < allLogs.length; i += 500) {
-        const subBatch = writeBatch(db);
-        allLogs.slice(i, i + 500).forEach(log => {
-          const newRef = doc(collection(db, "meter_logs"));
-          subBatch.set(newRef, log);
-        });
-        await subBatch.commit();
-      }
-
-      // 3. SAYAÇ TANIMLARINI OLUŞTUR (Dashboard uyumu için)
-      const meterBatch = writeBatch(db);
-      for (const [tip, adlar] of Object.entries(uniqueMeters)) {
-        for (const ad of adlar) {
-          const mId = `${tip}_${ad}`.replace(/\s+/g, '_').replace(/[İIıŞşĞğÜüÖöÇç]/g, 'x');
-          meterBatch.set(doc(db, "meters", mId), { adi: ad, tip: tip }, { merge: true });
-        }
-      }
-      await meterBatch.commit();
-
-      alert(`${allLogs.length} adet veri başarıyla yüklendi.`);
-      setShowMeterImportModal(false);
-      window.location.reload();
-    } catch (e: any) {
-      alert("Hata: " + e.message);
-    } finally {
-      setIsMeterImporting(false);
-    }
-  };
-
-  useEffect(() => {
-    if (rawMeterLogs.length === 0) return;
-    const elS = new Set<string>(), gzS = new Set<string>(), suS = new Set<string>();
-    const tEl:any = {}, tGz:any = {}, tSu:any = {};
-    rawMeterLogs.forEach((l: any) => {
-      const t = l.tip || "Elektrik";
-      if(t==="Elektrik") elS.add(l.sayacAdi); if(t==="Doğalgaz") gzS.add(l.sayacAdi); if(t==="Su") suS.add(l.sayacAdi);
-      const ay = `${l.tarih?.split("-")[1]}. Ay`;
-      if(t==="Elektrik" && (!filterElekSayac || l.sayacAdi===filterElekSayac)) tEl[ay] = (tEl[ay]||0) + Number(l.deger || 0);
-      if(t==="Doğalgaz" && (!filterGazSayac || l.sayacAdi===filterGazSayac)) tGz[ay] = (tGz[ay]||0) + Number(l.deger || 0);
-      if(t==="Su" && (!filterSuSayac || l.sayacAdi===filterSuSayac)) tSu[ay] = (tSu[ay]||0) + Number(l.deger || 0);
-    });
-    setElekSayacList(Array.from(elS).sort()); setGazSayacList(Array.from(gzS).sort()); setSuSayacList(Array.from(suS).sort());
-    setGrafikElek(Object.keys(tEl).map(ay=>({ ay, tuketim: tEl[ay] })));
-    setGrafikGaz(Object.keys(tGz).map(ay=>({ ay, tuketim: tGz[ay] })));
-    setGrafikSu(Object.keys(tSu).map(ay=>({ ay, tuketim: tSu[ay] })));
-  }, [rawMeterLogs, filterElekSayac, filterGazSayac, filterSuSayac]);
-
-  const handleSaveRca = async () => {
-    if (!rcaForm.category) return alert("Seçiniz");
-    await setDoc(doc(db, "root_cause_analysis", String(selectedLogForRca.id)), { logId: selectedLogForRca.id, ekipman: selectedLogForRca.ekipmanAdi, category: rcaForm.category, why: rcaForm.why, analizEden: userName, tarih: serverTimestamp() }, { merge: true });
-    alert("Başarılı!"); setShowRcaModal(false); fetchRcaData();
-  };
-
-  if (loading) return <div className="p-10 bg-slate-950 min-h-screen text-white flex justify-center items-center uppercase italic font-black">Güvenlik Kontrolü...</div>;
-  if (!isAdmin) return <div className="p-10 text-red-500 font-bold uppercase italic">YETKİSİZ ERİŞİM!</div>;
-
   return (
-    <div className="min-h-screen bg-[#020617] text-white p-4 md:p-8 font-sans overflow-x-hidden italic font-bold">
+    <div className="min-h-screen bg-[#020617] text-white p-4 md:p-8 font-sans overflow-x-hidden italic font-black uppercase selection:bg-indigo-500">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col lg:flex-row justify-between items-center gap-6 mb-10 border-b border-gray-800 pb-8 no-print">
           <div className="flex items-center gap-4 w-full lg:w-auto justify-center lg:justify-start">
@@ -599,17 +264,17 @@ const handleSystemReset = async () => {
             <h1 className="text-xl md:text-2xl font-black uppercase text-indigo-400 tracking-tighter">Komuta Merkezi</h1>
           </div>
           <div className="flex flex-wrap justify-center lg:justify-end gap-2 md:gap-3 w-full lg:w-auto">
-             <button onClick={() => setShowKpiModal(true)} className="bg-indigo-500 hover:bg-indigo-400 text-white px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border-2 border-white/20 animate-pulse">📈 KPI ANALİZ</button>
-             <Link href="/dashboard" className="bg-slate-800 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] uppercase shadow-lg">Vardiya Raporu</Link>
-             <button onClick={clearOldImports} className="bg-red-900 border border-red-500/30 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] uppercase shadow-lg font-black hover:bg-red-800">🗑️ TEMİZLE</button>
-             <label className="bg-orange-600 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] uppercase shadow-lg border border-orange-500/30 transition-all font-black cursor-pointer hover:bg-orange-500">📊 IMPORT <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleExcelImport} /></label>
-             <button onClick={downloadFullSnapshot} className="bg-emerald-600 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] uppercase shadow-lg italic font-black">💾 YEDEK</button>
-             <button onClick={handleCopyScript} type="button" className={`${copySuccess ? 'bg-indigo-500' : 'bg-slate-800'} px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] uppercase shadow-lg border border-indigo-500/30 transition-all font-black`}>{copySuccess ? '✓ KOPYALANDI' : '🧬 DNA'}</button>
-             <button onClick={()=>signOut(auth)} className="bg-red-600 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] uppercase shadow-lg">Çıkış</button>
+             <button onClick={() => setShowKpiModal(true)} className="bg-indigo-500 hover:bg-indigo-400 text-white px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border border-white/10 animate-pulse">📈 KPI ANALİZ</button>
+             <Link href="/dashboard" className="bg-slate-800 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border border-slate-700">Vardiya Raporu</Link>
+             <button onClick={clearOldImports} className="bg-red-900/40 border border-red-500/30 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg hover:bg-red-800">🗑️ TEMİZLE</button>
+             <label className="bg-orange-600 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border border-orange-500/30 cursor-pointer hover:bg-orange-500">📊 IMPORT <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleExcelImport} /></label>
+             <button onClick={() => setShowMeterImportModal(true)} className="bg-emerald-600 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border border-emerald-500/30">🔌 SAYAÇ</button>
+             <button onClick={downloadFullSnapshot} className="bg-slate-700 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg italic">💾 YEDEK</button>
+             <button onClick={handleCopyScript} type="button" className={`${copySuccess ? 'bg-indigo-500' : 'bg-slate-800'} px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border border-indigo-500/30 transition-all`}>{copySuccess ? '✓ KOPYALANDI' : '🧬 DNA'}</button>
+             <button onClick={()=>signOut(auth)} className="bg-red-600 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg">Çıkış</button>
           </div>
         </div>
-
-        {/* --- TÜM 23 BUTONLUK NAVİGASYON --- */}
+{/* --- TÜM 23 BUTONLUK NAVİGASYON --- */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-12 no-print">
           <Link href="/admin/is-emri-ac" className="bg-red-600 p-3 rounded-2xl text-[10px] text-center uppercase shadow-lg">🚨 Yeni İş Emri</Link>
           <Link href="/admin/aktif-isler" className="bg-red-950 border border-red-500 p-3 rounded-2xl text-[10px] text-center uppercase">Aktif Bildirimler</Link>
@@ -714,10 +379,7 @@ const handleSystemReset = async () => {
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/95 backdrop-blur-2xl" onClick={() => setShowKpiModal(false)}></div>
           <div className="relative bg-slate-900 border-2 border-indigo-500/30 w-full max-w-[95%] h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col text-white font-black italic uppercase">
-            <div className="p-8 border-b border-indigo-500/20 flex justify-between items-center bg-orange-500/5">
-              <div><h2 className="text-xl text-orange-500">📈 KPI ANALİZ MERKEZİ</h2></div>
-              <button onClick={() => setShowKpiModal(false)} className="text-indigo-500/50 hover:text-orange-500 text-3xl">✕</button>
-            </div>
+            <div className="p-8 border-b border-indigo-500/20 flex justify-between items-center bg-orange-500/5"><div><h2 className="text-xl text-orange-500">📈 KPI ANALİZ MERKEZİ</h2></div><button onClick={() => setShowKpiModal(false)} className="text-indigo-500/50 hover:text-orange-500 text-3xl">✕</button></div>
             <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
               <div className="w-full lg:w-80 bg-black/30 border-r border-slate-800 p-6 space-y-4 overflow-y-auto text-[9px]">
                 <h3 className="text-indigo-500 uppercase tracking-widest">Filtreleme</h3>
@@ -730,8 +392,7 @@ const handleSystemReset = async () => {
               <div className="flex-1 p-8 overflow-y-auto bg-slate-950/50">
                 <div className="h-[500px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart 
-                      data={(() => {
+                    <ComposedChart data={(() => {
                         const filtered = rawLogs.filter(l => {
                           const d = l.baslangicTarihi || "";
                           const matchYil = d.startsWith(kpiFYil);
@@ -744,33 +405,24 @@ const handleSystemReset = async () => {
                         const groups: any = {};
                         filtered.forEach(f => {
                           const key = kpiFHat ? f.ekipmanAdi : f.hatAdi;
-                          if(!groups[key]) groups[key] = { name: key, sure: 0, adet: 0, logs: [] }; groups[key].sure += Number(f.toplamSureDakika) || 0; groups[key].adet += 1; groups[key].logs.push(f);
+                          if(!groups[key]) groups[key] = { name: key, sure: 0, adet: 0, logs: [] };
+                          groups[key].sure += Number(f.toplamSureDakika) || 0;
+                          groups[key].adet += 1;
+                          groups[key].logs.push(f);
                         });
                         return Object.values(groups).sort((a:any, b:any) => b.sure - a.sure);
                       })()}
                       onClick={(data: any) => { if(data && data.activePayload) { setSelectedKpiLogDetails(data.activePayload[0].payload.logs); setShowKpiDetailWindow(true); } }}
                     >
-                      <defs>
-                        <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#818cf8" stopOpacity={1} />
-                          <stop offset="100%" stopColor="#4f46e5" stopOpacity={0.6} />
-                        </linearGradient>
-                        <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#6366f1" stopOpacity={0.3} />
-                          <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                      <XAxis dataKey="name" stroke="#94a3b8" fontSize={9} tickLine={false} axisLine={false} tick={{fill: '#94a3b8'}} />
-                      <YAxis yAxisId="left" stroke="#94a3b8" fontSize={9} tickLine={false} axisLine={false} /> <YAxis yAxisId="right" orientation="right" stroke="#6366f1" fontSize={9} tickLine={false} axisLine={false} />
-                      <Tooltip 
-                        contentStyle={{backgroundColor:'rgba(15, 23, 42, 0.9)', border:'1px solid rgba(99, 102, 241, 0.5)', borderRadius:'20px', backdropFilter: 'blur(10px)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)'}}
-                        itemStyle={{color: '#818cf8', fontWeight: 'bold'}}
-                      />
-                      <Area yAxisId="right" type="monotone" name="İş Adedi" dataKey="adet" fill="url(#areaGradient)" stroke="#6366f1" strokeWidth={2} />
-                      <Bar yAxisId="left" dataKey="sure" name="Toplam Süre (DK)" fill="url(#barGradient)" radius={[15, 15, 0, 0]} barSize={35} animationDuration={1500} />
-                    </ComposedChart>
-                  </ResponsiveContainer>
+                      <XAxis dataKey="name" stroke="#94a3b8" fontSize={9} tickLine={false} axisLine={false} />
+                      <YAxis yAxisId="left" stroke="#94a3b8" fontSize={9} tickLine={false} axisLine={false} />
+                      <YAxis yAxisId="right" orientation="right" stroke="#6366f1" fontSize={9} tickLine={false} axisLine={false} />
+                      <Tooltip contentStyle={{backgroundColor:'rgba(15, 23, 42, 0.9)', border:'1px solid rgba(99, 102, 241, 0.5)', borderRadius:'20px', backdropFilter: 'blur(10px)'}} />
+                      <Area yAxisId="right" type="monotone" name="İş Adedi" dataKey="adet" fill="#6366f133" stroke="#6366f1" />
+                      <Bar yAxisId="left" dataKey="sure" name="Toplam Süre (DK)" fill="#818cf8" radius={[10, 10, 0, 0]} barSize={35} />
+                    </BarChart>
+                  </ComposedChart>
                 </div>
               </div>
             </div>
@@ -782,17 +434,10 @@ const handleSystemReset = async () => {
         <div className="fixed inset-0 z-[130] flex items-center justify-end p-6">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={()=>setShowKpiDetailWindow(false)}></div>
           <div className="relative bg-slate-900 border-l-4 border-indigo-500 w-full max-w-xl h-full rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right">
-            <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
-              <h3 className="text-lg font-black text-white italic uppercase tracking-widest">🔍 İş Detay Arşivi</h3>
-              <button onClick={()=>setShowKpiDetailWindow(false)} className="text-slate-500 hover:text-white text-2xl">✕</button>
-            </div>
+            <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-900/50"><h3 className="text-lg font-black text-white italic uppercase tracking-widest">🔍 İş Detay Arşivi</h3><button onClick={()=>setShowKpiDetailWindow(false)} className="text-slate-500 hover:text-white text-2xl">✕</button></div>
             <div className="p-6 overflow-y-auto flex-1 space-y-4 text-white uppercase italic font-black">
               {selectedKpiLogDetails.map((log, i) => (
-                <div key={i} className="bg-slate-950 border border-slate-800 p-5 rounded-3xl hover:border-indigo-500/50 transition-all">
-                  <div className="flex justify-between text-[9px] font-black text-indigo-400 mb-2"><span>{log.baslangicTarihi}</span><span className="text-emerald-400">{log.toplamSureDakika} DK</span></div>
-                  <h4 className="text-white text-xs font-black mb-2">{log.hatAdi} - {log.ekipmanAdi}</h4>
-                  <p className="text-slate-400 text-[11px] font-bold italic leading-relaxed">"{log.aciklama}"</p>
-                </div>
+                <div key={i} className="bg-slate-950 border border-slate-800 p-5 rounded-3xl hover:border-indigo-500/50 transition-all"><div className="flex justify-between text-[9px] font-black text-indigo-400 mb-2"><span>{log.baslangicTarihi}</span><span className="text-emerald-400">{log.toplamSureDakika} DK</span></div><h4 className="text-white text-xs font-black mb-2">{log.hatAdi} - {log.ekipmanAdi}</h4><p className="text-slate-400 text-[11px] font-bold italic leading-relaxed">"{log.aciklama}"</p></div>
               ))}
             </div>
           </div>
@@ -802,11 +447,8 @@ const handleSystemReset = async () => {
       {showImportModal && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 text-white uppercase font-black italic">
           <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={() => !isImporting && setShowImportModal(false)}></div>
-          <div className="relative bg-slate-900 border-2 border-orange-500/30 w-full max-w-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col">
-            <div className="p-8 border-b border-orange-500/10 flex justify-between items-center bg-orange-500/5 tracking-widest">
-              <div><h2 className="text-xl text-orange-500 font-black">📊 EXCEL ÖNİZLEME</h2><p className="text-[10px] text-slate-500 mt-1">Toplam {importPreview.length} kayıt.</p></div>
-              <button onClick={() => !isImporting && setShowImportModal(false)} className="text-orange-500/50 hover:text-orange-500 text-2xl">✕</button>
-            </div>
+          <div className="relative bg-slate-900 border-2 border-orange-500/30 w-full max-w-6xl max-h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col font-black italic">
+            <div className="p-8 border-b border-orange-500/10 flex justify-between items-center bg-orange-500/5 uppercase tracking-widest"><div><h2 className="text-xl text-orange-500">📊 EXCEL ÖNİZLEME</h2><p className="text-[10px] text-slate-500 mt-1">Toplam {importPreview.length} kayıt.</p></div><button onClick={() => !isImporting && setShowImportModal(false)} className="text-orange-500/50 hover:text-orange-500 text-2xl">✕</button></div>
             <div className="p-6 overflow-y-auto flex-1"><table className="w-full text-left text-[10px] uppercase font-bold italic">
                 <thead className="sticky top-0 bg-slate-900 text-orange-500/70 border-b border-slate-800">
                   <tr><th className="p-3">Tarih</th><th className="p-3">Başl - Bit</th><th className="p-3">Süre</th><th className="p-3">Hat / Ekipman</th><th className="p-3">SORUMLU</th><th className="p-3">Duruş</th></tr>
@@ -816,7 +458,7 @@ const handleSystemReset = async () => {
                     <tr key={idx} className="hover:bg-orange-500/5">
                       <td className="p-3 text-slate-400 whitespace-nowrap">{row.baslangicTarihi}</td>
                       <td className="p-3 text-indigo-400 whitespace-nowrap font-mono">{row.baslangicSaati} - {row.bitisSaati}</td>
-                      <td className="p-3 text-amber-500 font-black">{row.toplamSureDakika}</td>
+                      <td className="p-3 text-amber-500 font-black">{row.toplamSureDakika} DK</td>
                       <td className="p-3 text-white"><span className="text-emerald-400">{row.hatAdi}</span> / {row.ekipmanAdi}</td>
                       <td className="p-3 text-indigo-300 font-black">{row.teknisyen}</td>
                       <td className="p-3">{row.isDuruslu ? '🔴 VAR' : '🟢 YOK'}</td>
@@ -824,9 +466,7 @@ const handleSystemReset = async () => {
                   ))}
                 </tbody>
               </table></div>
-            <div className="p-8 border-t border-slate-800 bg-slate-900/50 flex justify-end gap-4 text-[10px] font-black uppercase"><button onClick={() => setShowImportModal(false)} disabled={isImporting} className="bg-slate-800 px-8 py-3 rounded-xl text-white hover:bg-slate-700">İPTAL</button><button onClick={confirmImport} disabled={isImporting} className="bg-orange-600 text-white px-10 py-3 rounded-xl shadow-xl hover:bg-orange-500 flex items-center gap-2">
-                {isImporting ? '⏳ AKTARILIYOR...' : '🚀 AKTARIMI BAŞLAT'}
-              </button></div>
+            <div className="p-8 border-t border-slate-800 bg-slate-900/50 flex justify-end gap-4 text-[10px] font-black uppercase"><button onClick={() => setShowImportModal(false)} disabled={isImporting} className="bg-slate-800 px-8 py-3 rounded-xl text-white hover:bg-slate-700">İPTAL</button><button onClick={confirmImport} disabled={isImporting} className="bg-orange-600 text-white px-10 py-3 rounded-xl shadow-xl hover:bg-orange-500 flex items-center gap-2">{isImporting ? '⏳ AKTARILIYOR...' : '🚀 AKTARIMI BAŞLAT'}</button></div>
           </div>
         </div>
       )}
@@ -834,11 +474,11 @@ const handleSystemReset = async () => {
       {showMeterImportModal && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/95 backdrop-blur-xl" onClick={() => !isMeterImporting && setShowMeterImportModal(false)}></div>
-          <div className="relative bg-slate-900 border-2 border-emerald-500/30 w-full max-w-md rounded-[3rem] shadow-2xl p-10 flex flex-col items-center text-center">
+          <div className="relative bg-slate-900 border-2 border-emerald-500/30 w-full max-w-md rounded-[3rem] shadow-2xl p-10 flex flex-col items-center text-center text-white">
             <h2 className="text-xl font-black text-white uppercase tracking-widest mb-6">Sayaç DNA Aktarımı</h2>
             <p className="text-xs text-slate-400 mb-8 uppercase font-bold italic">Lütfen Elektrik, Su ve Doğalgaz dosyalarını seçin.</p>
             <input type="file" multiple accept=".xlsx, .xls" onChange={(e) => e.target.files && handleMeterDataImport(e.target.files)} disabled={isMeterImporting} className="w-full text-xs text-slate-500 file:bg-emerald-600 file:text-white file:border-0 file:py-3 file:px-6 file:rounded-full file:font-black file:uppercase cursor-pointer" />
-            {isMeterImporting && <div className="mt-8 text-[10px] text-emerald-400 font-black animate-pulse">VERİLER YAZILIYOR, LÜTFEN BEKLEYİN...</div>}
+            {isMeterImporting && <div className="mt-8 text-[10px] text-emerald-400 font-black animate-pulse uppercase">VERİLER YAZILIYOR, LÜTFEN BEKLEYİN...</div>}
             {!isMeterImporting && <button onClick={() => setShowMeterImportModal(false)} className="mt-8 text-[10px] text-slate-600 uppercase font-black">KAPAT</button>}
           </div>
         </div>

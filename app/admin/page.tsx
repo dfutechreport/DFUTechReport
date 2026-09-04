@@ -290,9 +290,9 @@ export default function AdminDashboard() {
       if (l.isDuruslu) { if (!eD[l.ekipmanAdi]) eD[l.ekipmanAdi] = { count: 0, sure: 0 }; eD[l.ekipmanAdi].count++; eD[l.ekipmanAdi].sure += s; }
     });
     setKpiTotals({ is: isC, sure: suC, durus: duC, mttr: isC > 0 ? (suC/isC) : 0 });
-    setGrafikIsHatti(Object.entries(hD).map(([name, value]) => ({ name, value })).sort((a,b)=>b.value-a.value));
-    setPersonelPerformans(Object.entries(pD).map(([name, v]:any) => ({ name, is: v.isSayisi, efor: v.eforDk })).sort((a,b)=>b.efor-a.efor));
-    setEkipmanPerformans(Object.entries(eD).map(([name, v]:any) => ({ name, count: v.count, sure: v.sure })).sort((a,b)=>b.sure-a.sure));
+    setGrafikIsHatti(Object.entries(hD).map(([name, value]) => ({ name, value })).sort((a:any, b:any) => b.value - a.value));
+    setPersonelPerformans(Object.entries(pD).map(([name, v]:any) => ({ name, is: v.isSayisi, efor: v.eforDk })).sort((a:any, b:any) => b.efor - a.efor));
+    setEkipmanPerformans(Object.entries(eD).map(([name, v]:any) => ({ name, count: v.count, sure: v.sure })).sort((a:any, b:any) => b.sure - a.sure));
   }, [rawLogs, filterYil]);
 
   useEffect(() => {

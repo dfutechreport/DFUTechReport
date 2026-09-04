@@ -4,7 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, setDoc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, db } from "../../lib/firebase"; 
-import { ComposedChart, Bar, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid } from 'recharts';
+import { ComposedChart, BarChart, Bar, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid } from 'recharts';
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 

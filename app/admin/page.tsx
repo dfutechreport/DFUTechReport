@@ -18,16 +18,12 @@ const RCA_CATEGORIES = [
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [userRole, setUserRole] = useState("");
-  const [userName, setUserName] = useState("");
+const [isAdmin, setIsAdmin] = useState(false);
+  const [userRole, setUserRole] = useState(""); 
+  const [userName, setUserName] = useState(""); 
   const [loading, setLoading] = useState(true);
-  const [copySuccess, setCopySuccess] = useState(false);
-  const [importPreview, setImportPreview] = useState<any[]>([]);
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
-
-  // Original states from snapshot
+  
+  // VERİ HAVUZLARI
   const [rawLogs, setRawLogs] = useState<any[]>([]);
   const [rcaLogs, setRcaLogs] = useState<any[]>([]);
   const [rawMeterLogs, setRawMeterLogs] = useState<any[]>([]);
@@ -35,6 +31,8 @@ export default function AdminDashboard() {
   const [aktifIsgAlarmlari, setAktifIsgAlarmlari] = useState<any[]>([]);
   const [aktifEked, setAktifEked] = useState<any[]>([]);
   const [kpiOnayBekleyen, setKpiOnayBekleyen] = useState(0);
+
+  // MODAL VE FİLTRE STATE'LERİ
   const [showEkedModal, setShowEkedModal] = useState(false);
   const [selectedEked, setSelectedEked] = useState<any>(null);
   const [selectedVaka, setSelectedVaka] = useState<any>(null);
@@ -42,6 +40,7 @@ export default function AdminDashboard() {
   const [showRcaModal, setShowRcaModal] = useState(false);
   const [selectedLogForRca, setSelectedLogForRca] = useState<any>(null);
   const [rcaForm, setRcaForm] = useState({ category: "", why: "" });
+  
   const [filterYil, setFilterYil] = useState(new Date().getFullYear().toString());
   const [filterElekSayac, setFilterElekSayac] = useState("");
   const [filterGazSayac, setFilterGazSayac] = useState("");
@@ -49,6 +48,8 @@ export default function AdminDashboard() {
   const [elekSayacList, setElekSayacList] = useState<string[]>([]);
   const [gazSayacList, setGazSayacList] = useState<string[]>([]);
   const [suSayacList, setSuSayacList] = useState<string[]>([]);
+
+  // HESAPLANAN VERİLER
   const [kpiTotals, setKpiTotals] = useState({ is: 0, sure: 0, durus: 0, mttr: 0 });
   const [grafikIsHatti, setGrafikIsHatti] = useState<any[]>([]);
   const [personelPerformans, setPersonelPerformans] = useState<any[]>([]);
@@ -57,7 +58,19 @@ export default function AdminDashboard() {
   const [grafikGaz, setGrafikGaz] = useState<any[]>([]);
   const [grafikSu, setGrafikSu] = useState<any[]>([]);
 
-  // --- NEW KPI STATES ---
+  const RCA_CATEGORIES = [
+    { id: "insan", label: "İnsan", color: "#3B82F6" }, { id: "makine", label: "Makine", color: "#EF4444" },
+    { id: "malzeme", label: "Malzeme", color: "#10B981" }, { id: "metot", label: "Metot", color: "#F59E0B" },
+    { id: "ortam", label: "Ortam", color: "#8B5CF6" }
+  ];
+
+  // --- ŞİFRE KORUMALI SNAPSHOT VE RESET ---
+  
+  const [copySuccess, setCopySuccess] = useState(false);
+  const [importPreview, setImportPreview] = useState<any[]>([]);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+
   const [showKpiModal, setShowKpiModal] = useState(false);
   const [selectedKpiLogDetails, setSelectedKpiLogDetails] = useState<any[]>([]);
   const [showKpiDetailWindow, setShowKpiDetailWindow] = useState(false);
@@ -67,13 +80,17 @@ export default function AdminDashboard() {
   const [kpiFPersonel, setKpiFPersonel] = useState("");
   const [kpiFDurus, setKpiFDurus] = useState("HEPSİ");
 
-  // Helpers (Excel, DNA, Time)
   const formatExcelTime = (val: any) => {
-    if (!val) return "00:00";
-    if (typeof val === 'string' && val.includes(':')) return val.trim().substring(0, 5);
+    if (val === null || val === undefined || val === "") return "00:00";
+    if (typeof val === 'string') {
+      const m = val.match(/(\d{1,2})[:.](\d{1,2})/);
+      return m ? `${m[1].padStart(2, '0')}:${m[2].padStart(2, '0')}` : "00:00";
+    }
     if (typeof val === 'number') {
       const totalSeconds = Math.round(val * 24 * 60 * 60);
-      return `${String(Math.floor(totalSeconds / 3600)).padStart(2, '0')}:${String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0')}`;
+      const h = Math.floor(totalSeconds / 3600);
+      const m = Math.floor((totalSeconds % 3600) / 60);
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     }
     return "00:00";
   };
@@ -97,7 +114,8 @@ export default function AdminDashboard() {
       const data: any[] = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
       const aylar: any = { "OCAK":"01","SUBAT":"02","MART":"03","NISAN":"04","MAYIS":"05","HAZIRAN":"06","TEMMUZ":"07","AGUSTOS":"08","EYLUL":"09","EKIM":"10","KASIM":"11","ARALIK":"12" };
       const mapped = data.map((row: any) => {
-        const ay = aylar[norm(getCol(row, "AY"))] || "01";
+        const ayRaw = String(getCol(row, "AY") || "");
+        const ay = aylar[norm(ayRaw)] || "01";
         const tarih = `${getCol(row, "YIL")||"2026"}-${ay}-${String(getCol(row, "GUN")||"01").padStart(2, '0')}`;
         const start = formatExcelTime(getCol(row, "BASLANGIC"));
         const end = formatExcelTime(getCol(row, "BITIS"));
@@ -108,7 +126,7 @@ export default function AdminDashboard() {
         const p1 = String(getCol(row, "PERSONEL 1") || "Sistem").trim();
         return {
           hatAdi: String(getCol(row, "HAT") || "").trim(), ekipmanAdi: String(getCol(row, "EKIPMAN") || "").trim(),
-          aciklama: getCol(row, "IS") || "-", baslangicSaati: start, bitisSaati: end, 
+          aciklama: String(getCol(row, "IS") || "-"), baslangicSaati: start, bitisSaati: end, 
           baslangicTarihi: tarih, bitisTarihi: tarih, toplamSureDakika: duration,
           vardiya: getCol(row, "VARDIYA") || "08:00 - 16:00", isDuruslu: String(getCol(row, "DURUS") || "").toUpperCase() !== "YOK",
           teknisyen: p1, yardimciTeknisyenler: [getCol(row, "PERSONEL 2"), getCol(row, "PERSONEL 3")].filter(p => p && p !== "-"),
@@ -121,7 +139,7 @@ export default function AdminDashboard() {
   };
 
   const confirmImport = async () => {
-    if (!window.confirm("Aktarım başlatılsın mı?")) return;
+    if (!window.confirm(`${importPreview.length} kayıt aktarılsın mı?`)) return;
     setIsImporting(true);
     try {
       for (let i = 0; i < importPreview.length; i += 500) {
@@ -132,35 +150,69 @@ export default function AdminDashboard() {
         });
         await batch.commit();
       }
-      alert("Başarılı"); setShowImportModal(false); window.location.reload();
+      alert("Aktarım Başarılı"); setShowImportModal(false); window.location.reload();
     } catch (err) { alert(err); } finally { setIsImporting(false); }
   };
 
   const clearOldImports = async () => {
-    if (!window.confirm("Sistem temizlenecek. Emin misiniz?")) return;
+    if (!window.confirm("TÜM SİSTEM TEMİZLENECEK. EMİN MİSİNİZ?")) return;
     setLoading(true);
     try {
       const snap = await getDocs(collection(db, "maintenance_logs"));
+      const allDocs = snap.docs;
       const allowed = ["DFUTECHREPORT", "HALILCAKIR", "TEKNIKSERVIS"];
-      const toDelete = snap.docs.filter(d => {
+      const toDelete = allDocs.filter(d => {
           const data = d.data();
           const bk = norm(data.bildirenKisi);
           const tk = norm(data.teknisyen);
           const isAllowed = allowed.some(a => bk.includes(a) || tk.includes(a));
           return !isAllowed || data.isImported === true;
       });
+      if (toDelete.length === 0) { alert("Silinecek kayıt bulunamadı."); setLoading(false); return; }
       for (let i = 0; i < toDelete.length; i += 500) {
         const batch = writeBatch(db);
         toDelete.slice(i, i + 500).forEach(d => batch.delete(d.ref));
         await batch.commit();
       }
-      alert(`${toDelete.length} kayıt silindi.`); window.location.reload();
-    } catch (err) { alert(err); setLoading(false); }
+      alert(`${toDelete.length} kayıt temizlendi.`); window.location.reload();
+    } catch (err) { alert("Hata: " + err); setLoading(false); }
   };
 
   const dnaScript = "Get-ChildItem -Recurse -Include *.tsx,*.ts | ForEach-Object { \"--- FILE: $($_.FullName) ---\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt; Get-Content $_.FullName | Out-File -Append PROJE_DOKUMU.txt; [char]96 + \"n\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt }";
   const handleCopyScript = () => { navigator.clipboard.writeText(dnaScript); setCopySuccess(true); setTimeout(() => setCopySuccess(false), 3000); };
-useEffect(() => {
+
+  const downloadFullSnapshot = async () => {
+    if (window.prompt("Şifre:") !== "161004") return alert("Hatalı!");
+    try {
+      const collections = ["maintenance_logs", "work_orders", "spare_parts", "users", "assets", "eked_logs", "meter_logs", "overtime_logs", "kar_arsivi"];
+      let dbBackup: any = {};
+      for (const coll of collections) {
+        const snap = await getDocs(collection(db, coll));
+        dbBackup[coll] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      }
+      const payload = { database: dbBackup, dna: "ULTIMATE_V23", date: new Date().toISOString() };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `DFU_MASTER_DNA_BACKUP.json`;
+      link.click();
+    } catch (e) { alert("Hata!"); }
+  };
+const handleSystemReset = async () => {
+    if (window.confirm("RESET?") && window.prompt("RESET ŞİFRESİ:") === "161004") {
+      setLoading(true);
+      const targetColls = ["maintenance_logs", "work_orders", "meter_logs", "eked_logs", "overtime_logs", "kar_arsivi", "pano_takip", "root_cause_analysis"];
+      for (const collName of targetColls) {
+        const snap = await getDocs(collection(db, collName));
+        const batch = writeBatch(db);
+        snap.docs.forEach((d) => batch.delete(d.ref));
+        await batch.commit();
+      }
+      window.location.reload();
+    }
+  };
+
+  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         const userRef = doc(db, "users", user.uid);
@@ -252,7 +304,7 @@ useEffect(() => {
           <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-12 bg-white rounded p-1" /><h1 className="text-2xl font-black uppercase text-indigo-400">Komuta Merkezi</h1></div>
           <div className="flex gap-3 items-center">
              <button onClick={() => setShowKpiModal(true)} className="bg-indigo-500 hover:bg-indigo-400 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase shadow-lg border-2 border-white/20 animate-pulse">📈 KPI ANALİZ</button>
-             <Link href="/dashboard" className="bg-indigo-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg">Vardiya Raporu</Link>
+             <Link href="/dashboard" className="bg-slate-800 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg">Vardiya Raporu</Link>
              <button onClick={clearOldImports} className="bg-red-900 border border-red-500/30 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg font-black hover:bg-red-800">🗑️ TEMİZLE</button>
              <label className="bg-orange-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg border border-orange-500/30 transition-all font-black cursor-pointer hover:bg-orange-500">📊 IMPORT <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleExcelImport} /></label>
              <button onClick={downloadFullSnapshot} className="bg-emerald-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg italic font-black">💾 YEDEK</button>
@@ -362,41 +414,22 @@ useEffect(() => {
         {showRcaModal && selectedLogForRca && (<div className="fixed inset-0 bg-black/95 backdrop-blur-sm flex justify-center items-center z-[999] p-4 font-bold italic"><div className="bg-slate-900 border border-slate-800 p-10 rounded-[50px] w-full max-w-xl shadow-2xl relative"><h2 className="text-xl font-black text-white mb-8 uppercase text-center tracking-[0.2em]">Root Cause Analysis</h2><div className="space-y-6 italic"><div className="grid grid-cols-3 gap-2 italic">{RCA_CATEGORIES.map(c=>(<button key={c.id} onClick={()=>setRcaForm({...rcaForm, category:c.id})} className={`p-3 rounded-2xl text-[10px] font-black uppercase transition-all border ${rcaForm.category===c.id?'bg-indigo-600 border-indigo-400 text-white shadow-xl shadow-indigo-600/30':'bg-slate-950 border-slate-800 text-gray-500 hover:border-indigo-400'}`}>{c.label}</button>))}</div><textarea value={rcaForm.why} onChange={e=>setRcaForm({...rcaForm, why:e.target.value})} placeholder="Duruş nedenini detaylandırın..." className="w-full bg-slate-950 border border-slate-800 rounded-[30px] p-6 text-sm text-white outline-none focus:ring-2 ring-indigo-500 h-40 shadow-inner italic font-black" /><div className="flex gap-4 italic"><button onClick={()=>setShowRcaModal(false)} className="flex-1 bg-slate-800 py-4 rounded-[20px] font-black text-gray-400 text-xs uppercase">Vazgeç</button><button onClick={handleSaveRca} className="flex-1 bg-indigo-600 py-4 rounded-[20px] font-black text-white shadow-xl text-xs uppercase transition">Kaydet</button></div></div></div></div>)}
       </div>
 
-      {/* --- KPI DERİN ANALİZ MODALI --- */}
       {showKpiModal && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/95 backdrop-blur-2xl" onClick={() => setShowKpiModal(false)}></div>
           <div className="relative bg-slate-900 border-2 border-indigo-500/30 w-full max-w-[95%] h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col text-white font-black italic uppercase">
-            <div className="p-8 border-b border-indigo-500/20 flex justify-between items-center bg-indigo-500/5">
-              <div><h2 className="text-2xl text-indigo-400">📈 KPI ANALİZ MERKEZİ</h2><p className="text-[10px] text-slate-500 mt-1">VERİ KAYNAĞI: MAINTENANCE_LOGS</p></div>
-              <button onClick={() => setShowKpiModal(false)} className="text-indigo-500/50 hover:text-indigo-400 text-3xl">✕</button>
+            <div className="p-8 border-b border-indigo-500/20 flex justify-between items-center bg-orange-500/5">
+              <div><h2 className="text-xl text-orange-500">📈 KPI ANALİZ MERKEZİ</h2></div>
+              <button onClick={() => setShowKpiModal(false)} className="text-indigo-500/50 hover:text-orange-500 text-3xl">✕</button>
             </div>
             <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-              <div className="w-full lg:w-80 bg-black/30 border-r border-slate-800 p-6 space-y-4 overflow-y-auto">
-                <h3 className="text-[10px] text-indigo-500 mb-4 tracking-[0.3em]">HASSAS FİLTRELEME</h3>
-                <div><label className="text-[9px] text-slate-500 block mb-1">YIL</label>
-                  <select value={kpiFYil} onChange={e=>setKpiFYil(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs">
-                    <option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option>
-                  </select>
-                </div>
-                <div><label className="text-[9px] text-slate-500 block mb-1">AY</label>
-                  <select value={kpiFAy} onChange={e=>setKpiFAy(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs">
-                    <option value="">TÜM AYLAR</option>{["01","02","03","04","05","06","07","08","09","10","11","12"].map(m=><option key={m} value={m}>{m}</option>)}
-                  </select>
-                </div>
-                <div><label className="text-[9px] text-slate-500 block mb-1">HAT</label>
-                  <select value={kpiFHat} onChange={e=>setKpiFHat(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs">
-                    <option value="">TÜM HATTAR</option>{Array.from(new Set(rawLogs.map(l=>l.hatAdi))).filter(Boolean).sort().map(h=><option key={h} value={h}>{h}</option>)}
-                  </select>
-                </div>
-                <div><label className="text-[9px] text-slate-500 block mb-1">PERSONEL</label>
-                  <select value={kpiFPersonel} onChange={e=>setKpiFPersonel(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs">
-                    <option value="">TÜM PERSONEL</option>{Array.from(new Set(rawLogs.map(l=>l.teknisyen))).filter(Boolean).sort().map(p=><option key={p} value={p}>{p}</option>)}
-                  </select>
-                </div>
-                <div><label className="text-[9px] text-slate-500 block mb-1">DURUŞ DURUMU</label>
-                  <div className="flex gap-2">{["HEPSİ", "VAR", "YOK"].map(d=><button key={d} onClick={()=>setKpiFDurus(d)} className={`flex-1 py-2 rounded-xl text-[9px] border ${kpiFDurus === d ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-slate-800 border-slate-700 text-slate-400'}`}>{d}</button>)}</div>
-                </div>
+              <div className="w-full lg:w-80 bg-black/30 border-r border-slate-800 p-6 space-y-4 overflow-y-auto text-[9px]">
+                <h3 className="text-indigo-500 uppercase tracking-widest">Filtreleme</h3>
+                <div><label className="text-slate-500 block">YIL</label><select value={kpiFYil} onChange={e=>setKpiFYil(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2"><option value="2025">2025</option><option value="2026">2026</option></select></div>
+                <div><label className="text-slate-500 block">AY</label><select value={kpiFAy} onChange={e=>setKpiFAy(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2"><option value="">TÜM AYLAR</option>{["01","02","03","04","05","06","07","08","09","10","11","12"].map(m=><option key={m} value={m}>{m}</option>)}</select></div>
+                <div><label className="text-slate-500 block">HAT</label><select value={kpiFHat} onChange={e=>setKpiFHat(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2"><option value="">TÜM HATTAR</option>{Array.from(new Set(rawLogs.map(l=>l.hatAdi))).filter(Boolean).sort().map(h=><option key={h} value={h}>{h}</option>)}</select></div>
+                <div><label className="text-slate-500 block">PERSONEL</label><select value={kpiFPersonel} onChange={e=>setKpiFPersonel(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2"><option value="">TÜM PERSONEL</option>{Array.from(new Set(rawLogs.map(l=>l.teknisyen))).filter(Boolean).sort().map(p=><option key={p} value={p}>{p}</option>)}</select></div>
+                <div><label className="text-slate-500 block">DURUŞ</label><div className="flex gap-2">{["HEPSİ", "VAR", "YOK"].map(d=><button key={d} onClick={()=>setKpiFDurus(d)} className={`flex-1 py-2 rounded-xl border ${kpiFDurus === d ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-slate-800 border-slate-700 text-slate-400'}`}>{d}</button>)}</div></div>
               </div>
               <div className="flex-1 p-8 overflow-y-auto bg-slate-950/50">
                 <div className="h-[500px] w-full">
@@ -435,21 +468,20 @@ useEffect(() => {
         </div>
       )}
 
-      {/* --- DRILL-DOWN PENCERESİ --- */}
       {showKpiDetailWindow && (
         <div className="fixed inset-0 z-[130] flex items-center justify-end p-6">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={()=>setShowKpiDetailWindow(false)}></div>
           <div className="relative bg-slate-900 border-l-4 border-indigo-500 w-full max-w-xl h-full rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right">
-            <div className="p-8 border-b border-slate-800 flex justify-between items-center">
-              <h3 className="text-lg font-black text-white">🔍 İŞ DETAYLARI</h3>
+            <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+              <h3 className="text-lg font-black text-white italic uppercase tracking-widest">🔍 İş Detay Arşivi</h3>
               <button onClick={()=>setShowKpiDetailWindow(false)} className="text-slate-500 hover:text-white text-2xl">✕</button>
             </div>
-            <div className="p-6 overflow-y-auto flex-1 space-y-4">
+            <div className="p-6 overflow-y-auto flex-1 space-y-4 text-white uppercase italic font-black">
               {selectedKpiLogDetails.map((log, i) => (
-                <div key={i} className="bg-slate-950 border border-slate-800 p-5 rounded-3xl">
+                <div key={i} className="bg-slate-950 border border-slate-800 p-5 rounded-3xl hover:border-indigo-500/50 transition-all">
                   <div className="flex justify-between text-[9px] font-black text-indigo-400 mb-2"><span>{log.baslangicTarihi}</span><span className="text-emerald-400">{log.toplamSureDakika} DK</span></div>
                   <h4 className="text-white text-xs font-black mb-2">{log.hatAdi} - {log.ekipmanAdi}</h4>
-                  <p className="text-slate-400 text-[11px] font-bold italic">"{log.aciklama}"</p>
+                  <p className="text-slate-400 text-[11px] font-bold italic leading-relaxed">"{log.aciklama}"</p>
                 </div>
               ))}
             </div>
@@ -457,17 +489,34 @@ useEffect(() => {
         </div>
       )}
 
-      {/* --- EXCEL IMPORT PREVIEW --- */}
       {showImportModal && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 text-white uppercase font-black italic">
           <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={() => !isImporting && setShowImportModal(false)}></div>
-          <div className="relative bg-slate-900 border-2 border-orange-500/30 w-full max-w-6xl max-h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col">
-            <div className="p-8 border-b border-orange-500/10 flex justify-between items-center bg-orange-500/5">
-              <div><h2 className="text-xl text-orange-500">📊 EXCEL ÖNİZLEME</h2><p className="text-[10px] text-slate-500 mt-1">Toplam {importPreview.length} kayıt.</p></div>
+          <div className="relative bg-slate-900 border-2 border-orange-500/30 w-full max-w-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col">
+            <div className="p-8 border-b border-orange-500/10 flex justify-between items-center bg-orange-500/5 tracking-widest">
+              <div><h2 className="text-xl text-orange-500 font-black">📊 EXCEL ÖNİZLEME</h2><p className="text-[10px] text-slate-500 mt-1">Toplam {importPreview.length} kayıt.</p></div>
               <button onClick={() => !isImporting && setShowImportModal(false)} className="text-orange-500/50 hover:text-orange-500 text-2xl">✕</button>
             </div>
-            <div className="p-6 overflow-y-auto flex-1"><table className="w-full text-left text-[10px]"><thead className="sticky top-0 bg-slate-900 text-orange-500/70 border-b border-slate-800"><tr><th className="p-3">Tarih</th><th className="p-3">Zaman</th><th className="p-3">Süre</th><th className="p-3">Hat</th><th className="p-3">Ekipman</th><th className="p-3">Duruş</th></tr></thead><tbody className="divide-y divide-slate-800">{importPreview.slice(0, 100).map((row, idx) => (<tr key={idx} className="hover:bg-orange-500/5"><td className="p-3 text-slate-400">{row.baslangicTarihi}</td><td className="p-3 text-indigo-400">{row.baslangicSaati} - {row.bitisSaati}</td><td className="p-3 text-amber-500">{row.toplamSureDakika} DK</td><td className="p-3 text-emerald-400 font-black">{row.hatAdi}</td><td className="p-3 text-white">{row.ekipmanAdi}</td><td className="p-3">{row.isDuruslu ? '🔴 VAR' : '🟢 YOK'}</td></tr>))}</tbody></table></div>
-            <div className="p-8 border-t border-slate-800 bg-slate-900/50 flex justify-end gap-4 text-[10px]"><button onClick={() => setShowImportModal(false)} disabled={isImporting} className="bg-slate-800 px-8 py-3 rounded-xl text-white">İPTAL</button><button onClick={confirmImport} disabled={isImporting} className="bg-orange-600 text-white px-10 py-3 rounded-xl shadow-xl">{isImporting ? '⏳ AKTARILIYOR...' : '🚀 AKTARIMI BAŞLAT'}</button></div>
+            <div className="p-6 overflow-y-auto flex-1"><table className="w-full text-left text-[10px] uppercase font-bold italic">
+                <thead className="sticky top-0 bg-slate-900 text-orange-500/70 border-b border-slate-800">
+                  <tr><th className="p-3">Tarih</th><th className="p-3">Başl - Bit</th><th className="p-3">Süre</th><th className="p-3">Hat / Ekipman</th><th className="p-3">SORUMLU</th><th className="p-3">Duruş</th></tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {importPreview.slice(0, 100).map((row, idx) => (
+                    <tr key={idx} className="hover:bg-orange-500/5">
+                      <td className="p-3 text-slate-400 whitespace-nowrap">{row.baslangicTarihi}</td>
+                      <td className="p-3 text-indigo-400 whitespace-nowrap font-mono">{row.baslangicSaati} - {row.bitisSaati}</td>
+                      <td className="p-3 text-amber-500 font-black">{row.toplamSureDakika}</td>
+                      <td className="p-3 text-white"><span className="text-emerald-400">{row.hatAdi}</span> / {row.ekipmanAdi}</td>
+                      <td className="p-3 text-indigo-300 font-black">{row.teknisyen}</td>
+                      <td className="p-3">{row.isDuruslu ? '🔴 VAR' : '🟢 YOK'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table></div>
+            <div className="p-8 border-t border-slate-800 bg-slate-900/50 flex justify-end gap-4 text-[10px] font-black uppercase"><button onClick={() => setShowImportModal(false)} disabled={isImporting} className="bg-slate-800 px-8 py-3 rounded-xl text-white hover:bg-slate-700">İPTAL</button><button onClick={confirmImport} disabled={isImporting} className="bg-orange-600 text-white px-10 py-3 rounded-xl shadow-xl hover:bg-orange-500 flex items-center gap-2">
+                {isImporting ? '⏳ AKTARILIYOR...' : '🚀 AKTARIMI BAŞLAT'}
+              </button></div>
           </div>
         </div>
       )}

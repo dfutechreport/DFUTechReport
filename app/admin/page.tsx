@@ -4,7 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import { collection, getDocs, doc, getDoc, query, where, orderBy, updateDoc, setDoc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, db } from "../../lib/firebase"; 
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { ComposedChart, Bar, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid } from 'recharts';
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -434,7 +434,8 @@ const handleSystemReset = async () => {
               <div className="flex-1 p-8 overflow-y-auto bg-slate-950/50">
                 <div className="h-[500px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={(() => {
+                    <ComposedChart 
+                      data={(() => {
                         const filtered = rawLogs.filter(l => {
                           const d = l.baslangicTarihi || "";
                           const matchYil = d.startsWith(kpiFYil);
@@ -455,11 +456,26 @@ const handleSystemReset = async () => {
                       })()}
                       onClick={(data: any) => { if(data && data.activePayload) { setSelectedKpiLogDetails(data.activePayload[0].payload.logs); setShowKpiDetailWindow(true); } }}
                     >
-                      <XAxis dataKey="name" stroke="#6366f1" fontSize={10} tickLine={false} axisLine={false} />
-                      <YAxis stroke="#475569" fontSize={10} tickLine={false} axisLine={false} />
-                      <Tooltip contentStyle={{backgroundColor:'#0f172a', border:'1px solid #334155', borderRadius:'15px'}} />
-                      <Bar dataKey="sure" fill="#6366f1" radius={[10, 10, 0, 0]} barSize={40} />
-                    </BarChart>
+                      <defs>
+                        <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#818cf8" stopOpacity={1} />
+                          <stop offset="100%" stopColor="#4f46e5" stopOpacity={0.6} />
+                        </linearGradient>
+                        <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#6366f1" stopOpacity={0.3} />
+                          <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                      <XAxis dataKey="name" stroke="#94a3b8" fontSize={9} tickLine={false} axisLine={false} tick={{fill: '#94a3b8'}} />
+                      <YAxis stroke="#94a3b8" fontSize={9} tickLine={false} axisLine={false} />
+                      <Tooltip 
+                        contentStyle={{backgroundColor:'rgba(15, 23, 42, 0.9)', border:'1px solid rgba(99, 102, 241, 0.5)', borderRadius:'20px', backdropBlur: '10px', boxShadow: '0 20px 50px rgba(0,0,0,0.5)'}}
+                        itemStyle={{color: '#818cf8', fontWeight: 'bold'}}
+                      />
+                      <Area type="monotone" dataKey="sure" fill="url(#areaGradient)" stroke="#6366f1" strokeWidth={2} />
+                      <Bar dataKey="sure" fill="url(#barGradient)" radius={[15, 15, 0, 0]} barSize={35} animationDuration={1500} />
+                    </ComposedChart>
                   </ResponsiveContainer>
                 </div>
               </div>

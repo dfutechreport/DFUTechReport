@@ -9,10 +9,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 const RCA_CATEGORIES = [
-  { id: "insan", label: "İnsan", color: "#3B82F6" }, 
-  { id: "makine", label: "Makine", color: "#EF4444" },
-  { id: "malzeme", label: "Malzeme", color: "#10B981" }, 
-  { id: "metot", label: "Metot", color: "#F59E0B" },
+  { id: "insan", label: "İnsan", color: "#3B82F6" }, { id: "makine", label: "Makine", color: "#EF4444" },
+  { id: "malzeme", label: "Malzeme", color: "#10B981" }, { id: "metot", label: "Metot", color: "#F59E0B" },
   { id: "ortam", label: "Ortam", color: "#8B5CF6" }
 ];
 
@@ -27,7 +25,7 @@ export default function AdminDashboard() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
 
-  // Core States
+  // States
   const [rawLogs, setRawLogs] = useState<any[]>([]);
   const [rcaLogs, setRcaLogs] = useState<any[]>([]);
   const [rawMeterLogs, setRawMeterLogs] = useState<any[]>([]);
@@ -57,7 +55,6 @@ export default function AdminDashboard() {
   const [grafikGaz, setGrafikGaz] = useState<any[]>([]);
   const [grafikSu, setGrafikSu] = useState<any[]>([]);
 
-  // KPI & Meter States
   const [showKpiModal, setShowKpiModal] = useState(false);
   const [selectedKpiLogDetails, setSelectedKpiLogDetails] = useState<any[]>([]);
   const [showKpiDetailWindow, setShowKpiDetailWindow] = useState(false);
@@ -69,7 +66,6 @@ export default function AdminDashboard() {
   const [showMeterImportModal, setShowMeterImportModal] = useState(false);
   const [isMeterImporting, setIsMeterImporting] = useState(false);
 
-  // UTILS
   const formatExcelTime = (val: any) => {
     if (!val) return "00:00";
     if (typeof val === 'string') {
@@ -91,7 +87,6 @@ export default function AdminDashboard() {
     return key ? row[key] : null;
   };
 
-  // FUNCTIONS
   const handleExcelImport = (e: any) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -101,10 +96,9 @@ export default function AdminDashboard() {
       if (!bstr) return;
       const wb = XLSX.read(bstr, { type: 'binary' });
       const data: any[] = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-      const aylar: any = { "OCAK":"01","SUBAT":"02","MART":"03","NISAN":"04","MAYIS":"05","HAZIRAN":"06","TEMMUZ":"07","AGUSTOS":"08","EYLUL":"09","EKIM":"10","KASIM":"11","ARALIK":"12" };
+      const aylar: any = { "OCAK":"01","SUBAT":"02","MART":"03","NISAN":"04","MAYIS":"05","HAZİRAN":"06","TEMMUZ":"07","AGUSTOS":"08","EYLUL":"09","EKIM":"10","KASIM":"11","ARALIK":"12" };
       const mapped = data.map((row: any) => {
-        const ayRaw = String(getCol(row, "AY") || "");
-        const ay = aylar[norm(ayRaw)] || "01";
+        const ay = aylar[norm(getCol(row, "AY"))] || "01";
         const tarih = `${getCol(row, "YIL")||"2026"}-${ay}-${String(getCol(row, "GUN")||"01").padStart(2, '0')}`;
         const start = formatExcelTime(getCol(row, "BASLANGIC"));
         const end = formatExcelTime(getCol(row, "BITIS"));
@@ -134,7 +128,7 @@ export default function AdminDashboard() {
       for (let i = 0; i < importPreview.length; i += 500) {
         const batch = writeBatch(db);
         importPreview.slice(i, i + 500).forEach(item => {
-          const uId = `imp_${item.baslangicTarihi}_${item.hatAdi}_${item.ekipmanAdi}_${item.baslangicSaati}`.replace(/\s+/g, '_');
+          const uId = `imp_${item.baslangicTarihi}_${item.hatAdi}_${item.ekipmanAdi}_${item.baslangicSaati}`.replace(/\s+/g, '_').replace(/\//g, '-');
           batch.set(doc(db, "maintenance_logs", uId), item);
         });
         await batch.commit();
@@ -162,7 +156,7 @@ export default function AdminDashboard() {
         await batch.commit();
       }
       alert(`${toDelete.length} kayıt silindi.`); window.location.reload();
-    } catch (err) { alert(err); setLoading(false); }
+    } catch (err) { alert("Hata: " + err); setLoading(false); }
   };
 
   const handleMeterDataImport = async (files: FileList) => {
@@ -179,9 +173,10 @@ export default function AdminDashboard() {
       const uniqueMeters: Record<string, string[]> = { "Elektrik": [], "Su": [], "Doğalgaz": [] };
       const allLogs: any[] = [];
       for (let i = 0; i < files.length; i++) {
-        const workbook = XLSX.read(await files[i].arrayBuffer());
+        const file = files[i];
+        const workbook = XLSX.read(await file.arrayBuffer());
         const data: any[] = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-        let type = files[i].name.toUpperCase().includes("ELEK") ? "Elektrik" : files[i].name.toUpperCase().includes("DOGAL") ? "Doğalgaz" : "Su";
+        let type = file.name.toUpperCase().includes("ELEK") ? "Elektrik" : file.name.toUpperCase().includes("DOGAL") || file.name.toUpperCase().includes("DOĞAL") ? "Doğalgaz" : "Su";
         data.forEach(row => {
           const rawTs = row["Zaman damgası"];
           const dateStr = typeof rawTs === 'number' ? new Date((rawTs - 25569) * 86400 * 1000).toISOString().split('T')[0] : new Date(rawTs).toISOString().split('T')[0];
@@ -200,10 +195,14 @@ export default function AdminDashboard() {
       }
       const mBatch = writeBatch(db);
       for (const [t, ads] of Object.entries(uniqueMeters)) {
-        for (const ad of ads) mBatch.set(doc(db, "meters", `${t}_${ad}`.replace(/\s+/g,'_')), { adi: ad, tip: t }, { merge: true });
+        for (const ad of ads) {
+            // FIXED: SLASH REPLACEMENT FOR FIRESTORE PATHS
+            const mId = `${t}_${ad}`.replace(/\s+/g,'_').replace(/\//g, '-');
+            mBatch.set(doc(db, "meters", mId), { adi: ad, tip: t }, { merge: true });
+        }
       }
       await mBatch.commit();
-      alert("Sayaçlar yüklendi."); window.location.reload();
+      alert("Sayaçlar güncellendi."); window.location.reload();
     } catch (e: any) { alert(e.message); } finally { setIsMeterImporting(false); }
   };
 
@@ -223,7 +222,7 @@ export default function AdminDashboard() {
         const snap = await getDocs(collection(db, coll));
         dbBackup[coll] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       }
-      const payload = { database: dbBackup, dna: "ULTIMATE_V33", date: new Date().toISOString() };
+      const payload = { database: dbBackup, dna: "ULTIMATE_V37", date: new Date().toISOString() };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
       const link = document.createElement("a"); link.href = URL.createObjectURL(blob);
       link.download = `DFU_MASTER_DNA_BACKUP.json`; link.click();
@@ -290,9 +289,9 @@ export default function AdminDashboard() {
       if (l.isDuruslu) { if (!eD[l.ekipmanAdi]) eD[l.ekipmanAdi] = { count: 0, sure: 0 }; eD[l.ekipmanAdi].count++; eD[l.ekipmanAdi].sure += s; }
     });
     setKpiTotals({ is: isC, sure: suC, durus: duC, mttr: isC > 0 ? (suC/isC) : 0 });
-    setGrafikIsHatti(Object.entries(hD).map(([name, value]) => ({ name, value })).sort((a:any, b:any) => b.value - a.value));
-    setPersonelPerformans(Object.entries(pD).map(([name, v]:any) => ({ name, is: v.isSayisi, efor: v.eforDk })).sort((a:any, b:any) => b.efor - a.efor));
-    setEkipmanPerformans(Object.entries(eD).map(([name, v]:any) => ({ name, count: v.count, sure: v.sure })).sort((a:any, b:any) => b.sure - a.sure));
+    setGrafikIsHatti(Object.entries(hD).map(([name, value]) => ({ name, value })).sort((a:any,b:any)=>b.value-a.value));
+    setPersonelPerformans(Object.entries(pD).map(([name, v]:any) => ({ name, is: v.isSayisi, efor: v.eforDk })).sort((a:any,b:any)=>b.efor-a.efor));
+    setEkipmanPerformans(Object.entries(eD).map(([name, v]:any) => ({ name, count: v.count, sure: v.sure })).sort((a:any,b:any)=>b.sure-a.sure));
   }, [rawLogs, filterYil]);
 
   useEffect(() => {
@@ -317,26 +316,20 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-[#020617] text-white p-4 md:p-8 font-sans overflow-x-hidden italic font-black uppercase selection:bg-indigo-500">
       <div className="max-w-7xl mx-auto">
-        
-        {/* RESPONSIVE HEADER */}
         <div className="flex flex-col lg:flex-row justify-between items-center gap-6 mb-10 border-b border-gray-800 pb-8 no-print">
-          <div className="flex items-center gap-4 w-full lg:w-auto justify-center lg:justify-start">
-            <img src="/dfulogo.png" className="h-12 bg-white rounded p-1" />
-            <h1 className="text-xl md:text-2xl font-black uppercase text-indigo-400 tracking-tighter">Komuta Merkezi</h1>
-          </div>
+          <div className="flex items-center gap-4 w-full lg:w-auto justify-center lg:justify-start"><img src="/dfulogo.png" className="h-12 bg-white rounded p-1" /><h1 className="text-xl md:text-2xl font-black uppercase text-indigo-400 tracking-tighter">Komuta Merkezi</h1></div>
           <div className="flex flex-wrap justify-center lg:justify-end gap-2 md:gap-3 w-full lg:w-auto">
              <button onClick={() => setShowKpiModal(true)} className="bg-indigo-500 hover:bg-indigo-400 text-white px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border border-white/10 animate-pulse">📈 KPI ANALİZ</button>
              <Link href="/dashboard" className="bg-slate-800 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border border-slate-700 text-center flex items-center">Vardiya Raporu</Link>
-             <button onClick={clearOldImports} className="bg-red-900/40 border border-red-500/30 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg hover:bg-red-800">🗑️ TEMİZLE</button>
+             <button onClick={clearOldImports} className="bg-red-900/40 border border-red-500/30 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg hover:bg-red-800 text-center">🗑️ TEMİZLE</button>
              <label className="bg-orange-600 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border border-orange-500/30 cursor-pointer hover:bg-orange-500 text-center flex items-center">📊 IMPORT <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleExcelImport} /></label>
              <button onClick={() => setShowMeterImportModal(true)} className="bg-emerald-600 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border border-emerald-500/30 text-center">🔌 SAYAÇ</button>
              <button onClick={downloadFullSnapshot} className="bg-slate-700 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg italic text-center">💾 YEDEK</button>
-             <button onClick={handleCopyScript} type="button" className={`${copySuccess ? 'bg-indigo-500' : 'bg-slate-800'} px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border border-indigo-500/30 transition-all`}>{copySuccess ? '✓ KOPYALANDI' : '🧬 DNA'}</button>
-             <button onClick={()=>signOut(auth)} className="bg-red-600 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg">Çıkış</button>
+             <button onClick={handleCopyScript} type="button" className={`${copySuccess ? 'bg-indigo-500' : 'bg-slate-800'} px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border border-indigo-500/30 transition-all text-center`}>{copySuccess ? '✓ KOPYALANDI' : '🧬 DNA'}</button>
+             <button onClick={()=>signOut(auth)} className="bg-red-600 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg text-center">Çıkış</button>
           </div>
         </div>
 
-        {/* NAVIGATION GRID */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-12 no-print">
           <Link href="/admin/is-emri-ac" className="bg-red-600 p-3 rounded-2xl text-[10px] text-center uppercase shadow-lg">🚨 Yeni İş Emri</Link>
           <Link href="/admin/aktif-isler" className="bg-red-950 border border-red-500 p-3 rounded-2xl text-[10px] text-center uppercase">Aktif Bildirimler</Link>
@@ -361,7 +354,6 @@ export default function AdminDashboard() {
           {userRole === "admin" && <button onClick={handleSystemReset} className="bg-red-950 border border-red-500/50 p-3 rounded-2xl text-[10px] text-red-500 font-black uppercase">☢️ SİSTEMİ SIFIRLA</button>}
         </div>
 
-        {/* RCA ANALİZ */}
         <div className="bg-slate-900 border border-slate-800 p-8 rounded-[3rem] mb-12 shadow-2xl">
           <h2 className="text-xl font-black text-white uppercase tracking-widest italic mb-6">📉 RCA Pareto Analizi (5 Neden)</h2>
           <div className="h-[400px]">
@@ -376,32 +368,27 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* ENERGY CHARTS */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
-           <div className="bg-slate-900 border border-slate-800 p-6 rounded-[30px] shadow-xl font-black">
+           <div className="bg-slate-900 border border-slate-800 p-6 rounded-[30px] shadow-xl font-black text-white">
               <h2 className="text-xs text-yellow-400 mb-4 uppercase underline">⚡ Elektrik</h2>
               <div className="h-48"><ResponsiveContainer><BarChart data={grafikElek}><XAxis dataKey="name" stroke="#555" fontSize={8} /><Tooltip contentStyle={{backgroundColor:'#000', borderRadius:'10px'}} /><Bar dataKey="value" fill="#fbbf24" /></BarChart></ResponsiveContainer></div>
            </div>
-           <div className="bg-slate-900 border border-slate-800 p-6 rounded-[30px] shadow-xl font-black">
+           <div className="bg-slate-900 border border-slate-800 p-6 rounded-[30px] shadow-xl font-black text-white">
               <h2 className="text-xs text-red-400 mb-4 uppercase underline">🔥 Doğalgaz</h2>
               <div className="h-48"><ResponsiveContainer><BarChart data={grafikGaz}><XAxis dataKey="name" stroke="#555" fontSize={8} /><Tooltip contentStyle={{backgroundColor:'#000', borderRadius:'10px'}} /><Bar dataKey="value" fill="#f87171" /></BarChart></ResponsiveContainer></div>
            </div>
-           <div className="bg-slate-900 border border-slate-800 p-6 rounded-[30px] shadow-xl font-black">
+           <div className="bg-slate-900 border border-slate-800 p-6 rounded-[30px] shadow-xl font-black text-white">
               <h2 className="text-xs text-blue-400 mb-4 uppercase underline">💧 Su</h2>
               <div className="h-48"><ResponsiveContainer><BarChart data={grafikSu}><XAxis dataKey="name" stroke="#555" fontSize={8} /><Tooltip contentStyle={{backgroundColor:'#000', borderRadius:'10px'}} /><Bar dataKey="value" fill="#60a5fa" /></BarChart></ResponsiveContainer></div>
            </div>
         </div>
       </div>
 
-      {/* KPI MODAL */}
       {showKpiModal && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/95 backdrop-blur-2xl" onClick={() => setShowKpiModal(false)}></div>
           <div className="relative bg-slate-900 border-2 border-indigo-500/30 w-full max-w-[95%] h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col text-white font-black italic uppercase">
-            <div className="p-8 border-b border-indigo-500/20 flex justify-between items-center bg-orange-500/5 font-black uppercase">
-              <div><h2 className="text-xl text-orange-500 tracking-widest">📈 KPI ANALİZ MERKEZİ</h2><p className="text-[10px] text-slate-500">Kapsamlı Filtreleme & Drill-down</p></div>
-              <button onClick={() => setShowKpiModal(false)} className="text-indigo-500/50 hover:text-orange-500 text-3xl">✕</button>
-            </div>
+            <div className="p-8 border-b border-indigo-500/20 flex justify-between items-center bg-orange-500/5"><div><h2 className="text-xl text-orange-500 tracking-widest">📈 KPI ANALİZ MERKEZİ</h2></div><button onClick={() => setShowKpiModal(false)} className="text-indigo-500/50 hover:text-orange-500 text-3xl">✕</button></div>
             <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
               <div className="w-full lg:w-80 bg-black/30 border-r border-slate-800 p-6 space-y-4 overflow-y-auto text-[9px]">
                 <h3 className="text-indigo-500 uppercase tracking-widest">Filtreleme</h3>
@@ -456,7 +443,7 @@ export default function AdminDashboard() {
         <div className="fixed inset-0 z-[130] flex items-center justify-end p-6">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={()=>setShowKpiDetailWindow(false)}></div>
           <div className="relative bg-slate-900 border-l-4 border-indigo-500 w-full max-w-xl h-full rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right">
-            <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-900/50 uppercase italic font-black"><h3 className="text-lg font-black text-white italic uppercase tracking-widest">🔍 İş Detay Arşivi</h3><button onClick={()=>setShowKpiDetailWindow(false)} className="text-slate-500 hover:text-white text-2xl">✕</button></div>
+            <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-900/50"><h3 className="text-lg font-black text-white italic uppercase tracking-widest">🔍 İş Detay Arşivi</h3><button onClick={()=>setShowKpiDetailWindow(false)} className="text-slate-500 hover:text-white text-2xl">✕</button></div>
             <div className="p-6 overflow-y-auto flex-1 space-y-4 text-white uppercase italic font-black">
               {selectedKpiLogDetails.map((log, i) => (
                 <div key={i} className="bg-slate-950 border border-slate-800 p-5 rounded-3xl hover:border-indigo-500/50 transition-all"><div className="flex justify-between text-[9px] font-black text-indigo-400 mb-2"><span>{log.baslangicTarihi}</span><span className="text-emerald-400">{log.toplamSureDakika} DK</span></div><h4 className="text-white text-xs font-black mb-2">{log.hatAdi} - {log.ekipmanAdi}</h4><p className="text-slate-400 text-[11px] font-bold italic leading-relaxed uppercase">"{log.aciklama}"</p></div>

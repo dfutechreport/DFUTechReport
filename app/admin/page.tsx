@@ -18,12 +18,16 @@ const RCA_CATEGORIES = [
 
 export default function AdminDashboard() {
   const router = useRouter();
-const [isAdmin, setIsAdmin] = useState(false);
-  const [userRole, setUserRole] = useState(""); 
-  const [userName, setUserName] = useState(""); 
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [userRole, setUserRole] = useState("");
+  const [userName, setUserName] = useState("");
   const [loading, setLoading] = useState(true);
-  
-  // VERİ HAVUZLARI
+  const [copySuccess, setCopySuccess] = useState(false);
+  const [importPreview, setImportPreview] = useState<any[]>([]);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+
+  // Original states from snapshot
   const [rawLogs, setRawLogs] = useState<any[]>([]);
   const [rcaLogs, setRcaLogs] = useState<any[]>([]);
   const [rawMeterLogs, setRawMeterLogs] = useState<any[]>([]);
@@ -31,8 +35,6 @@ const [isAdmin, setIsAdmin] = useState(false);
   const [aktifIsgAlarmlari, setAktifIsgAlarmlari] = useState<any[]>([]);
   const [aktifEked, setAktifEked] = useState<any[]>([]);
   const [kpiOnayBekleyen, setKpiOnayBekleyen] = useState(0);
-
-  // MODAL VE FİLTRE STATE'LERİ
   const [showEkedModal, setShowEkedModal] = useState(false);
   const [selectedEked, setSelectedEked] = useState<any>(null);
   const [selectedVaka, setSelectedVaka] = useState<any>(null);
@@ -40,7 +42,6 @@ const [isAdmin, setIsAdmin] = useState(false);
   const [showRcaModal, setShowRcaModal] = useState(false);
   const [selectedLogForRca, setSelectedLogForRca] = useState<any>(null);
   const [rcaForm, setRcaForm] = useState({ category: "", why: "" });
-  
   const [filterYil, setFilterYil] = useState(new Date().getFullYear().toString());
   const [filterElekSayac, setFilterElekSayac] = useState("");
   const [filterGazSayac, setFilterGazSayac] = useState("");
@@ -48,8 +49,6 @@ const [isAdmin, setIsAdmin] = useState(false);
   const [elekSayacList, setElekSayacList] = useState<string[]>([]);
   const [gazSayacList, setGazSayacList] = useState<string[]>([]);
   const [suSayacList, setSuSayacList] = useState<string[]>([]);
-
-  // HESAPLANAN VERİLER
   const [kpiTotals, setKpiTotals] = useState({ is: 0, sure: 0, durus: 0, mttr: 0 });
   const [grafikIsHatti, setGrafikIsHatti] = useState<any[]>([]);
   const [personelPerformans, setPersonelPerformans] = useState<any[]>([]);
@@ -58,56 +57,32 @@ const [isAdmin, setIsAdmin] = useState(false);
   const [grafikGaz, setGrafikGaz] = useState<any[]>([]);
   const [grafikSu, setGrafikSu] = useState<any[]>([]);
 
-  const RCA_CATEGORIES = [
-    { id: "insan", label: "İnsan", color: "#3B82F6" }, { id: "makine", label: "Makine", color: "#EF4444" },
-    { id: "malzeme", label: "Malzeme", color: "#10B981" }, { id: "metot", label: "Metot", color: "#F59E0B" },
-    { id: "ortam", label: "Ortam", color: "#8B5CF6" }
-  ];
-
-  // --- ŞİFRE KORUMALI SNAPSHOT VE RESET ---
-  
-  const [copySuccess, setCopySuccess] = useState(false);
-  const [importPreview, setImportPreview] = useState<any[]>([]);
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
+  // --- NEW KPI STATES ---
   const [showKpiModal, setShowKpiModal] = useState(false);
   const [selectedKpiLogDetails, setSelectedKpiLogDetails] = useState<any[]>([]);
   const [showKpiDetailWindow, setShowKpiDetailWindow] = useState(false);
-  
-  // Filtre State'leri
   const [kpiFYil, setKpiFYil] = useState(new Date().getFullYear().toString());
   const [kpiFAy, setKpiFAy] = useState("");
-  const [kpiFGun, setKpiFGun] = useState("");
   const [kpiFHat, setKpiFHat] = useState("");
-  const [kpiFEkipman, setKpiFEkipman] = useState("");
   const [kpiFPersonel, setKpiFPersonel] = useState("");
   const [kpiFDurus, setKpiFDurus] = useState("HEPSİ");
-  const [kpiFVardiya, setKpiFVardiya] = useState("");
 
-
+  // Helpers (Excel, DNA, Time)
   const formatExcelTime = (val: any) => {
     if (!val) return "00:00";
-    if (typeof val === 'string') {
-      const m = val.match(/(\d{1,2})[:.](\d{1,2})/);
-      return m ? `${m[1].padStart(2, '0')}:${m[2].padStart(2, '0')}` : "00:00";
-    }
+    if (typeof val === 'string' && val.includes(':')) return val.trim().substring(0, 5);
     if (typeof val === 'number') {
       const totalSeconds = Math.round(val * 24 * 60 * 60);
-      const h = Math.floor(totalSeconds / 3600);
-      const m = Math.floor((totalSeconds % 3600) / 60);
-      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      return `${String(Math.floor(totalSeconds / 3600)).padStart(2, '0')}:${String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0')}`;
     }
     return "00:00";
   };
 
   const norm = (s: any) => String(s || "").replace(/[İIı]/g, 'I').replace(/[ŞŞ]/g, 'S').replace(/[ĞĞ]/g, 'G').replace(/[ÜÜ]/g, 'U').replace(/[ÖÖ]/g, 'O').replace(/[ÇÇ]/g, 'C').replace(/\s/g, '').toUpperCase();
 
-  const getCol = (row: any, keyword: string, exact: boolean = false) => {
+  const getCol = (row: any, keyword: string) => {
     const kNorm = norm(keyword);
-    const key = Object.keys(row).find(k => {
-      const keyNorm = norm(k);
-      return exact ? keyNorm === kNorm : keyNorm.includes(kNorm);
-    });
+    const key = Object.keys(row).find(k => norm(k).includes(kNorm));
     return key ? row[key] : null;
   };
 
@@ -120,45 +95,33 @@ const [isAdmin, setIsAdmin] = useState(false);
       if (!bstr) return;
       const wb = XLSX.read(bstr, { type: 'binary' });
       const data: any[] = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-      const aylar: any = { "OCAK":"01","SUBAT":"02","MART":"03","NISAN":"04","MAYIS":"05","HAZİRAN":"06","TEMMUZ":"07","AGUSTOS":"08","EYLUL":"09","EKIM":"10","KASIM":"11","ARALIK":"12" };
-      
+      const aylar: any = { "OCAK":"01","SUBAT":"02","MART":"03","NISAN":"04","MAYIS":"05","HAZIRAN":"06","TEMMUZ":"07","AGUSTOS":"08","EYLUL":"09","EKIM":"10","KASIM":"11","ARALIK":"12" };
       const mapped = data.map((row: any) => {
-        const ay = aylar[norm(getCol(row, "AY", true))] || "01";
+        const ay = aylar[norm(getCol(row, "AY"))] || "01";
         const tarih = `${getCol(row, "YIL")||"2026"}-${ay}-${String(getCol(row, "GUN")||"01").padStart(2, '0')}`;
         const start = formatExcelTime(getCol(row, "BASLANGIC"));
         const end = formatExcelTime(getCol(row, "BITIS"));
-        
         const [h1, m1] = start.split(':').map(Number);
         const [h2, m2] = end.split(':').map(Number);
         let duration = (h2 * 60 + m2) - (h1 * 60 + m1);
         if (duration < 0) duration += 1440;
-
-        const p1 = String(getCol(row, "PERSONEL1") || "Sistem").trim();
-        // AÇIKLAMA İÇİN ÖZEL ANAHTAR: "YAPILANIS" (IS ile karışmaması için)
-        const aciklamaVerisi = getCol(row, "YAPILANIS") || getCol(row, "ACIKLAMA") || "-";
-
+        const p1 = String(getCol(row, "PERSONEL 1") || "Sistem").trim();
         return {
-          hatAdi: String(getCol(row, "HAT") || "").trim(),
-          ekipmanAdi: String(getCol(row, "EKIPMAN") || "").trim(),
-          aciklama: String(aciklamaVerisi), // Sayısal gelirse string'e zorla
-          baslangicTarihi: tarih, bitisTarihi: tarih,
-          baslangicSaati: start, bitisSaati: end,
-          toplamSureDakika: duration,
-          vardiya: getCol(row, "VARDIYA") || "08:00 - 16:00",
-          isDuruslu: String(getCol(row, "DURUS") || "").toUpperCase() !== "YOK",
-          teknisyen: p1,
-          yardimciTeknisyenler: [getCol(row, "PERSONEL2"), getCol(row, "PERSONEL3")].filter(p => p && p !== "-"),
+          hatAdi: String(getCol(row, "HAT") || "").trim(), ekipmanAdi: String(getCol(row, "EKIPMAN") || "").trim(),
+          aciklama: getCol(row, "IS") || "-", baslangicSaati: start, bitisSaati: end, 
+          baslangicTarihi: tarih, bitisTarihi: tarih, toplamSureDakika: duration,
+          vardiya: getCol(row, "VARDIYA") || "08:00 - 16:00", isDuruslu: String(getCol(row, "DURUS") || "").toUpperCase() !== "YOK",
+          teknisyen: p1, yardimciTeknisyenler: [getCol(row, "PERSONEL 2"), getCol(row, "PERSONEL 3")].filter(p => p && p !== "-"),
           bildirenKisi: p1, usedMaterials: [], durum: "Kapalı", kayitTarihi: new Date(), isImported: true
         };
       });
-      setImportPreview(mapped.filter(i => i.hatAdi));
-      setShowImportModal(true);
+      setImportPreview(mapped.filter(i => i.hatAdi)); setShowImportModal(true);
     };
     reader.readAsBinaryString(file);
   };
 
   const confirmImport = async () => {
-    if (!window.confirm(`${importPreview.length} kayıt aktarılsın mı?`)) return;
+    if (!window.confirm("Aktarım başlatılsın mı?")) return;
     setIsImporting(true);
     try {
       for (let i = 0; i < importPreview.length; i += 500) {
@@ -169,76 +132,35 @@ const [isAdmin, setIsAdmin] = useState(false);
         });
         await batch.commit();
       }
-      alert("Aktarım Başarılı"); setShowImportModal(false); window.location.reload();
+      alert("Başarılı"); setShowImportModal(false); window.location.reload();
     } catch (err) { alert(err); } finally { setIsImporting(false); }
   };
 
   const clearOldImports = async () => {
-    if (!window.confirm("KORUNANLAR DIŞINDAKİ TÜM KAYITLAR SİLİNECEK. EMİN MİSİNİZ?")) return;
+    if (!window.confirm("Sistem temizlenecek. Emin misiniz?")) return;
     setLoading(true);
     try {
       const snap = await getDocs(collection(db, "maintenance_logs"));
-      const allDocs = snap.docs;
-      // Korunacak tam normalize isimler
       const allowed = ["DFUTECHREPORT", "HALILCAKIR", "TEKNIKSERVIS"];
-      
-      const toDelete = allDocs.filter(d => {
+      const toDelete = snap.docs.filter(d => {
           const data = d.data();
-          const bk = norm(data.bildirenKisi || "");
-          const tk = norm(data.teknisyen || "");
-          // Eğer ikisinden biri bile izinli değilse SİL
-          const isBkOk = allowed.some(a => bk.includes(a));
-          const isTkOk = allowed.some(a => tk.includes(a));
-          return !isBkOk && !isTkOk;
+          const bk = norm(data.bildirenKisi);
+          const tk = norm(data.teknisyen);
+          const isAllowed = allowed.some(a => bk.includes(a) || tk.includes(a));
+          return !isAllowed || data.isImported === true;
       });
-
-      if (toDelete.length === 0) { alert("Silinecek yabancı kayıt bulunamadı."); setLoading(false); return; }
-
       for (let i = 0; i < toDelete.length; i += 500) {
         const batch = writeBatch(db);
         toDelete.slice(i, i + 500).forEach(d => batch.delete(d.ref));
         await batch.commit();
       }
-      alert(`${toDelete.length} adet yabancı kayıt başarıyla temizlendi.`);
-      window.location.reload();
-    } catch (err) { alert("Hata: " + err); setLoading(false); }
+      alert(`${toDelete.length} kayıt silindi.`); window.location.reload();
+    } catch (err) { alert(err); setLoading(false); }
   };
 
   const dnaScript = "Get-ChildItem -Recurse -Include *.tsx,*.ts | ForEach-Object { \"--- FILE: $($_.FullName) ---\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt; Get-Content $_.FullName | Out-File -Append PROJE_DOKUMU.txt; [char]96 + \"n\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt }";
   const handleCopyScript = () => { navigator.clipboard.writeText(dnaScript); setCopySuccess(true); setTimeout(() => setCopySuccess(false), 3000); };
-
-  const downloadFullSnapshot = async () => {
-    if (window.prompt("Şifre:") !== "161004") return alert("Hatalı!");
-    try {
-      const collections = ["maintenance_logs", "work_orders", "spare_parts", "users", "assets", "eked_logs", "meter_logs", "overtime_logs", "kar_arsivi"];
-      let dbBackup: any = {};
-      for (const coll of collections) {
-        const snap = await getDocs(collection(db, coll));
-        dbBackup[coll] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      }
-      const payload = { database: dbBackup, dna: "ULTIMATE_V16", date: new Date().toISOString() };
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = `DFU_MASTER_DNA_BACKUP.json`;
-      link.click();
-    } catch (e) { alert("Hata!"); }
-  };
-const handleSystemReset = async () => {
-    if (window.confirm("RESET?") && window.prompt("RESET ŞİFRESİ:") === "161004") {
-      setLoading(true);
-      const targetColls = ["maintenance_logs", "work_orders", "meter_logs", "eked_logs", "overtime_logs", "kar_arsivi", "pano_takip", "root_cause_analysis"];
-      for (const collName of targetColls) {
-        const snap = await getDocs(collection(db, collName));
-        const batch = writeBatch(db);
-        snap.docs.forEach((d) => batch.delete(d.ref));
-        await batch.commit();
-      }
-      window.location.reload();
-    }
-  };
-
-  useEffect(() => {
+useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         const userRef = doc(db, "users", user.uid);
@@ -328,17 +250,13 @@ const handleSystemReset = async () => {
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-10 border-b border-gray-800 pb-5 no-print">
           <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-12 bg-white rounded p-1" /><h1 className="text-2xl font-black uppercase text-indigo-400">Komuta Merkezi</h1></div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 items-center">
+             <button onClick={() => setShowKpiModal(true)} className="bg-indigo-500 hover:bg-indigo-400 text-white px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase shadow-lg border-2 border-white/20 animate-pulse">📈 KPI ANALİZ</button>
              <Link href="/dashboard" className="bg-indigo-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg">Vardiya Raporu</Link>
-             <button onClick={clearOldImports} className="bg-red-900 border border-red-500/30 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg font-black hover:bg-red-800">🗑️ ESKİ AKTARIMLARI TEMİZLE</button>
-             <label className="bg-orange-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg border border-orange-500/30 transition-all font-black cursor-pointer hover:bg-orange-500">
-               📊 EXCEL İÇE AKTAR
-               <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleExcelImport} />
-             </label>
-             <button onClick={downloadFullSnapshot} className="bg-emerald-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg italic font-black">💾 MASTER YEDEK (JSON)</button>
-             <button onClick={handleCopyScript} type="button" className={`${copySuccess ? 'bg-indigo-500' : 'bg-slate-800'} px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg border border-indigo-500/30 transition-all font-black`}>
-               {copySuccess ? '✓ SCRİPT KOPYALANDI' : '🧬 SCRİPTİ KOPYALA'}
-             </button>
+             <button onClick={clearOldImports} className="bg-red-900 border border-red-500/30 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg font-black hover:bg-red-800">🗑️ TEMİZLE</button>
+             <label className="bg-orange-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg border border-orange-500/30 transition-all font-black cursor-pointer hover:bg-orange-500">📊 IMPORT <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleExcelImport} /></label>
+             <button onClick={downloadFullSnapshot} className="bg-emerald-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg italic font-black">💾 YEDEK</button>
+             <button onClick={handleCopyScript} type="button" className={`${copySuccess ? 'bg-indigo-500' : 'bg-slate-800'} px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg border border-indigo-500/30 transition-all font-black`}>{copySuccess ? '✓ KOPYALANDI' : '🧬 DNA'}</button>
              <button onClick={()=>signOut(auth)} className="bg-red-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg">Çıkış</button>
           </div>
         </div>
@@ -444,99 +362,46 @@ const handleSystemReset = async () => {
         {showRcaModal && selectedLogForRca && (<div className="fixed inset-0 bg-black/95 backdrop-blur-sm flex justify-center items-center z-[999] p-4 font-bold italic"><div className="bg-slate-900 border border-slate-800 p-10 rounded-[50px] w-full max-w-xl shadow-2xl relative"><h2 className="text-xl font-black text-white mb-8 uppercase text-center tracking-[0.2em]">Root Cause Analysis</h2><div className="space-y-6 italic"><div className="grid grid-cols-3 gap-2 italic">{RCA_CATEGORIES.map(c=>(<button key={c.id} onClick={()=>setRcaForm({...rcaForm, category:c.id})} className={`p-3 rounded-2xl text-[10px] font-black uppercase transition-all border ${rcaForm.category===c.id?'bg-indigo-600 border-indigo-400 text-white shadow-xl shadow-indigo-600/30':'bg-slate-950 border-slate-800 text-gray-500 hover:border-indigo-400'}`}>{c.label}</button>))}</div><textarea value={rcaForm.why} onChange={e=>setRcaForm({...rcaForm, why:e.target.value})} placeholder="Duruş nedenini detaylandırın..." className="w-full bg-slate-950 border border-slate-800 rounded-[30px] p-6 text-sm text-white outline-none focus:ring-2 ring-indigo-500 h-40 shadow-inner italic font-black" /><div className="flex gap-4 italic"><button onClick={()=>setShowRcaModal(false)} className="flex-1 bg-slate-800 py-4 rounded-[20px] font-black text-gray-400 text-xs uppercase">Vazgeç</button><button onClick={handleSaveRca} className="flex-1 bg-indigo-600 py-4 rounded-[20px] font-black text-white shadow-xl text-xs uppercase transition">Kaydet</button></div></div></div></div>)}
       </div>
 
-      {showImportModal && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 text-white uppercase font-black italic">
-          <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={() => !isImporting && setShowImportModal(false)}></div>
-          <div className="relative bg-slate-900 border-2 border-orange-500/30 w-full max-w-[90%] max-h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col">
-            <div className="p-8 border-b border-orange-500/10 flex justify-between items-center bg-orange-500/5">
-              <div><h2 className="text-xl text-orange-500 tracking-widest">📊 EXCEL ÖNİZLEME (TAM KONTROL)</h2><p className="text-[10px] text-slate-500 mt-1">Toplam {importPreview.length} kayıt.</p></div>
-              <button onClick={() => !isImporting && setShowImportModal(false)} className="text-orange-500/50 hover:text-orange-500 text-2xl">✕</button>
-            </div>
-            <div className="p-6 overflow-y-auto flex-1">
-              <table className="w-full text-left text-[10px]">
-                <thead className="sticky top-0 bg-slate-900 text-orange-500/70 border-b border-slate-800">
-                  <tr><th className="p-3">Tarih</th><th className="p-3">Başl - Bit</th><th className="p-3">Süre</th><th className="p-3">Hat / Ekipman</th><th className="p-3">SORUMLU</th><th className="p-3">Açıklama</th><th className="p-3">Duruş</th></tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800">
-                  {importPreview.slice(0, 100).map((row, idx) => (
-                    <tr key={idx} className="hover:bg-orange-500/5">
-                      <td className="p-3 text-slate-400 whitespace-nowrap">{row.baslangicTarihi}</td>
-                      <td className="p-3 text-indigo-400 whitespace-nowrap">{row.baslangicSaati} - {row.bitisSaati}</td>
-                      <td className="p-3 text-amber-500">{row.toplamSureDakika}</td>
-                      <td className="p-3 text-white"><span className="text-emerald-400">{row.hatAdi}</span> / {row.ekipmanAdi}</td>
-                      <td className="p-3 text-indigo-300 font-black">{row.teknisyen}</td>
-                      <td className="p-3 text-slate-400 max-w-xs truncate">{row.aciklama}</td>
-                      <td className="p-3">{row.isDuruslu ? '🔴 VAR' : '🟢 YOK'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="p-8 border-t border-slate-800 bg-slate-900/50 flex justify-end gap-4 text-[10px]"><button onClick={() => setShowImportModal(false)} disabled={isImporting} className="bg-slate-800 px-8 py-3 rounded-xl text-white">İPTAL</button><button onClick={confirmImport} disabled={isImporting} className="bg-orange-600 text-white px-10 py-3 rounded-xl shadow-xl">{isImporting ? '⏳ AKTARILIYOR...' : '🚀 AKTARIMI BAŞLAT'}</button></div>
-          </div>
-        </div>
-      )}
-
       {/* --- KPI DERİN ANALİZ MODALI --- */}
       {showKpiModal && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/95 backdrop-blur-2xl" onClick={() => setShowKpiModal(false)}></div>
           <div className="relative bg-slate-900 border-2 border-indigo-500/30 w-full max-w-[95%] h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col text-white font-black italic uppercase">
             <div className="p-8 border-b border-indigo-500/20 flex justify-between items-center bg-indigo-500/5">
-              <div>
-                <h2 className="text-2xl text-indigo-400 tracking-tighter">📈 STRATEJİK KPI ANALİZ MERKEZİ</h2>
-                <p className="text-[10px] text-slate-500 mt-1 tracking-widest">VERİ KAYNAĞI: MAINTENANCE_LOGS | TÜM FİLTRELER AKTİF</p>
-              </div>
+              <div><h2 className="text-2xl text-indigo-400">📈 KPI ANALİZ MERKEZİ</h2><p className="text-[10px] text-slate-500 mt-1">VERİ KAYNAĞI: MAINTENANCE_LOGS</p></div>
               <button onClick={() => setShowKpiModal(false)} className="text-indigo-500/50 hover:text-indigo-400 text-3xl">✕</button>
             </div>
-
             <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-              {/* SOL PANEL: FİLTRELER */}
               <div className="w-full lg:w-80 bg-black/30 border-r border-slate-800 p-6 space-y-4 overflow-y-auto">
                 <h3 className="text-[10px] text-indigo-500 mb-4 tracking-[0.3em]">HASSAS FİLTRELEME</h3>
-                <div>
-                  <label className="text-[9px] text-slate-500 block mb-1">YIL</label>
-                  <select value={kpiFYil} onChange={e=>setKpiFYil(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs text-white">
+                <div><label className="text-[9px] text-slate-500 block mb-1">YIL</label>
+                  <select value={kpiFYil} onChange={e=>setKpiFYil(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs">
                     <option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option>
                   </select>
                 </div>
-                <div>
-                  <label className="text-[9px] text-slate-500 block mb-1">AY</label>
+                <div><label className="text-[9px] text-slate-500 block mb-1">AY</label>
                   <select value={kpiFAy} onChange={e=>setKpiFAy(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs">
-                    <option value="">TÜM AYLAR</option>
-                    {["01","02","03","04","05","06","07","08","09","10","11","12"].map(m=><option key={m} value={m}>{m}</option>)}
+                    <option value="">TÜM AYLAR</option>{["01","02","03","04","05","06","07","08","09","10","11","12"].map(m=><option key={m} value={m}>{m}</option>)}
                   </select>
                 </div>
-                <div>
-                  <label className="text-[9px] text-slate-500 block mb-1">HAT</label>
+                <div><label className="text-[9px] text-slate-500 block mb-1">HAT</label>
                   <select value={kpiFHat} onChange={e=>setKpiFHat(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs">
-                    <option value="">TÜM HATTAR</option>
-                    {Array.from(new Set(rawLogs.map(l=>l.hatAdi))).filter(Boolean).sort().map(h=><option key={h} value={h}>{h}</option>)}
+                    <option value="">TÜM HATTAR</option>{Array.from(new Set(rawLogs.map(l=>l.hatAdi))).filter(Boolean).sort().map(h=><option key={h} value={h}>{h}</option>)}
                   </select>
                 </div>
-                <div>
-                  <label className="text-[9px] text-slate-500 block mb-1">PERSONEL</label>
+                <div><label className="text-[9px] text-slate-500 block mb-1">PERSONEL</label>
                   <select value={kpiFPersonel} onChange={e=>setKpiFPersonel(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs">
-                    <option value="">TÜM PERSONEL</option>
-                    {Array.from(new Set(rawLogs.map(l=>l.teknisyen))).filter(Boolean).sort().map(p=><option key={p} value={p}>{p}</option>)}
+                    <option value="">TÜM PERSONEL</option>{Array.from(new Set(rawLogs.map(l=>l.teknisyen))).filter(Boolean).sort().map(p=><option key={p} value={p}>{p}</option>)}
                   </select>
                 </div>
-                <div>
-                  <label className="text-[9px] text-slate-500 block mb-1">DURUŞ DURUMU</label>
-                  <div className="flex gap-2">
-                    {["HEPSİ", "VAR", "YOK"].map(d=>(
-                      <button key={d} onClick={()=>setKpiFDurus(d)} className={`flex-1 py-2 rounded-xl text-[9px] border ${kpiFDurus === d ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-slate-800 border-slate-700 text-slate-400'}`}>{d}</button>
-                    ))}
-                  </div>
+                <div><label className="text-[9px] text-slate-500 block mb-1">DURUŞ DURUMU</label>
+                  <div className="flex gap-2">{["HEPSİ", "VAR", "YOK"].map(d=><button key={d} onClick={()=>setKpiFDurus(d)} className={`flex-1 py-2 rounded-xl text-[9px] border ${kpiFDurus === d ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-slate-800 border-slate-700 text-slate-400'}`}>{d}</button>)}</div>
                 </div>
               </div>
-
-              {/* SAĞ PANEL: GRAFİK VE ANALİZ */}
               <div className="flex-1 p-8 overflow-y-auto bg-slate-950/50">
                 <div className="h-[500px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart 
-                      data={(() => {
+                    <BarChart data={(() => {
                         const filtered = rawLogs.filter(l => {
                           const d = l.baslangicTarihi || "";
                           const matchYil = d.startsWith(kpiFYil);
@@ -555,28 +420,14 @@ const handleSystemReset = async () => {
                         });
                         return Object.values(groups).sort((a:any, b:any) => b.sure - a.sure);
                       })()}
-                      onClick={(data: any) => {
-                        if(data && data.activePayload) {
-                          setSelectedKpiLogDetails(data.activePayload[0].payload.logs);
-                          setShowKpiDetailWindow(true);
-                        }
-                      }}
+                      onClick={(data: any) => { if(data && data.activePayload) { setSelectedKpiLogDetails(data.activePayload[0].payload.logs); setShowKpiDetailWindow(true); } }}
                     >
                       <XAxis dataKey="name" stroke="#6366f1" fontSize={10} tickLine={false} axisLine={false} />
                       <YAxis stroke="#475569" fontSize={10} tickLine={false} axisLine={false} />
-                      <Tooltip contentStyle={{backgroundColor:'#0f172a', border:'1px solid #334155', borderRadius:'15px', color:'#fff'}} />
-                      <Bar dataKey="sure" fill="url(#colorKpi)" radius={[10, 10, 0, 0]} barSize={40} />
-                      <defs>
-                        <linearGradient id="colorKpi" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#6366f1" stopOpacity={0.8}/>
-                          <stop offset="95%" stopColor="#6366f1" stopOpacity={0.1}/>
-                        </linearGradient>
-                      </defs>
+                      <Tooltip contentStyle={{backgroundColor:'#0f172a', border:'1px solid #334155', borderRadius:'15px'}} />
+                      <Bar dataKey="sure" fill="#6366f1" radius={[10, 10, 0, 0]} barSize={40} />
                     </BarChart>
                   </ResponsiveContainer>
-                </div>
-                <div className="mt-8 text-center">
-                   <p className="text-[10px] text-slate-500 font-bold animate-pulse">💡 GRAFİK ÜZERİNDEKİ ÇUBUKLARA TIKLAYARAK YAPILAN İŞ DETAYLARINI GÖREBİLİRSİNİZ</p>
                 </div>
               </div>
             </div>
@@ -584,28 +435,39 @@ const handleSystemReset = async () => {
         </div>
       )}
 
-      {/* --- MİNİ DETAY PENCERESİ (DRILL-DOWN) --- */}
+      {/* --- DRILL-DOWN PENCERESİ --- */}
       {showKpiDetailWindow && (
         <div className="fixed inset-0 z-[130] flex items-center justify-end p-6">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={()=>setShowKpiDetailWindow(false)}></div>
-          <div className="relative bg-slate-900 border-l-4 border-indigo-500 w-full max-w-xl h-full rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-500">
+          <div className="relative bg-slate-900 border-l-4 border-indigo-500 w-full max-w-xl h-full rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right">
             <div className="p-8 border-b border-slate-800 flex justify-between items-center">
-              <h3 className="text-lg font-black text-white italic uppercase tracking-widest">🔍 İş Detay Arşivi</h3>
+              <h3 className="text-lg font-black text-white">🔍 İŞ DETAYLARI</h3>
               <button onClick={()=>setShowKpiDetailWindow(false)} className="text-slate-500 hover:text-white text-2xl">✕</button>
             </div>
             <div className="p-6 overflow-y-auto flex-1 space-y-4">
               {selectedKpiLogDetails.map((log, i) => (
-                <div key={i} className="bg-slate-950/50 border border-slate-800 p-5 rounded-3xl hover:border-indigo-500/50 transition-all">
-                  <div className="flex justify-between text-[9px] font-black text-indigo-400 mb-2">
-                    <span>{log.baslangicTarihi} | {log.baslangicSaati}</span>
-                    <span className="text-emerald-400">{log.toplamSureDakika} DK</span>
-                  </div>
+                <div key={i} className="bg-slate-950 border border-slate-800 p-5 rounded-3xl">
+                  <div className="flex justify-between text-[9px] font-black text-indigo-400 mb-2"><span>{log.baslangicTarihi}</span><span className="text-emerald-400">{log.toplamSureDakika} DK</span></div>
                   <h4 className="text-white text-xs font-black mb-2">{log.hatAdi} - {log.ekipmanAdi}</h4>
-                  <p className="text-slate-400 text-[11px] font-bold italic leading-relaxed bg-black/20 p-3 rounded-xl border border-slate-800/50">"{log.aciklama}"</p>
-                  <div className="mt-3 text-[9px] text-slate-600 font-black tracking-widest">SORUMLU: {log.teknisyen}</div>
+                  <p className="text-slate-400 text-[11px] font-bold italic">"{log.aciklama}"</p>
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- EXCEL IMPORT PREVIEW --- */}
+      {showImportModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 text-white uppercase font-black italic">
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={() => !isImporting && setShowImportModal(false)}></div>
+          <div className="relative bg-slate-900 border-2 border-orange-500/30 w-full max-w-6xl max-h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col">
+            <div className="p-8 border-b border-orange-500/10 flex justify-between items-center bg-orange-500/5">
+              <div><h2 className="text-xl text-orange-500">📊 EXCEL ÖNİZLEME</h2><p className="text-[10px] text-slate-500 mt-1">Toplam {importPreview.length} kayıt.</p></div>
+              <button onClick={() => !isImporting && setShowImportModal(false)} className="text-orange-500/50 hover:text-orange-500 text-2xl">✕</button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1"><table className="w-full text-left text-[10px]"><thead className="sticky top-0 bg-slate-900 text-orange-500/70 border-b border-slate-800"><tr><th className="p-3">Tarih</th><th className="p-3">Zaman</th><th className="p-3">Süre</th><th className="p-3">Hat</th><th className="p-3">Ekipman</th><th className="p-3">Duruş</th></tr></thead><tbody className="divide-y divide-slate-800">{importPreview.slice(0, 100).map((row, idx) => (<tr key={idx} className="hover:bg-orange-500/5"><td className="p-3 text-slate-400">{row.baslangicTarihi}</td><td className="p-3 text-indigo-400">{row.baslangicSaati} - {row.bitisSaati}</td><td className="p-3 text-amber-500">{row.toplamSureDakika} DK</td><td className="p-3 text-emerald-400 font-black">{row.hatAdi}</td><td className="p-3 text-white">{row.ekipmanAdi}</td><td className="p-3">{row.isDuruslu ? '🔴 VAR' : '🟢 YOK'}</td></tr>))}</tbody></table></div>
+            <div className="p-8 border-t border-slate-800 bg-slate-900/50 flex justify-end gap-4 text-[10px]"><button onClick={() => setShowImportModal(false)} disabled={isImporting} className="bg-slate-800 px-8 py-3 rounded-xl text-white">İPTAL</button><button onClick={confirmImport} disabled={isImporting} className="bg-orange-600 text-white px-10 py-3 rounded-xl shadow-xl">{isImporting ? '⏳ AKTARILIYOR...' : '🚀 AKTARIMI BAŞLAT'}</button></div>
           </div>
         </div>
       )}

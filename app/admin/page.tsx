@@ -70,6 +70,20 @@ const [isAdmin, setIsAdmin] = useState(false);
   const [importPreview, setImportPreview] = useState<any[]>([]);
   const [showImportModal, setShowImportModal] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [showKpiModal, setShowKpiModal] = useState(false);
+  const [selectedKpiLogDetails, setSelectedKpiLogDetails] = useState<any[]>([]);
+  const [showKpiDetailWindow, setShowKpiDetailWindow] = useState(false);
+  
+  // Filtre State'leri
+  const [kpiFYil, setKpiFYil] = useState(new Date().getFullYear().toString());
+  const [kpiFAy, setKpiFAy] = useState("");
+  const [kpiFGun, setKpiFGun] = useState("");
+  const [kpiFHat, setKpiFHat] = useState("");
+  const [kpiFEkipman, setKpiFEkipman] = useState("");
+  const [kpiFPersonel, setKpiFPersonel] = useState("");
+  const [kpiFDurus, setKpiFDurus] = useState("HEPSİ");
+  const [kpiFVardiya, setKpiFVardiya] = useState("");
+
 
   const formatExcelTime = (val: any) => {
     if (!val) return "00:00";
@@ -459,6 +473,139 @@ const handleSystemReset = async () => {
               </table>
             </div>
             <div className="p-8 border-t border-slate-800 bg-slate-900/50 flex justify-end gap-4 text-[10px]"><button onClick={() => setShowImportModal(false)} disabled={isImporting} className="bg-slate-800 px-8 py-3 rounded-xl text-white">İPTAL</button><button onClick={confirmImport} disabled={isImporting} className="bg-orange-600 text-white px-10 py-3 rounded-xl shadow-xl">{isImporting ? '⏳ AKTARILIYOR...' : '🚀 AKTARIMI BAŞLAT'}</button></div>
+          </div>
+        </div>
+      )}
+
+      {/* --- KPI DERİN ANALİZ MODALI --- */}
+      {showKpiModal && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/95 backdrop-blur-2xl" onClick={() => setShowKpiModal(false)}></div>
+          <div className="relative bg-slate-900 border-2 border-indigo-500/30 w-full max-w-[95%] h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col text-white font-black italic uppercase">
+            <div className="p-8 border-b border-indigo-500/20 flex justify-between items-center bg-indigo-500/5">
+              <div>
+                <h2 className="text-2xl text-indigo-400 tracking-tighter">📈 STRATEJİK KPI ANALİZ MERKEZİ</h2>
+                <p className="text-[10px] text-slate-500 mt-1 tracking-widest">VERİ KAYNAĞI: MAINTENANCE_LOGS | TÜM FİLTRELER AKTİF</p>
+              </div>
+              <button onClick={() => setShowKpiModal(false)} className="text-indigo-500/50 hover:text-indigo-400 text-3xl">✕</button>
+            </div>
+
+            <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+              {/* SOL PANEL: FİLTRELER */}
+              <div className="w-full lg:w-80 bg-black/30 border-r border-slate-800 p-6 space-y-4 overflow-y-auto">
+                <h3 className="text-[10px] text-indigo-500 mb-4 tracking-[0.3em]">HASSAS FİLTRELEME</h3>
+                <div>
+                  <label className="text-[9px] text-slate-500 block mb-1">YIL</label>
+                  <select value={kpiFYil} onChange={e=>setKpiFYil(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs text-white">
+                    <option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[9px] text-slate-500 block mb-1">AY</label>
+                  <select value={kpiFAy} onChange={e=>setKpiFAy(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs">
+                    <option value="">TÜM AYLAR</option>
+                    {["01","02","03","04","05","06","07","08","09","10","11","12"].map(m=><option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[9px] text-slate-500 block mb-1">HAT</label>
+                  <select value={kpiFHat} onChange={e=>setKpiFHat(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs">
+                    <option value="">TÜM HATTAR</option>
+                    {Array.from(new Set(rawLogs.map(l=>l.hatAdi))).filter(Boolean).sort().map(h=><option key={h} value={h}>{h}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[9px] text-slate-500 block mb-1">PERSONEL</label>
+                  <select value={kpiFPersonel} onChange={e=>setKpiFPersonel(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-xs">
+                    <option value="">TÜM PERSONEL</option>
+                    {Array.from(new Set(rawLogs.map(l=>l.teknisyen))).filter(Boolean).sort().map(p=><option key={p} value={p}>{p}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[9px] text-slate-500 block mb-1">DURUŞ DURUMU</label>
+                  <div className="flex gap-2">
+                    {["HEPSİ", "VAR", "YOK"].map(d=>(
+                      <button key={d} onClick={()=>setKpiFDurus(d)} className={`flex-1 py-2 rounded-xl text-[9px] border ${kpiFDurus === d ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-slate-800 border-slate-700 text-slate-400'}`}>{d}</button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* SAĞ PANEL: GRAFİK VE ANALİZ */}
+              <div className="flex-1 p-8 overflow-y-auto bg-slate-950/50">
+                <div className="h-[500px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart 
+                      data={(() => {
+                        const filtered = rawLogs.filter(l => {
+                          const d = l.baslangicTarihi || "";
+                          const matchYil = d.startsWith(kpiFYil);
+                          const matchAy = !kpiFAy || d.split('-')[1] === kpiFAy;
+                          const matchHat = !kpiFHat || l.hatAdi === kpiFHat;
+                          const matchPers = !kpiFPersonel || l.teknisyen === kpiFPersonel;
+                          const matchDurus = kpiFDurus === "HEPSİ" || (kpiFDurus === "VAR" ? l.isDuruslu : !l.isDuruslu);
+                          return matchYil && matchAy && matchHat && matchPers && matchDurus;
+                        });
+                        const groups: any = {};
+                        filtered.forEach(f => {
+                          const key = kpiFHat ? f.ekipmanAdi : f.hatAdi;
+                          if(!groups[key]) groups[key] = { name: key, sure: 0, logs: [] };
+                          groups[key].sure += Number(f.toplamSureDakika) || 0;
+                          groups[key].logs.push(f);
+                        });
+                        return Object.values(groups).sort((a:any, b:any) => b.sure - a.sure);
+                      })()}
+                      onClick={(data) => {
+                        if(data && data.activePayload) {
+                          setSelectedKpiLogDetails(data.activePayload[0].payload.logs);
+                          setShowKpiDetailWindow(true);
+                        }
+                      }}
+                    >
+                      <XAxis dataKey="name" stroke="#6366f1" fontSize={10} tickLine={false} axisLine={false} />
+                      <YAxis stroke="#475569" fontSize={10} tickLine={false} axisLine={false} />
+                      <Tooltip contentStyle={{backgroundColor:'#0f172a', border:'1px solid #334155', borderRadius:'15px', color:'#fff'}} />
+                      <Bar dataKey="sure" fill="url(#colorKpi)" radius={[10, 10, 0, 0]} barSize={40} />
+                      <defs>
+                        <linearGradient id="colorKpi" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#6366f1" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#6366f1" stopOpacity={0.1}/>
+                        </linearGradient>
+                      </defs>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-8 text-center">
+                   <p className="text-[10px] text-slate-500 font-bold animate-pulse">💡 GRAFİK ÜZERİNDEKİ ÇUBUKLARA TIKLAYARAK YAPILAN İŞ DETAYLARINI GÖREBİLİRSİNİZ</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- MİNİ DETAY PENCERESİ (DRILL-DOWN) --- */}
+      {showKpiDetailWindow && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-end p-6">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={()=>setShowKpiDetailWindow(false)}></div>
+          <div className="relative bg-slate-900 border-l-4 border-indigo-500 w-full max-w-xl h-full rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-500">
+            <div className="p-8 border-b border-slate-800 flex justify-between items-center">
+              <h3 className="text-lg font-black text-white italic uppercase tracking-widest">🔍 İş Detay Arşivi</h3>
+              <button onClick={()=>setShowKpiDetailWindow(false)} className="text-slate-500 hover:text-white text-2xl">✕</button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1 space-y-4">
+              {selectedKpiLogDetails.map((log, i) => (
+                <div key={i} className="bg-slate-950/50 border border-slate-800 p-5 rounded-3xl hover:border-indigo-500/50 transition-all">
+                  <div className="flex justify-between text-[9px] font-black text-indigo-400 mb-2">
+                    <span>{log.baslangicTarihi} | {log.baslangicSaati}</span>
+                    <span className="text-emerald-400">{log.toplamSureDakika} DK</span>
+                  </div>
+                  <h4 className="text-white text-xs font-black mb-2">{log.hatAdi} - {log.ekipmanAdi}</h4>
+                  <p className="text-slate-400 text-[11px] font-bold italic leading-relaxed bg-black/20 p-3 rounded-xl border border-slate-800/50">"{log.aciklama}"</p>
+                  <div className="mt-3 text-[9px] text-slate-600 font-black tracking-widest">SORUMLU: {log.teknisyen}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}

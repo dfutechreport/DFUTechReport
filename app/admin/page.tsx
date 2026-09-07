@@ -17,7 +17,7 @@ const RCA_CATEGORIES = [
 export default function AdminDashboard() {
   const router = useRouter();
 
-  // --- ATLAS FEATURES ---
+  // --- ATLAS NEW FEATURES ---
   const [copySuccess, setCopySuccess] = useState(false);
   const [importPreview, setImportPreview] = useState<any[]>([]);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -33,7 +33,7 @@ export default function AdminDashboard() {
   const [showMeterImportModal, setShowMeterImportModal] = useState(false);
   const [isMeterImporting, setIsMeterImporting] = useState(false);
 
-  const formatExTime = (val: any) => {
+  const formatAtlasTime = (val: any) => {
     if (!val) return "00:00";
     if (typeof val === 'string') {
       const m = val.match(/(\d{1,2})[:.](\d{1,2})/);
@@ -46,11 +46,11 @@ export default function AdminDashboard() {
     return "00:00";
   };
 
-  const nAtlas = (s: any) => String(s || "").replace(/[İIı]/g, 'I').replace(/[ŞŞ]/g, 'S').replace(/[ĞĞ]/g, 'G').replace(/[ÜÜ]/g, 'U').replace(/[ÖÖ]/g, 'O').replace(/[ÇÇ]/g, 'C').replace(/\s/g, '').toUpperCase();
+  const normAtlas = (s: any) => String(s || "").replace(/[İIı]/g, 'I').replace(/[ŞŞ]/g, 'S').replace(/[ĞĞ]/g, 'G').replace(/[ÜÜ]/g, 'U').replace(/[ÖÖ]/g, 'O').replace(/[ÇÇ]/g, 'C').replace(/\s/g, '').toUpperCase();
 
-  const getColA = (row: any, keyword: string) => {
-    const kNorm = nAtlas(keyword);
-    const key = Object.keys(row).find(k => nAtlas(k).includes(kNorm));
+  const getColAtlas = (row: any, keyword: string) => {
+    const kNorm = normAtlas(keyword);
+    const key = Object.keys(row).find(k => normAtlas(k).includes(kNorm));
     return key ? row[key] : null;
   };
 
@@ -63,23 +63,24 @@ export default function AdminDashboard() {
       if (!bstr) return;
       const wb = XLSX.read(bstr, { type: 'binary' });
       const data: any[] = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-      const aylar: any = { "OCAK":"01","SUBAT":"02","MART":"03","NISAN":"04","MAYIS":"05","HAZİRAN":"06","TEMMUZ":"07","AGUSTOS":"08","EYLUL":"09","EKIM":"10","KASIM":"11","ARALIK":"12" };
+      const aylar: any = { "OCAK":"01","SUBAT":"02","MART":"03","NISAN":"04","MAYIS":"05","HAZIRAN":"06","TEMMUZ":"07","AGUSTOS":"08","EYLUL":"09","EKIM":"10","KASIM":"11","ARALIK":"12" };
       const mapped = data.map((row: any) => {
-        const ay = aylar[nAtlas(getColA(row, "AY"))] || "01";
-        const tarih = `${getColA(row, "YIL")||"2026"}-${ay}-${String(getColA(row, "GUN")||"01").padStart(2, '0')}`;
-        const start = formatExTime(getColA(row, "BASLANGIC"));
-        const end = formatExTime(getColA(row, "BITIS"));
+        const ayRaw = String(getColAtlas(row, "AY") || "");
+        const ay = aylar[normAtlas(ayRaw)] || "01";
+        const tarih = `${getColAtlas(row, "YIL")||"2026"}-${ay}-${String(getColAtlas(row, "GUN")||"01").padStart(2, '0')}`;
+        const start = formatAtlasTime(getColAtlas(row, "BASLANGIC"));
+        const end = formatAtlasTime(getColAtlas(row, "BITIS"));
         const [h1, m1] = start.split(':').map(Number);
         const [h2, m2] = end.split(':').map(Number);
         let duration = (h2 * 60 + m2) - (h1 * 60 + m1);
         if (duration < 0) duration += 1440;
-        const p1 = String(getColA(row, "PERSONEL 1") || "Sistem").trim();
+        const p1 = String(getColAtlas(row, "PERSONEL 1") || "Sistem").trim();
         return {
-          hatAdi: String(getColA(row, "HAT") || "").trim(), ekipmanAdi: String(getColA(row, "EKIPMAN") || "").trim(),
-          aciklama: String(getColA(row, "IS") || "-"), baslangicSaati: start, bitisSaati: end, 
+          hatAdi: String(getColAtlas(row, "HAT") || "").trim(), ekipmanAdi: String(getColAtlas(row, "EKIPMAN") || "").trim(),
+          aciklama: String(getColAtlas(row, "IS") || "-"), baslangicSaati: start, bitisSaati: end, 
           baslangicTarihi: tarih, bitisTarihi: tarih, toplamSureDakika: duration,
-          vardiya: getColA(row, "VARDIYA") || "08:00 - 16:00", isDuruslu: String(getColA(row, "DURUS") || "").toUpperCase() !== "YOK",
-          teknisyen: p1, yardimciTeknisyenler: [getColA(row, "PERSONEL 2"), getColA(row, "PERSONEL 3")].filter(p => p && p !== "-"),
+          vardiya: getColAtlas(row, "VARDIYA") || "08:00 - 16:00", isDuruslu: String(getColAtlas(row, "DURUS") || "").toUpperCase() !== "YOK",
+          teknisyen: p1, yardimciTeknisyenler: [getColAtlas(row, "PERSONEL 2"), getColAtlas(row, "PERSONEL 3")].filter(p => p && p !== "-"),
           bildirenKisi: p1, usedMaterials: [], durum: "Kapalı", kayitTarihi: new Date(), isImported: true
         };
       });
@@ -89,7 +90,7 @@ export default function AdminDashboard() {
   };
 
   const confirmImport = async () => {
-    if (!window.confirm("Aktarımı başlat?")) return;
+    if (!window.confirm("Aktarım başlatılsın mı?")) return;
     setIsImporting(true);
     try {
       for (let i = 0; i < importPreview.length; i += 500) {
@@ -100,7 +101,7 @@ export default function AdminDashboard() {
         });
         await batch.commit();
       }
-      alert("Başarılı"); setShowImportModal(false); window.location.reload();
+      alert("Aktarım Başarılı"); setShowImportModal(false); window.location.reload();
     } catch (err) { alert(err); } finally { setIsImporting(false); }
   };
 
@@ -112,8 +113,8 @@ export default function AdminDashboard() {
       const allowed = ["DFUTECHREPORT", "HALILCAKIR", "TEKNIKSERVIS"];
       const toDelete = snap.docs.filter(d => {
           const data = d.data();
-          const bk = nAtlas(data.bildirenKisi);
-          const tk = nAtlas(data.teknisyen);
+          const bk = normAtlas(data.bildirenKisi);
+          const tk = normAtlas(data.teknisyen);
           const isAllowed = allowed.some(a => bk.includes(a) || tk.includes(a));
           return !isAllowed || data.isImported === true;
       });
@@ -172,7 +173,7 @@ export default function AdminDashboard() {
     navigator.clipboard.writeText(dnaScript); setCopySuccess(true); setTimeout(() => setCopySuccess(false), 3000);
   };
 
-  const downloadDNA = async () => {
+  const downloadFullSnapshotDNA = async () => {
     if (window.prompt("Şifre:") !== "161004") return;
     try {
       const collections = ["maintenance_logs", "work_orders", "spare_parts", "users", "assets", "eked_logs", "meter_logs", "overtime_logs", "kar_arsivi"];
@@ -181,10 +182,10 @@ export default function AdminDashboard() {
         const snap = await getDocs(collection(db, coll));
         dbBackup[coll] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       }
-      const payload = { database: dbBackup, dna: "V_ULT_MASTER_V50", date: new Date().toISOString() };
+      const payload = { database: dbBackup, dna: "MASTER_V51_ULTIMATE", date: new Date().toISOString() };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
       const link = document.createElement("a"); link.href = URL.createObjectURL(blob);
-      link.download = `DFU_MASTER_DNA.json`; link.click();
+      link.download = `DFU_SYSTEM_DNA.json`; link.click();
     } catch (e) { alert("Hata!"); }
   };
 const [isAdmin, setIsAdmin] = useState(false);
@@ -281,25 +282,25 @@ const [isAdmin, setIsAdmin] = useState(false);
       }
       setLoading(false);
     });
-  
+    
   if (loading) return <div className="h-screen bg-black flex items-center justify-center text-white italic font-black uppercase tracking-widest">Yükleniyor...</div>;
-  if (!isAdmin) return <div className="p-10 text-red-500 font-bold uppercase italic text-center">YETKİSİZ ERİŞİM!</div>;
+  if (!isAdmin) return <div className="p-10 text-red-500 font-bold uppercase italic text-center text-white font-black italic uppercase underline">YETKİSİZ ERİŞİM!</div>;
 
   return (
     <div className="min-h-screen bg-[#020617] text-white p-4 md:p-8 font-sans overflow-x-hidden italic font-black uppercase selection:bg-indigo-500">
       <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col lg:flex-row justify-between items-center gap-6 mb-10 border-b border-gray-800 pb-8 no-print text-white">
+        <div className="flex flex-col lg:flex-row justify-between items-center gap-6 mb-10 border-b border-gray-800 pb-8 no-print text-white font-black italic uppercase">
           <div className="flex items-center gap-4 w-full lg:w-auto justify-center lg:justify-start">
             <img src="/dfulogo.png" className="h-12 bg-white rounded p-1" />
             <h1 className="text-xl md:text-2xl font-black uppercase text-indigo-400 tracking-tighter">Komuta Merkezi</h1>
           </div>
-          <div className="flex flex-wrap justify-center lg:justify-end gap-2 md:gap-3 w-full lg:w-auto">
+          <div className="flex flex-wrap justify-center lg:justify-end gap-2 md:gap-3 w-full lg:w-auto font-black italic uppercase">
              <button onClick={() => setShowKpiModal(true)} className="bg-indigo-500 hover:bg-indigo-400 text-white px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border border-white/10 animate-pulse">📈 KPI ANALİZ</button>
              <Link href="/dashboard" className="bg-slate-800 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border border-slate-700 text-center flex items-center">Vardiya Raporu</Link>
              <button onClick={clearOldImports} className="bg-red-900/40 border border-red-500/30 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg hover:bg-red-800 text-center">🗑️ TEMİZLE</button>
              <label className="bg-orange-600 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border border-orange-500/30 cursor-pointer hover:bg-orange-500 text-center flex items-center">📊 IMPORT <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleExcelImport} /></label>
              <button onClick={() => setShowMeterImportModal(true)} className="bg-emerald-600 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border border-emerald-500/30 text-center">🔌 SAYAÇ</button>
-             <button onClick={downloadDNA} className="bg-slate-700 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg italic text-center">💾 YEDEK</button>
+             <button onClick={downloadFullSnapshotDNA} className="bg-slate-700 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg italic text-center">💾 YEDEK</button>
              <button onClick={handleCopyScript} type="button" className={`${copySuccess ? 'bg-indigo-500' : 'bg-slate-800'} px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border border-indigo-500/30 transition-all text-center`}>{copySuccess ? '✓ KOPYALANDI' : '🧬 DNA'}</button>
              <button onClick={()=>signOut(auth)} className="bg-red-600 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg text-center">Çıkış</button>
           </div>
@@ -409,7 +410,7 @@ const [isAdmin, setIsAdmin] = useState(false);
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/95 backdrop-blur-2xl" onClick={() => setShowKpiModal(false)}></div>
           <div className="relative bg-slate-900 border-2 border-indigo-500/30 w-full max-w-[95%] h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col text-white font-black italic uppercase">
-            <div className="p-8 border-b border-indigo-500/20 flex justify-between items-center bg-orange-500/5"><div><h2 className="text-xl text-orange-500 tracking-widest uppercase">📈 KPI ANALİZ MERKEZİ</h2></div><button onClick={() => setShowKpiModal(false)} className="text-indigo-500/50 hover:text-orange-500 text-3xl">✕</button></div>
+            <div className="p-8 border-b border-indigo-500/20 flex justify-between items-center bg-orange-500/5"><div><h2 className="text-xl text-orange-500 tracking-widest uppercase italic font-black">📈 KPI ANALİZ MERKEZİ</h2></div><button onClick={() => setShowKpiModal(false)} className="text-indigo-500/50 hover:text-orange-500 text-3xl">✕</button></div>
             <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
               <div className="w-full lg:w-80 bg-black/30 border-r border-slate-800 p-6 space-y-4 overflow-y-auto text-[9px]">
                 <h3 className="text-indigo-500 uppercase tracking-widest">Filtreleme</h3>
@@ -420,7 +421,7 @@ const [isAdmin, setIsAdmin] = useState(false);
                 <div><label className="text-slate-500 block">DURUŞ</label><div className="flex gap-2">{["HEPSİ", "VAR", "YOK"].map(d=><button key={d} onClick={()=>setKpiFDurus(d)} className={`flex-1 py-2 rounded-xl border ${kpiFDurus === d ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-slate-800 border-slate-700 text-slate-400'}`}>{d}</button>)}</div></div>
               </div>
               <div className="flex-1 p-8 overflow-y-auto bg-slate-950/50">
-                <div className="h-[500px] w-full text-white font-black">
+                <div className="h-[500px] w-full text-white font-black italic uppercase">
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={(() => {
                         const filtered = rawLogs.filter((l:any) => {
@@ -463,7 +464,7 @@ const [isAdmin, setIsAdmin] = useState(false);
       {showKpiDetailWindow && (
         <div className="fixed inset-0 z-[130] flex items-center justify-end p-6 font-black uppercase italic text-white text-xs">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={()=>setShowKpiDetailWindow(false)}></div>
-          <div className="relative bg-slate-900 border-l-4 border-indigo-500 w-full max-w-xl h-full rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right">
+          <div className="relative bg-slate-900 border-l-4 border-indigo-500 w-full max-w-xl h-full rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right font-black italic uppercase">
             <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-900/50"><h3 className="text-lg tracking-widest uppercase italic font-black">🔍 İş Detay Arşivi</h3><button onClick={()=>setShowKpiDetailWindow(false)} className="text-slate-500 hover:text-white text-2xl">✕</button></div>
             <div className="p-6 overflow-y-auto flex-1 space-y-4">
               {selectedKpiLogDetails.map((log:any, i:number) => (
@@ -478,7 +479,7 @@ const [isAdmin, setIsAdmin] = useState(false);
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 text-white uppercase font-black italic">
           <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={() => !isImporting && setShowImportModal(false)}></div>
           <div className="relative bg-slate-900 border-2 border-orange-500/30 w-full max-w-6xl max-h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col font-black italic">
-            <div className="p-8 border-b border-orange-500/10 flex justify-between items-center bg-orange-500/5 uppercase tracking-widest"><div><h2 className="text-xl text-orange-500">📊 EXCEL ÖNİZLEME</h2><p className="text-[10px] text-slate-500 mt-1 uppercase font-bold italic tracking-tighter">Toplam {importPreview.length} kayıt.</p></div><button onClick={() => !isImporting && setShowImportModal(false)} className="text-orange-500/50 hover:text-orange-500 text-2xl">✕</button></div>
+            <div className="p-8 border-b border-orange-500/10 flex justify-between items-center bg-orange-500/5 uppercase tracking-widest font-black italic"><div><h2 className="text-xl text-orange-500">📊 EXCEL ÖNİZLEME</h2><p className="text-[10px] text-slate-500 mt-1 uppercase font-bold italic tracking-tighter">Toplam {importPreview.length} kayıt.</p></div><button onClick={() => !isImporting && setShowImportModal(false)} className="text-orange-500/50 hover:text-orange-500 text-2xl">✕</button></div>
             <div className="p-6 overflow-y-auto flex-1 text-white uppercase italic font-black"><table className="w-full text-left text-[10px] uppercase font-bold italic">
                 <thead className="sticky top-0 bg-slate-900 text-orange-500/70 border-b border-slate-800"><tr><th className="p-3">Tarih</th><th className="p-3">Zaman</th><th className="p-3">Süre</th><th className="p-3">Hat / Ekipman</th><th className="p-3">SORUMLU</th><th className="p-3">Duruş</th></tr></thead>
                 <tbody className="divide-y divide-slate-800">{importPreview.slice(0, 100).map((row, idx) => (<tr key={idx} className="hover:bg-orange-500/5"><td className="p-3 text-slate-400 whitespace-nowrap">{row.baslangicTarihi}</td><td className="p-3 text-indigo-400 whitespace-nowrap font-mono">{row.baslangicSaati} - {row.bitisSaati}</td><td className="p-3 text-amber-500 font-black">{row.toplamSureDakika} DK</td><td className="p-3 text-white"><span className="text-emerald-400">{row.hatAdi}</span> / {row.ekipmanAdi}</td><td className="p-3 text-indigo-300 font-black">{row.teknisyen}</td><td className="p-3">{row.isDuruslu ? '🔴 VAR' : '🟢 YOK'}</td></tr>))}</tbody>
@@ -494,7 +495,7 @@ const [isAdmin, setIsAdmin] = useState(false);
           <div className="relative bg-slate-900 border-2 border-emerald-500/30 w-full max-w-md rounded-[3rem] shadow-2xl p-10 flex flex-col items-center text-center text-white font-black italic uppercase">
             <h2 className="text-xl font-black text-white uppercase tracking-widest mb-6 uppercase italic font-black">Sayaç DNA Aktarımı</h2>
             <p className="text-xs text-slate-400 mb-8 uppercase font-bold italic">Lütfen Elektrik, Su ve Doğalgaz dosyalarını seçin.</p>
-            <input type="file" multiple accept=".xlsx, .xls" onChange={(e) => e.target.files && handleMeterDataImport(e.target.files)} disabled={isMeterImporting} className="w-full text-xs text-slate-500 file:bg-emerald-600 file:text-white file:border-0 file:py-3 file:px-6 file:rounded-full file:font-black file:uppercase cursor-pointer" />
+            <input type="file" multiple accept=".xlsx, .xls" onChange={(e) => e.target.files && handleMeterDataImport(e.target.files)} disabled={isMeterImporting} className="w-full text-xs text-slate-500 file:bg-emerald-600 file:text-white file:border-0 file:py-3 file:px-6 file:rounded-full file:font-black file:uppercase cursor-pointer font-black italic uppercase" />
             {isMeterImporting && <div className="mt-8 text-[10px] text-emerald-400 font-black animate-pulse uppercase">VERİLER YAZILIYOR...</div>}
             {!isMeterImporting && <button onClick={() => setShowMeterImportModal(false)} className="mt-8 text-[10px] text-slate-600 uppercase font-black">KAPAT</button>}
           </div>
@@ -502,4 +503,5 @@ const [isAdmin, setIsAdmin] = useState(false);
       )}
     </div>
   );
+}
 }

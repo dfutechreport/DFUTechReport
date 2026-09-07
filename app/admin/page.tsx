@@ -9,15 +9,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 const RCA_CATEGORIES = [
-  { id: "insan", label: "İnsan", color: "#3B82F6" }, { id: "makine", label: "Makine", color: "#EF4444" },
-  { id: "malzeme", label: "Malzeme", color: "#10B981" }, { id: "metot", label: "Metot", color: "#F59E0B" },
+  { id: "insan", label: "İnsan", color: "#3B82F6" }, 
+  { id: "makine", label: "Makine", color: "#EF4444" },
+  { id: "malzeme", label: "Malzeme", color: "#10B981" }, 
+  { id: "metot", label: "Metot", color: "#F59E0B" },
   { id: "ortam", label: "Ortam", color: "#8B5CF6" }
 ];
 
 export default function AdminDashboard() {
   const router = useRouter();
-
-  // --- ATLAS STATES ---
+  
   const [copySuccess, setCopySuccess] = useState(false);
   const [importPreview, setImportPreview] = useState<any[]>([]);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -32,7 +33,8 @@ export default function AdminDashboard() {
   const [kpiFDurus, setKpiFDurus] = useState("HEPSİ");
   const [showMeterImportModal, setShowMeterImportModal] = useState(false);
   const [isMeterImporting, setIsMeterImporting] = useState(false);
-const [isAdmin, setIsAdmin] = useState(false);
+
+  const [isAdmin, setIsAdmin] = useState(false);
   const [userRole, setUserRole] = useState(""); 
   const [userName, setUserName] = useState(""); 
   const [loading, setLoading] = useState(true);
@@ -79,16 +81,48 @@ const [isAdmin, setIsAdmin] = useState(false);
   ];
 
   // --- ŞİFRE KORUMALI SNAPSHOT VE RESET ---
+  const downloadFullSnapshot = async () => {
+    if (window.prompt("Yedekleme Şifresi:") !== "161004") return alert("Hatalı!");
+    try {
+      const collections = ["maintenance_logs", "work_orders", "spare_parts", "users", "assets", "eked_logs", "meter_logs", "overtime_logs", "kar_arsivi"];
+      let dbBackup: any = {};
+      for (const coll of collections) {
+        const snap = await getDocs(collection(db, coll));
+        dbBackup[coll] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      }
+      const codeRes = await fetch('/api/backup-all');
+      const codeData = await codeRes.json();
+      const blob = new Blob([JSON.stringify({ database: dbBackup, dna: codeData.codeDump }, null, 2)], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `DFU_MASTER_FULL_SNAPSHOT.json`;
+      link.click();
+    } catch (e) { alert("Hata!"); }
+  };
+
+  const handleSystemReset = async () => {
+    if (window.confirm("RESET?") && window.prompt("RESET ŞİFRESİ:") === "161004") {
+      setLoading(true);
+      const targetColls = ["maintenance_logs", "work_orders", "meter_logs", "eked_logs", "overtime_logs", "kar_arsivi", "pano_takip", "root_cause_analysis"];
+      for (const collName of targetColls) {
+        const snap = await getDocs(collection(db, collName));
+        const batch = writeBatch(db);
+        snap.docs.forEach((d) => batch.delete(d.ref));
+        await batch.commit();
+      }
+      window.location.reload();
+    }
+  };
+
   
-  // --- ATLAS LOGIC ---
   const formatExTime = (v: any) => {
     if (!v) return "00:00";
     if (typeof v === 'string') { const m = v.match(/(\d{1,2})[:.](\d{1,2})/); return m ? `${m[1].padStart(2, '0')}:${m[2].padStart(2, '0')}` : "00:00"; }
     if (typeof v === 'number') { const ts = Math.round(v * 86400); return `${String(Math.floor(ts / 3600)).padStart(2, '0')}:${String(Math.floor((ts % 3600) / 60)).padStart(2, '0')}`; }
     return "00:00";
   };
-  const nA = (s: any) => String(s || "").replace(/[İIı]/g, 'I').replace(/[ŞŞ]/g, 'S').replace(/[ĞĞ]/g, 'G').replace(/[ÜÜ]/g, 'U').replace(/[ÖÖ]/g, 'O').replace(/[ÇÇ]/g, 'C').replace(/\s/g, '').toUpperCase();
-  const getCA = (row: any, kw: string) => { const kn = nA(kw); const key = Object.keys(row).find(k => nA(k).includes(kn)); return key ? row[key] : null; };
+  const normA = (s: any) => String(s || "").replace(/[İIı]/g, 'I').replace(/[ŞŞ]/g, 'S').replace(/[ĞĞ]/g, 'G').replace(/[ÜÜ]/g, 'U').replace(/[ÖÖ]/g, 'O').replace(/[ÇÇ]/g, 'C').replace(/\s/g, '').toUpperCase();
+  const getColA = (row: any, keyword: string) => { const kn = normA(keyword); const key = Object.keys(row).find(k => normA(k).includes(kn)); return key ? row[key] : null; };
 
   const handleExcelImport = (e: any) => {
     const file = e.target.files?.[0];
@@ -101,21 +135,21 @@ const [isAdmin, setIsAdmin] = useState(false);
       const data: any[] = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
       const aylar: any = { "OCAK":"01","SUBAT":"02","MART":"03","NISAN":"04","MAYIS":"05","HAZIRAN":"06","TEMMUZ":"07","AGUSTOS":"08","EYLUL":"09","EKIM":"10","KASIM":"11","ARALIK":"12" };
       const mapped = data.map((row: any) => {
-        const ay = aylar[nA(getCA(row, "AY"))] || "01";
-        const tarih = `${getCA(row, "YIL")||"2026"}-${ay}-${String(getCA(row, "GUN")||"01").padStart(2, '0')}`;
-        const start = formatExTime(getCA(row, "BASLANGIC"));
-        const end = formatExTime(getCA(row, "BITIS"));
+        const ay = aylar[normA(getColA(row, "AY"))] || "01";
+        const tarih = `${getColA(row, "YIL")||"2026"}-${ay}-${String(getColA(row, "GUN")||"01").padStart(2, '0')}`;
+        const start = formatExTime(getColA(row, "BASLANGIC"));
+        const end = formatExTime(getColA(row, "BITIS"));
         const [h1, m1] = start.split(':').map(Number);
         const [h2, m2] = end.split(':').map(Number);
         let duration = (h2 * 60 + m2) - (h1 * 60 + m1);
         if (duration < 0) duration += 1440;
-        const p1 = String(getCA(row, "PERSONEL 1") || "Sistem").trim();
+        const p1 = String(getColA(row, "PERSONEL 1") || "Sistem").trim();
         return {
-          hatAdi: String(getCA(row, "HAT") || "").trim(), ekipmanAdi: String(getCA(row, "EKIPMAN") || "").trim(),
-          aciklama: String(getCA(row, "IS") || "-"), baslangicSaati: start, bitisSaati: end, 
+          hatAdi: String(getColA(row, "HAT") || "").trim(), ekipmanAdi: String(getColA(row, "EKIPMAN") || "").trim(),
+          aciklama: String(getColA(row, "IS") || "-"), baslangicSaati: start, bitisSaati: end, 
           baslangicTarihi: tarih, bitisTarihi: tarih, toplamSureDakika: duration,
-          vardiya: getCA(row, "VARDIYA") || "08:00 - 16:00", isDuruslu: String(getCA(row, "DURUS") || "").toUpperCase() !== "YOK",
-          teknisyen: p1, yardimciTeknisyenler: [getCA(row, "PERSONEL 2"), getCA(row, "PERSONEL 3")].filter(p => p && p !== "-"),
+          vardiya: getColA(row, "VARDIYA") || "08:00 - 16:00", isDuruslu: String(getColA(row, "DURUS") || "").toUpperCase() !== "YOK",
+          teknisyen: p1, yardimciTeknisyenler: [getColA(row, "PERSONEL 2"), getColA(row, "PERSONEL 3")].filter(p => p && p !== "-"),
           bildirenKisi: p1, usedMaterials: [], durum: "Kapalı", kayitTarihi: new Date(), isImported: true
         };
       });
@@ -125,7 +159,7 @@ const [isAdmin, setIsAdmin] = useState(false);
   };
 
   const confirmImport = async () => {
-    if (!window.confirm("Aktarımı başlat?")) return;
+    if (!window.confirm("Kayıtlar aktarılsın mı?")) return;
     setIsImporting(true);
     try {
       for (let i = 0; i < importPreview.length; i += 500) {
@@ -136,7 +170,7 @@ const [isAdmin, setIsAdmin] = useState(false);
         });
         await batch.commit();
       }
-      alert("Başarılı"); setShowImportModal(false); window.location.reload();
+      alert("Aktarım Başarılı"); setShowImportModal(false); window.location.reload();
     } catch (err) { alert(err); } finally { setIsImporting(false); }
   };
 
@@ -148,8 +182,8 @@ const [isAdmin, setIsAdmin] = useState(false);
       const allowed = ["DFUTECHREPORT", "HALILCAKIR", "TEKNIKSERVIS"];
       const toDelete = snap.docs.filter(d => {
           const data = d.data();
-          const bk = nA(data.bildirenKisi);
-          const tk = nA(data.teknisyen);
+          const bk = normA(data.bildirenKisi);
+          const tk = normA(data.teknisyen);
           const isAllowed = allowed.some(a => bk.includes(a) || tk.includes(a));
           return !isAllowed || data.isImported === true;
       });
@@ -208,7 +242,7 @@ const [isAdmin, setIsAdmin] = useState(false);
     navigator.clipboard.writeText(dnaScript); setCopySuccess(true); setTimeout(() => setCopySuccess(false), 3000);
   };
 
-  const downloadDNABackup = async () => {
+  const downloadFullSnapshotDNA = async () => {
     if (window.prompt("Şifre:") !== "161004") return;
     try {
       const collections = ["maintenance_logs", "work_orders", "spare_parts", "users", "assets", "eked_logs", "meter_logs", "overtime_logs", "kar_arsivi"];
@@ -217,13 +251,14 @@ const [isAdmin, setIsAdmin] = useState(false);
         const snap = await getDocs(collection(db, coll));
         dbBackup[coll] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       }
-      const payload = { database: dbBackup, dna: "V_ULTIMATE_FINAL_V53", date: new Date().toISOString() };
+      const payload = { database: dbBackup, dna: "V_MASTER_FINAL_V54", date: new Date().toISOString() };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
       const link = document.createElement("a"); link.href = URL.createObjectURL(blob);
-      link.download = `DFU_FULL_SYSTEM_DNA.json`; link.click();
+      link.download = `DFU_FULL_DNA_SNAPSHOT.json`; link.click();
     } catch (e) { alert("Hata!"); }
   };
-useEffect(() => {
+
+  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         const userRef = doc(db, "users", user.uid);
@@ -237,30 +272,389 @@ useEffect(() => {
       }
       setLoading(false);
     });
+    return () => unsubscribe();
+  }, [router]);
+
+  const fetchRcaData = async () => {
+    const snap = await getDocs(collection(db, "root_cause_analysis"));
+    setRcaLogs(snap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
+  };
+
+  const fetchInitialData = async () => {
+    try {
+      const wSnap = await getDocs(query(collection(db, "work_orders"), where("durum", "==", "Açık")));
+      const wData = wSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+      setAktifIsgAlarmlari(wData.filter(d => d.ekipmanAdi === "KAR devreye alma"));
+      setAktifIsler(wData.filter(d => d.ekipmanAdi !== "KAR devreye alma"));
+      const ekedSnap = await getDocs(query(collection(db, "eked_logs"), where("durum", "==", "Açık")));
+      setAktifEked(ekedSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
+      const logsSnap = await getDocs(collection(db, "maintenance_logs"));
+      setRawLogs(logsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
+      const mSnap = await getDocs(query(collection(db, "meter_logs"), orderBy("tarih", "asc")));
+      setRawMeterLogs(mSnap.docs.map(d => d.data()));
+      setKpiOnayBekleyen((await getDocs(query(collection(db, "users"), where("isApproved", "==", false)))).size);
+    } catch (e) { console.error(e); }
+  };
+
   
-  if (loading) return <div className="h-screen bg-black flex items-center justify-center text-white italic font-black uppercase tracking-widest">Yükleniyor...</div>;
-  if (!isAdmin) return <div className="p-10 text-red-500 font-bold uppercase italic text-center text-white font-black italic uppercase underline">YETKİSİZ ERİŞİM!</div>;
+  const formatExTime = (v: any) => {
+    if (!v) return "00:00";
+    if (typeof v === 'string') { const m = v.match(/(\d{1,2})[:.](\d{1,2})/); return m ? `${m[1].padStart(2, '0')}:${m[2].padStart(2, '0')}` : "00:00"; }
+    if (typeof v === 'number') { const ts = Math.round(v * 86400); return `${String(Math.floor(ts / 3600)).padStart(2, '0')}:${String(Math.floor((ts % 3600) / 60)).padStart(2, '0')}`; }
+    return "00:00";
+  };
+  const normA = (s: any) => String(s || "").replace(/[İIı]/g, 'I').replace(/[ŞŞ]/g, 'S').replace(/[ĞĞ]/g, 'G').replace(/[ÜÜ]/g, 'U').replace(/[ÖÖ]/g, 'O').replace(/[ÇÇ]/g, 'C').replace(/\s/g, '').toUpperCase();
+  const getColA = (row: any, keyword: string) => { const kn = normA(keyword); const key = Object.keys(row).find(k => normA(k).includes(kn)); return key ? row[key] : null; };
+
+  const handleExcelImport = (e: any) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const bstr = evt.target?.result;
+      if (!bstr) return;
+      const wb = XLSX.read(bstr, { type: 'binary' });
+      const data: any[] = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+      const aylar: any = { "OCAK":"01","SUBAT":"02","MART":"03","NISAN":"04","MAYIS":"05","HAZIRAN":"06","TEMMUZ":"07","AGUSTOS":"08","EYLUL":"09","EKIM":"10","KASIM":"11","ARALIK":"12" };
+      const mapped = data.map((row: any) => {
+        const ay = aylar[normA(getColA(row, "AY"))] || "01";
+        const tarih = `${getColA(row, "YIL")||"2026"}-${ay}-${String(getColA(row, "GUN")||"01").padStart(2, '0')}`;
+        const start = formatExTime(getColA(row, "BASLANGIC"));
+        const end = formatExTime(getColA(row, "BITIS"));
+        const [h1, m1] = start.split(':').map(Number);
+        const [h2, m2] = end.split(':').map(Number);
+        let duration = (h2 * 60 + m2) - (h1 * 60 + m1);
+        if (duration < 0) duration += 1440;
+        const p1 = String(getColA(row, "PERSONEL 1") || "Sistem").trim();
+        return {
+          hatAdi: String(getColA(row, "HAT") || "").trim(), ekipmanAdi: String(getColA(row, "EKIPMAN") || "").trim(),
+          aciklama: String(getColA(row, "IS") || "-"), baslangicSaati: start, bitisSaati: end, 
+          baslangicTarihi: tarih, bitisTarihi: tarih, toplamSureDakika: duration,
+          vardiya: getColA(row, "VARDIYA") || "08:00 - 16:00", isDuruslu: String(getColA(row, "DURUS") || "").toUpperCase() !== "YOK",
+          teknisyen: p1, yardimciTeknisyenler: [getColA(row, "PERSONEL 2"), getColA(row, "PERSONEL 3")].filter(p => p && p !== "-"),
+          bildirenKisi: p1, usedMaterials: [], durum: "Kapalı", kayitTarihi: new Date(), isImported: true
+        };
+      });
+      setImportPreview(mapped.filter(i => i.hatAdi)); setShowImportModal(true);
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  const confirmImport = async () => {
+    if (!window.confirm("Kayıtlar aktarılsın mı?")) return;
+    setIsImporting(true);
+    try {
+      for (let i = 0; i < importPreview.length; i += 500) {
+        const batch = writeBatch(db);
+        importPreview.slice(i, i + 500).forEach(item => {
+          const uId = `imp_${item.baslangicTarihi}_${item.hatAdi}_${item.ekipmanAdi}_${item.baslangicSaati}`.replace(/\s+/g, '_').replace(/\//g, '-');
+          batch.set(doc(db, "maintenance_logs", uId), item);
+        });
+        await batch.commit();
+      }
+      alert("Aktarım Başarılı"); setShowImportModal(false); window.location.reload();
+    } catch (err) { alert(err); } finally { setIsImporting(false); }
+  };
+
+  const clearOldImports = async () => {
+    if (!window.confirm("KORUNANLAR DIŞINDAKİ TÜM KAYITLAR SİLİNECEK?")) return;
+    setLoading(true);
+    try {
+      const snap = await getDocs(collection(db, "maintenance_logs"));
+      const allowed = ["DFUTECHREPORT", "HALILCAKIR", "TEKNIKSERVIS"];
+      const toDelete = snap.docs.filter(d => {
+          const data = d.data();
+          const bk = normA(data.bildirenKisi);
+          const tk = normA(data.teknisyen);
+          const isAllowed = allowed.some(a => bk.includes(a) || tk.includes(a));
+          return !isAllowed || data.isImported === true;
+      });
+      for (let i = 0; i < toDelete.length; i += 500) {
+        const batch = writeBatch(db);
+        toDelete.slice(i, i + 500).forEach(d => batch.delete(d.ref));
+        await batch.commit();
+      }
+      alert(`${toDelete.length} kayıt silindi.`); window.location.reload();
+    } catch (err) { alert("Hata: " + err); setLoading(false); }
+  };
+
+  const handleMeterDataImport = async (files: FileList) => {
+    if (files.length === 0) return;
+    setIsMeterImporting(true);
+    try {
+      const logSnap = await getDocs(collection(db, "meter_logs"));
+      for (let i = 0; i < logSnap.docs.length; i += 500) {
+        const batch = writeBatch(db);
+        logSnap.docs.slice(i, i + 500).forEach(d => batch.delete(d.ref));
+        await batch.commit();
+      }
+      const uniqueMeters: Record<string, string[]> = { "Elektrik": [], "Su": [], "Doğalgaz": [] };
+      const allLogs: any[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const workbook = XLSX.read(await files[i].arrayBuffer());
+        const data: any[] = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+        let t = files[i].name.toUpperCase().includes("ELEK") ? "Elektrik" : files[i].name.toUpperCase().includes("DOGAL") ? "Doğalgaz" : "Su";
+        data.forEach(row => {
+          const rawTs = row["Zaman damgası"];
+          const dateStr = typeof rawTs === 'number' ? new Date((rawTs - 25569) * 86400 * 1000).toISOString().split('T')[0] : new Date(rawTs).toISOString().split('T')[0];
+          Object.keys(row).forEach(key => {
+            if (key !== "Zaman damgası" && !isNaN(Number(row[key]))) {
+              if (!uniqueMeters[t].includes(key)) uniqueMeters[t].push(key);
+              allLogs.push({ sayacAdi: key, deger: Number(row[key]), tarih: dateStr, tip: t, personel: "Sistem", timestamp: serverTimestamp() });
+            }
+          });
+        });
+      }
+      for (let i = 0; i < allLogs.length; i += 500) {
+        const b = writeBatch(db);
+        allLogs.slice(i, i + 500).forEach(l => b.set(doc(collection(db, "meter_logs")), l));
+        await b.commit();
+      }
+      const mBatch = writeBatch(db);
+      for (const [tp, ads] of Object.entries(uniqueMeters)) {
+        for (const ad of ads) mBatch.set(doc(db, "meters", `${tp}_${ad}`.replace(/\s+/g,'_').replace(/\//g, '-')), { adi: ad, tip: tp }, { merge: true });
+      }
+      await mBatch.commit();
+      alert("Sayaçlar yüklendi."); window.location.reload();
+    } catch (e: any) { alert(e.message); } finally { setIsMeterImporting(false); }
+  };
+
+  const handleCopyScript = () => {
+    const dnaScript = "Get-ChildItem -Recurse -Include *.tsx,*.ts | ForEach-Object { \"--- FILE: $($_.FullName) ---\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt; Get-Content $_.FullName | Out-File -Append PROJE_DOKUMU.txt; [char]96 + \"n\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt }";
+    navigator.clipboard.writeText(dnaScript); setCopySuccess(true); setTimeout(() => setCopySuccess(false), 3000);
+  };
+
+  const downloadFullSnapshotDNA = async () => {
+    if (window.prompt("Şifre:") !== "161004") return;
+    try {
+      const collections = ["maintenance_logs", "work_orders", "spare_parts", "users", "assets", "eked_logs", "meter_logs", "overtime_logs", "kar_arsivi"];
+      let dbBackup: any = {};
+      for (const coll of collections) {
+        const snap = await getDocs(collection(db, coll));
+        dbBackup[coll] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      }
+      const payload = { database: dbBackup, dna: "V_MASTER_FINAL_V54", date: new Date().toISOString() };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const link = document.createElement("a"); link.href = URL.createObjectURL(blob);
+      link.download = `DFU_FULL_DNA_SNAPSHOT.json`; link.click();
+    } catch (e) { alert("Hata!"); }
+  };
+
+  useEffect(() => {
+    if (rawLogs.length === 0) return;
+    let isC=0, suC=0, duC=0; const hD:any = {}, pD:any = {}, eD:any = {};
+    rawLogs.forEach((l: any) => {
+      const d = l.kayitTarihi?.toDate ? l.kayitTarihi.toDate() : new Date(l.kayitTarihi);
+      const s = Number(l.toplamSureDakika) || 0;
+      if (d.getFullYear().toString() === filterYil) {
+        isC++; suC += s; hD[l.hatAdi] = (hD[l.hatAdi] || 0) + 1;
+        if(l.isDuruslu) duC += s;
+      }
+      const crew = Array.isArray(l.yardimciTeknisyenler) ? [l.bildirenKisi, ...l.yardimciTeknisyenler] : [l.bildirenKisi];
+      crew.forEach((p: string) => { if(p) { if (!pD[p]) pD[p] = { isSayisi: 0, eforDk: 0 }; pD[p].isSayisi++; pD[p].eforDk += s; } });
+      if (l.isDuruslu) { if (!eD[l.ekipmanAdi]) eD[l.ekipmanAdi] = { count: 0, sure: 0 }; eD[l.ekipmanAdi].count++; eD[l.ekipmanAdi].sure += s; }
+    });
+    setKpiTotals({ is: isC, sure: suC, durus: duC, mttr: isC > 0 ? (suC/isC) : 0 });
+    setGrafikIsHatti(Object.keys(hD).map(k=>({ isim: k, adet: hD[k] })));
+    setPersonelPerformans(Object.keys(pD).map(k=>({ isim: k, ...pD[k] })).sort((a,b)=> b.isSayisi - a.isSayisi));
+    setEkipmanPerformans(Object.keys(eD).map(k=>({ ekipman: k, ...eD[k] })).sort((a,b)=>b.count-a.count).slice(0, 5));
+  }, [rawLogs, filterYil]);
+
+  
+  const formatExTime = (v: any) => {
+    if (!v) return "00:00";
+    if (typeof v === 'string') { const m = v.match(/(\d{1,2})[:.](\d{1,2})/); return m ? `${m[1].padStart(2, '0')}:${m[2].padStart(2, '0')}` : "00:00"; }
+    if (typeof v === 'number') { const ts = Math.round(v * 86400); return `${String(Math.floor(ts / 3600)).padStart(2, '0')}:${String(Math.floor((ts % 3600) / 60)).padStart(2, '0')}`; }
+    return "00:00";
+  };
+  const normA = (s: any) => String(s || "").replace(/[İIı]/g, 'I').replace(/[ŞŞ]/g, 'S').replace(/[ĞĞ]/g, 'G').replace(/[ÜÜ]/g, 'U').replace(/[ÖÖ]/g, 'O').replace(/[ÇÇ]/g, 'C').replace(/\s/g, '').toUpperCase();
+  const getColA = (row: any, keyword: string) => { const kn = normA(keyword); const key = Object.keys(row).find(k => normA(k).includes(kn)); return key ? row[key] : null; };
+
+  const handleExcelImport = (e: any) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const bstr = evt.target?.result;
+      if (!bstr) return;
+      const wb = XLSX.read(bstr, { type: 'binary' });
+      const data: any[] = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+      const aylar: any = { "OCAK":"01","SUBAT":"02","MART":"03","NISAN":"04","MAYIS":"05","HAZIRAN":"06","TEMMUZ":"07","AGUSTOS":"08","EYLUL":"09","EKIM":"10","KASIM":"11","ARALIK":"12" };
+      const mapped = data.map((row: any) => {
+        const ay = aylar[normA(getColA(row, "AY"))] || "01";
+        const tarih = `${getColA(row, "YIL")||"2026"}-${ay}-${String(getColA(row, "GUN")||"01").padStart(2, '0')}`;
+        const start = formatExTime(getColA(row, "BASLANGIC"));
+        const end = formatExTime(getColA(row, "BITIS"));
+        const [h1, m1] = start.split(':').map(Number);
+        const [h2, m2] = end.split(':').map(Number);
+        let duration = (h2 * 60 + m2) - (h1 * 60 + m1);
+        if (duration < 0) duration += 1440;
+        const p1 = String(getColA(row, "PERSONEL 1") || "Sistem").trim();
+        return {
+          hatAdi: String(getColA(row, "HAT") || "").trim(), ekipmanAdi: String(getColA(row, "EKIPMAN") || "").trim(),
+          aciklama: String(getColA(row, "IS") || "-"), baslangicSaati: start, bitisSaati: end, 
+          baslangicTarihi: tarih, bitisTarihi: tarih, toplamSureDakika: duration,
+          vardiya: getColA(row, "VARDIYA") || "08:00 - 16:00", isDuruslu: String(getColA(row, "DURUS") || "").toUpperCase() !== "YOK",
+          teknisyen: p1, yardimciTeknisyenler: [getColA(row, "PERSONEL 2"), getColA(row, "PERSONEL 3")].filter(p => p && p !== "-"),
+          bildirenKisi: p1, usedMaterials: [], durum: "Kapalı", kayitTarihi: new Date(), isImported: true
+        };
+      });
+      setImportPreview(mapped.filter(i => i.hatAdi)); setShowImportModal(true);
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  const confirmImport = async () => {
+    if (!window.confirm("Kayıtlar aktarılsın mı?")) return;
+    setIsImporting(true);
+    try {
+      for (let i = 0; i < importPreview.length; i += 500) {
+        const batch = writeBatch(db);
+        importPreview.slice(i, i + 500).forEach(item => {
+          const uId = `imp_${item.baslangicTarihi}_${item.hatAdi}_${item.ekipmanAdi}_${item.baslangicSaati}`.replace(/\s+/g, '_').replace(/\//g, '-');
+          batch.set(doc(db, "maintenance_logs", uId), item);
+        });
+        await batch.commit();
+      }
+      alert("Aktarım Başarılı"); setShowImportModal(false); window.location.reload();
+    } catch (err) { alert(err); } finally { setIsImporting(false); }
+  };
+
+  const clearOldImports = async () => {
+    if (!window.confirm("KORUNANLAR DIŞINDAKİ TÜM KAYITLAR SİLİNECEK?")) return;
+    setLoading(true);
+    try {
+      const snap = await getDocs(collection(db, "maintenance_logs"));
+      const allowed = ["DFUTECHREPORT", "HALILCAKIR", "TEKNIKSERVIS"];
+      const toDelete = snap.docs.filter(d => {
+          const data = d.data();
+          const bk = normA(data.bildirenKisi);
+          const tk = normA(data.teknisyen);
+          const isAllowed = allowed.some(a => bk.includes(a) || tk.includes(a));
+          return !isAllowed || data.isImported === true;
+      });
+      for (let i = 0; i < toDelete.length; i += 500) {
+        const batch = writeBatch(db);
+        toDelete.slice(i, i + 500).forEach(d => batch.delete(d.ref));
+        await batch.commit();
+      }
+      alert(`${toDelete.length} kayıt silindi.`); window.location.reload();
+    } catch (err) { alert("Hata: " + err); setLoading(false); }
+  };
+
+  const handleMeterDataImport = async (files: FileList) => {
+    if (files.length === 0) return;
+    setIsMeterImporting(true);
+    try {
+      const logSnap = await getDocs(collection(db, "meter_logs"));
+      for (let i = 0; i < logSnap.docs.length; i += 500) {
+        const batch = writeBatch(db);
+        logSnap.docs.slice(i, i + 500).forEach(d => batch.delete(d.ref));
+        await batch.commit();
+      }
+      const uniqueMeters: Record<string, string[]> = { "Elektrik": [], "Su": [], "Doğalgaz": [] };
+      const allLogs: any[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const workbook = XLSX.read(await files[i].arrayBuffer());
+        const data: any[] = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+        let t = files[i].name.toUpperCase().includes("ELEK") ? "Elektrik" : files[i].name.toUpperCase().includes("DOGAL") ? "Doğalgaz" : "Su";
+        data.forEach(row => {
+          const rawTs = row["Zaman damgası"];
+          const dateStr = typeof rawTs === 'number' ? new Date((rawTs - 25569) * 86400 * 1000).toISOString().split('T')[0] : new Date(rawTs).toISOString().split('T')[0];
+          Object.keys(row).forEach(key => {
+            if (key !== "Zaman damgası" && !isNaN(Number(row[key]))) {
+              if (!uniqueMeters[t].includes(key)) uniqueMeters[t].push(key);
+              allLogs.push({ sayacAdi: key, deger: Number(row[key]), tarih: dateStr, tip: t, personel: "Sistem", timestamp: serverTimestamp() });
+            }
+          });
+        });
+      }
+      for (let i = 0; i < allLogs.length; i += 500) {
+        const b = writeBatch(db);
+        allLogs.slice(i, i + 500).forEach(l => b.set(doc(collection(db, "meter_logs")), l));
+        await b.commit();
+      }
+      const mBatch = writeBatch(db);
+      for (const [tp, ads] of Object.entries(uniqueMeters)) {
+        for (const ad of ads) mBatch.set(doc(db, "meters", `${tp}_${ad}`.replace(/\s+/g,'_').replace(/\//g, '-')), { adi: ad, tip: tp }, { merge: true });
+      }
+      await mBatch.commit();
+      alert("Sayaçlar yüklendi."); window.location.reload();
+    } catch (e: any) { alert(e.message); } finally { setIsMeterImporting(false); }
+  };
+
+  const handleCopyScript = () => {
+    const dnaScript = "Get-ChildItem -Recurse -Include *.tsx,*.ts | ForEach-Object { \"--- FILE: $($_.FullName) ---\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt; Get-Content $_.FullName | Out-File -Append PROJE_DOKUMU.txt; [char]96 + \"n\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt }";
+    navigator.clipboard.writeText(dnaScript); setCopySuccess(true); setTimeout(() => setCopySuccess(false), 3000);
+  };
+
+  const downloadFullSnapshotDNA = async () => {
+    if (window.prompt("Şifre:") !== "161004") return;
+    try {
+      const collections = ["maintenance_logs", "work_orders", "spare_parts", "users", "assets", "eked_logs", "meter_logs", "overtime_logs", "kar_arsivi"];
+      let dbBackup: any = {};
+      for (const coll of collections) {
+        const snap = await getDocs(collection(db, coll));
+        dbBackup[coll] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      }
+      const payload = { database: dbBackup, dna: "V_MASTER_FINAL_V54", date: new Date().toISOString() };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const link = document.createElement("a"); link.href = URL.createObjectURL(blob);
+      link.download = `DFU_FULL_DNA_SNAPSHOT.json`; link.click();
+    } catch (e) { alert("Hata!"); }
+  };
+
+  useEffect(() => {
+    if (rawMeterLogs.length === 0) return;
+    const elS = new Set<string>(), gzS = new Set<string>(), suS = new Set<string>();
+    const tEl:any = {}, tGz:any = {}, tSu:any = {};
+    rawMeterLogs.forEach((l: any) => {
+      const t = l.tip || "Elektrik";
+      if(t==="Elektrik") elS.add(l.sayacAdi); if(t==="Doğalgaz") gzS.add(l.sayacAdi); if(t==="Su") suS.add(l.sayacAdi);
+      const ay = `${l.tarih?.split("-")[1]}. Ay`;
+      if(t==="Elektrik" && (!filterElekSayac || l.sayacAdi===filterElekSayac)) tEl[ay] = (tEl[ay]||0) + Number(l.deger || 0);
+      if(t==="Doğalgaz" && (!filterGazSayac || l.sayacAdi===filterGazSayac)) tGz[ay] = (tGz[ay]||0) + Number(l.deger || 0);
+      if(t==="Su" && (!filterSuSayac || l.sayacAdi===filterSuSayac)) tSu[ay] = (tSu[ay]||0) + Number(l.deger || 0);
+    });
+    setElekSayacList(Array.from(elS).sort()); setGazSayacList(Array.from(gzS).sort()); setSuSayacList(Array.from(suS).sort());
+    setGrafikElek(Object.keys(tEl).map(ay=>({ ay, tuketim: tEl[ay] })));
+    setGrafikGaz(Object.keys(tGz).map(ay=>({ ay, tuketim: tGz[ay] })));
+    setGrafikSu(Object.keys(tSu).map(ay=>({ ay, tuketim: tSu[ay] })));
+  }, [rawMeterLogs, filterElekSayac, filterGazSayac, filterSuSayac]);
+
+  const handleSaveRca = async () => {
+    if (!rcaForm.category) return alert("Seçiniz");
+    await setDoc(doc(db, "root_cause_analysis", String(selectedLogForRca.id)), { logId: selectedLogForRca.id, ekipman: selectedLogForRca.ekipmanAdi, category: rcaForm.category, why: rcaForm.why, analizEden: userName, tarih: serverTimestamp() }, { merge: true });
+    alert("Başarılı!"); setShowRcaModal(false); fetchRcaData();
+  };
+
+  if (loading) return <div className="p-10 bg-slate-950 min-h-screen text-white flex justify-center items-center uppercase italic font-black">Güvenlik Kontrolü...</div>;
+  if (!isAdmin) return <div className="p-10 text-red-500 font-bold uppercase italic">YETKİSİZ ERİŞİM!</div>;
 
   return (
-    <div className="min-h-screen bg-[#020617] text-white p-4 md:p-8 font-sans overflow-x-hidden italic font-black uppercase selection:bg-indigo-500">
+    <div className="min-h-screen bg-[#020617] text-white p-4 md:p-8 font-sans overflow-x-hidden italic font-bold">
       <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col lg:flex-row justify-between items-center gap-6 mb-10 border-b border-gray-800 pb-8 no-print text-white font-black italic uppercase">
+        
+        <div className="flex flex-col lg:flex-row justify-between items-center gap-6 mb-10 border-b border-gray-800 pb-8 no-print text-white">
           <div className="flex items-center gap-4 w-full lg:w-auto justify-center lg:justify-start">
             <img src="/dfulogo.png" className="h-12 bg-white rounded p-1" />
             <h1 className="text-xl md:text-2xl font-black uppercase text-indigo-400 tracking-tighter">Komuta Merkezi</h1>
           </div>
-          <div className="flex flex-wrap justify-center lg:justify-end gap-2 md:gap-3 w-full lg:w-auto font-black italic uppercase">
+          <div className="flex flex-wrap justify-center lg:justify-end gap-2 md:gap-3 w-full lg:w-auto">
              <button onClick={() => setShowKpiModal(true)} className="bg-indigo-500 hover:bg-indigo-400 text-white px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border border-white/10 animate-pulse">📈 KPI ANALİZ</button>
              <Link href="/dashboard" className="bg-slate-800 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border border-slate-700 text-center flex items-center">Vardiya Raporu</Link>
              <button onClick={clearOldImports} className="bg-red-900/40 border border-red-500/30 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg hover:bg-red-800 text-center">🗑️ TEMİZLE</button>
              <label className="bg-orange-600 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border border-orange-500/30 cursor-pointer hover:bg-orange-500 text-center flex items-center">📊 IMPORT <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleExcelImport} /></label>
              <button onClick={() => setShowMeterImportModal(true)} className="bg-emerald-600 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border border-emerald-500/30 text-center">🔌 SAYAÇ</button>
-             <button onClick={downloadDNABackup} className="bg-slate-700 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg italic text-center">💾 YEDEK</button>
+             <button onClick={downloadFullSnapshotDNA} className="bg-slate-700 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg italic text-center">💾 YEDEK</button>
              <button onClick={handleCopyScript} type="button" className={`${copySuccess ? 'bg-indigo-500' : 'bg-slate-800'} px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border border-indigo-500/30 transition-all text-center`}>{copySuccess ? '✓ KOPYALANDI' : '🧬 DNA'}</button>
              <button onClick={()=>signOut(auth)} className="bg-red-600 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg text-center">Çıkış</button>
           </div>
         </div>
-<div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-12 no-print">
+
+
+        {/* --- TÜM 23 BUTONLUK NAVİGASYON --- */}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-12 no-print">
           <Link href="/admin/is-emri-ac" className="bg-red-600 p-3 rounded-2xl text-[10px] text-center uppercase shadow-lg">🚨 Yeni İş Emri</Link>
           <Link href="/admin/aktif-isler" className="bg-red-950 border border-red-500 p-3 rounded-2xl text-[10px] text-center uppercase">Aktif Bildirimler</Link>
           <Link href="/admin/eked" className="bg-yellow-600 text-black p-3 rounded-2xl text-[10px] text-center uppercase">🔐 EKED Takip</Link>
@@ -359,8 +753,8 @@ useEffect(() => {
         {showVakaModal && selectedVaka && (<div className="fixed inset-0 bg-black/90 backdrop-blur-md flex justify-center items-center z-[1000] p-4 font-bold italic"><div className="bg-slate-900 border border-slate-800 p-10 rounded-[50px] w-full max-w-2xl shadow-3xl relative overflow-hidden italic"><div className={`absolute top-0 left-0 w-full h-2 ${selectedVaka.ekipmanAdi === "KAR devreye alma" ? "bg-red-600 shadow-xl" : "bg-indigo-600 shadow-xl"}`}></div><h2 className="text-2xl font-black text-white mb-8 uppercase italic tracking-widest">Bildirim Detayı</h2><div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 mb-10 shadow-inner italic font-black uppercase italic font-black font-black uppercase"><p className="text-gray-300 text-sm italic font-black italic">"{selectedVaka.arizaDetayi || selectedVaka.aciklama || "Not yok."}"</p></div><button onClick={()=>setShowVakaModal(false)} className="w-full bg-slate-800 hover:bg-slate-700 py-4 rounded-2xl font-black uppercase text-xs transition shadow-2xl italic font-black uppercase italic uppercase">Kapat</button></div></div>)}
         {showRcaModal && selectedLogForRca && (<div className="fixed inset-0 bg-black/95 backdrop-blur-sm flex justify-center items-center z-[999] p-4 font-bold italic"><div className="bg-slate-900 border border-slate-800 p-10 rounded-[50px] w-full max-w-xl shadow-2xl relative"><h2 className="text-xl font-black text-white mb-8 uppercase text-center tracking-[0.2em]">Root Cause Analysis</h2><div className="space-y-6 italic"><div className="grid grid-cols-3 gap-2 italic">{RCA_CATEGORIES.map(c=>(<button key={c.id} onClick={()=>setRcaForm({...rcaForm, category:c.id})} className={`p-3 rounded-2xl text-[10px] font-black uppercase transition-all border ${rcaForm.category===c.id?'bg-indigo-600 border-indigo-400 text-white shadow-xl shadow-indigo-600/30':'bg-slate-950 border-slate-800 text-gray-500 hover:border-indigo-400'}`}>{c.label}</button>))}</div><textarea value={rcaForm.why} onChange={e=>setRcaForm({...rcaForm, why:e.target.value})} placeholder="Duruş nedenini detaylandırın..." className="w-full bg-slate-950 border border-slate-800 rounded-[30px] p-6 text-sm text-white outline-none focus:ring-2 ring-indigo-500 h-40 shadow-inner italic font-black" /><div className="flex gap-4 italic"><button onClick={()=>setShowRcaModal(false)} className="flex-1 bg-slate-800 py-4 rounded-[20px] font-black text-gray-400 text-xs uppercase">Vazgeç</button><button onClick={handleSaveRca} className="flex-1 bg-indigo-600 py-4 rounded-[20px] font-black text-white shadow-xl text-xs uppercase transition">Kaydet</button></div></div></div></div>)}
       </div>
-
-      {/* KPI MODAL */}
+    
+      {/* ATLAS MODALS */}
       {showKpiModal && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/95 backdrop-blur-2xl" onClick={() => setShowKpiModal(false)}></div>
@@ -420,8 +814,8 @@ useEffect(() => {
         <div className="fixed inset-0 z-[130] flex items-center justify-end p-6 font-black uppercase italic text-white text-xs">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={()=>setShowKpiDetailWindow(false)}></div>
           <div className="relative bg-slate-900 border-l-4 border-indigo-500 w-full max-w-xl h-full rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right font-black italic uppercase">
-            <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-900/50 text-white font-black italic uppercase"><h3 className="text-lg tracking-widest uppercase font-black italic">🔍 İş Detay Arşivi</h3><button onClick={()=>setShowKpiDetailWindow(false)} className="text-slate-500 hover:text-white text-2xl">✕</button></div>
-            <div className="p-6 overflow-y-auto flex-1 space-y-4">
+            <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-900/50 font-black italic uppercase text-white"><h3 className="text-lg tracking-widest uppercase font-black italic">🔍 İş Detay Arşivi</h3><button onClick={()=>setShowKpiDetailWindow(false)} className="text-slate-500 hover:text-white text-2xl">✕</button></div>
+            <div className="p-6 overflow-y-auto flex-1 space-y-4 text-white">
               {selectedKpiLogDetails.map((log:any, i:number) => (
                 <div key={i} className="bg-slate-950 border border-slate-800 p-5 rounded-3xl hover:border-indigo-500/50 transition-all font-black uppercase italic"><div className="flex justify-between text-[9px] font-black text-indigo-400 mb-2"><span>{log.baslangicTarihi}</span><span className="text-emerald-400">{log.toplamSureDakika} DK</span></div><h4 className="text-white text-xs font-black mb-2">{log.hatAdi} - {log.ekipmanAdi}</h4><p className="text-slate-400 text-[11px] font-bold italic leading-relaxed uppercase">"{log.aciklama}"</p></div>
               ))}
@@ -458,6 +852,6 @@ useEffect(() => {
           </div>
         </div>
       )}
-    </div>
+</div>
   );
 }

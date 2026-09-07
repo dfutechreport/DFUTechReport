@@ -9,12 +9,182 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 const RCA_CATEGORIES = [
-  { id: "insan", label: "İnsan", color: "#3B82F6" }, 
-  { id: "makine", label: "Makine", color: "#EF4444" },
-  { id: "malzeme", label: "Malzeme", color: "#10B981" }, 
-  { id: "metot", label: "Metot", color: "#F59E0B" },
+  { id: "insan", label: "İnsan", color: "#3B82F6" }, { id: "makine", label: "Makine", color: "#EF4444" },
+  { id: "malzeme", label: "Malzeme", color: "#10B981" }, { id: "metot", label: "Metot", color: "#F59E0B" },
   { id: "ortam", label: "Ortam", color: "#8B5CF6" }
 ];
+export default function AdminDashboard() {
+  // --- ATLAS NEW FEATURES ---
+  const [copySuccess, setCopySuccess] = useState(false);
+  const [importPreview, setImportPreview] = useState<any[]>([]);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [showKpiModal, setShowKpiModal] = useState(false);
+  const [selectedKpiLogDetails, setSelectedKpiLogDetails] = useState<any[]>([]);
+  const [showKpiDetailWindow, setShowKpiDetailWindow] = useState(false);
+  const [kpiFYil, setKpiFYil] = useState(new Date().getFullYear().toString());
+  const [kpiFAy, setKpiFAy] = useState("");
+  const [kpiFHat, setKpiFHat] = useState("");
+  const [kpiFPersonel, setKpiFPersonel] = useState("");
+  const [kpiFDurus, setKpiFDurus] = useState("HEPSİ");
+  const [showMeterImportModal, setShowMeterImportModal] = useState(false);
+  const [isMeterImporting, setIsMeterImporting] = useState(false);
+
+  const formatExcelTime = (val: any) => {
+    if (!val) return "00:00";
+    if (typeof val === 'string') {
+      const m = val.match(/(\d{1,2})[:.](\d{1,2})/);
+      return m ? `${m[1].padStart(2, '0')}:${m[2].padStart(2, '0')}` : "00:00";
+    }
+    if (typeof val === 'number') {
+      const totalSeconds = Math.round(val * 24 * 60 * 60);
+      return `${String(Math.floor(totalSeconds / 3600)).padStart(2, '0')}:${String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0')}`;
+    }
+    return "00:00";
+  };
+
+  const normL = (s: any) => String(s || "").replace(/[İIı]/g, 'I').replace(/[ŞŞ]/g, 'S').replace(/[ĞĞ]/g, 'G').replace(/[ÜÜ]/g, 'U').replace(/[ÖÖ]/g, 'O').replace(/[ÇÇ]/g, 'C').replace(/\s/g, '').toUpperCase();
+
+  const getColL = (row: any, keyword: string) => {
+    const kNorm = normL(keyword);
+    const key = Object.keys(row).find(k => normL(k).includes(kNorm));
+    return key ? row[key] : null;
+  };
+
+  const handleExcelImport = (e: any) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const bstr = evt.target?.result;
+      if (!bstr) return;
+      const wb = XLSX.read(bstr, { type: 'binary' });
+      const data: any[] = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+      const aylar: any = { "OCAK":"01","SUBAT":"02","MART":"03","NISAN":"04","MAYIS":"05","HAZİRAN":"06","TEMMUZ":"07","AGUSTOS":"08","EYLUL":"09","EKIM":"10","KASIM":"11","ARALIK":"12" };
+      const mapped = data.map((row: any) => {
+        const ayRaw = String(getColL(row, "AY") || "");
+        const ay = aylar[normL(ayRaw)] || "01";
+        const tarih = `${getColL(row, "YIL")||"2026"}-${ay}-${String(getColL(row, "GUN")||"01").padStart(2, '0')}`;
+        const start = formatExcelTime(getColL(row, "BASLANGIC"));
+        const end = formatExcelTime(getColL(row, "BITIS"));
+        const [h1, m1] = start.split(':').map(Number);
+        const [h2, m2] = end.split(':').map(Number);
+        let duration = (h2 * 60 + m2) - (h1 * 60 + m1);
+        if (duration < 0) duration += 1440;
+        const p1 = String(getColL(row, "PERSONEL 1") || "Sistem").trim();
+        return {
+          hatAdi: String(getColL(row, "HAT") || "").trim(), ekipmanAdi: String(getColL(row, "EKIPMAN") || "").trim(),
+          aciklama: String(getColL(row, "IS") || "-"), baslangicSaati: start, bitisSaati: end, 
+          baslangicTarihi: tarih, bitisTarihi: tarih, toplamSureDakika: duration,
+          vardiya: getColL(row, "VARDIYA") || "08:00 - 16:00", isDuruslu: String(getColL(row, "DURUS") || "").toUpperCase() !== "YOK",
+          teknisyen: p1, yardimciTeknisyenler: [getColL(row, "PERSONEL 2"), getColL(row, "PERSONEL 3")].filter(p => p && p !== "-"),
+          bildirenKisi: p1, usedMaterials: [], durum: "Kapalı", kayitTarihi: new Date(), isImported: true
+        };
+      });
+      setImportPreview(mapped.filter(i => i.hatAdi)); setShowImportModal(true);
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  const confirmImport = async () => {
+    if (!window.confirm("Aktarım başlatılsın mı?")) return;
+    setIsImporting(true);
+    try {
+      for (let i = 0; i < importPreview.length; i += 500) {
+        const batch = writeBatch(db);
+        importPreview.slice(i, i + 500).forEach(item => {
+          const uId = `imp_${item.baslangicTarihi}_${item.hatAdi}_${item.ekipmanAdi}_${item.baslangicSaati}`.replace(/\s+/g, '_').replace(/\//g, '-');
+          batch.set(doc(db, "maintenance_logs", uId), item);
+        });
+        await batch.commit();
+      }
+      alert("Aktarım Başarılı"); setShowImportModal(false); window.location.reload();
+    } catch (err) { alert(err); } finally { setIsImporting(false); }
+  };
+
+  const clearOldImports = async () => {
+    if (!window.confirm("KORUNANLAR DIŞINDAKİ TÜM KAYITLAR SİLİNECEK?")) return;
+    setLoading(true);
+    try {
+      const snap = await getDocs(collection(db, "maintenance_logs"));
+      const allowed = ["DFUTECHREPORT", "HALILCAKIR", "TEKNIKSERVIS"];
+      const toDelete = snap.docs.filter(d => {
+          const data = d.data();
+          const bk = normL(data.bildirenKisi);
+          const tk = normL(data.teknisyen);
+          const isAllowed = allowed.some(a => bk.includes(a) || tk.includes(a));
+          return !isAllowed || data.isImported === true;
+      });
+      for (let i = 0; i < toDelete.length; i += 500) {
+        const batch = writeBatch(db);
+        toDelete.slice(i, i + 500).forEach(d => batch.delete(d.ref));
+        await batch.commit();
+      }
+      alert(`${toDelete.length} kayıt silindi.`); window.location.reload();
+    } catch (err) { alert("Hata: " + err); setLoading(false); }
+  };
+
+  const handleMeterDataImport = async (files: FileList) => {
+    if (files.length === 0) return;
+    setIsMeterImporting(true);
+    try {
+      const logSnap = await getDocs(collection(db, "meter_logs"));
+      for (let i = 0; i < logSnap.docs.length; i += 500) {
+        const batch = writeBatch(db);
+        logSnap.docs.slice(i, i + 500).forEach(d => batch.delete(d.ref));
+        await batch.commit();
+      }
+      const uniqueMeters: Record<string, string[]> = { "Elektrik": [], "Su": [], "Doğalgaz": [] };
+      const allLogs: any[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const workbook = XLSX.read(await files[i].arrayBuffer());
+        const data: any[] = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+        let type = files[i].name.toUpperCase().includes("ELEK") ? "Elektrik" : files[i].name.toUpperCase().includes("DOGAL") ? "Doğalgaz" : "Su";
+        data.forEach(row => {
+          const rawTs = row["Zaman damgası"];
+          const dateStr = typeof rawTs === 'number' ? new Date((rawTs - 25569) * 86400 * 1000).toISOString().split('T')[0] : new Date(rawTs).toISOString().split('T')[0];
+          Object.keys(row).forEach(key => {
+            if (key !== "Zaman damgası" && !isNaN(Number(row[key]))) {
+              if (!uniqueMeters[type].includes(key)) uniqueMeters[type].push(key);
+              allLogs.push({ sayacAdi: key, deger: Number(row[key]), tarih: dateStr, tip: type, personel: "Sistem", timestamp: serverTimestamp() });
+            }
+          });
+        });
+      }
+      for (let i = 0; i < allLogs.length; i += 500) {
+        const b = writeBatch(db);
+        allLogs.slice(i, i + 500).forEach(l => b.set(doc(collection(db, "meter_logs")), l));
+        await b.commit();
+      }
+      const mBatch = writeBatch(db);
+      for (const [t, ads] of Object.entries(uniqueMeters)) {
+        for (const ad of ads) mBatch.set(doc(db, "meters", `${t}_${ad}`.replace(/\s+/g,'_').replace(/\//g, '-')), { adi: ad, tip: t }, { merge: true });
+      }
+      await mBatch.commit();
+      alert("Sayaçlar yüklendi."); window.location.reload();
+    } catch (e: any) { alert(e.message); } finally { setIsMeterImporting(false); }
+  };
+
+  const handleCopyScript = () => {
+    const dnaScript = "Get-ChildItem -Recurse -Include *.tsx,*.ts | ForEach-Object { \"--- FILE: $($_.FullName) ---\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt; Get-Content $_.FullName | Out-File -Append PROJE_DOKUMU.txt; [char]96 + \"n\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt }";
+    navigator.clipboard.writeText(dnaScript); setCopySuccess(true); setTimeout(() => setCopySuccess(false), 3000);
+  };
+
+  const downloadFullSnapshotDNA = async () => {
+    if (window.prompt("Şifre:") !== "161004") return;
+    try {
+      const collections = ["maintenance_logs", "work_orders", "spare_parts", "users", "assets", "eked_logs", "meter_logs", "overtime_logs", "kar_arsivi"];
+      let dbBackup: any = {};
+      for (const coll of collections) {
+        const snap = await getDocs(collection(db, coll));
+        dbBackup[coll] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      }
+      const payload = { database: dbBackup, system_dna: "MASTER_V47", date: new Date().toISOString() };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const link = document.createElement("a"); link.href = URL.createObjectURL(blob);
+      link.download = `DFU_SYSTEM_DNA.json`; link.click();
+    } catch (e) { alert("Hata!"); }
+  };
 const [isAdmin, setIsAdmin] = useState(false);
   const [userRole, setUserRole] = useState(""); 
   const [userName, setUserName] = useState(""); 
@@ -110,177 +280,6 @@ const [isAdmin, setIsAdmin] = useState(false);
       setLoading(false);
     });
   
-  // --- ATLAS FEATURES (DNA, KPI, IMPORT) ---
-  const [copySuccess, setCopySuccess] = useState(false);
-  const [importPreview, setImportPreview] = useState<any[]>([]);
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
-  const [showKpiModal, setShowKpiModal] = useState(false);
-  const [selectedKpiLogDetails, setSelectedKpiLogDetails] = useState<any[]>([]);
-  const [showKpiDetailWindow, setShowKpiDetailWindow] = useState(false);
-  const [kpiFYil, setKpiFYil] = useState(new Date().getFullYear().toString());
-  const [kpiFAy, setKpiFAy] = useState("");
-  const [kpiFHat, setKpiFHat] = useState("");
-  const [kpiFPersonel, setKpiFPersonel] = useState("");
-  const [kpiFDurus, setKpiFDurus] = useState("HEPSİ");
-  const [showMeterImportModal, setShowMeterImportModal] = useState(false);
-  const [isMeterImporting, setIsMeterImporting] = useState(false);
-
-  const formatTimeA = (val: any) => {
-    if (!val) return "00:00";
-    if (typeof val === 'string') {
-      const m = val.match(/(\d{1,2})[:.](\d{1,2})/);
-      return m ? `${m[1].padStart(2, '0')}:${m[2].padStart(2, '0')}` : "00:00";
-    }
-    if (typeof val === 'number') {
-      const totalSeconds = Math.round(val * 24 * 60 * 60);
-      return `${String(Math.floor(totalSeconds / 3600)).padStart(2, '0')}:${String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0')}`;
-    }
-    return "00:00";
-  };
-
-  const normA = (s: any) => String(s || "").replace(/[İIı]/g, 'I').replace(/[ŞŞ]/g, 'S').replace(/[ĞĞ]/g, 'G').replace(/[ÜÜ]/g, 'U').replace(/[ÖÖ]/g, 'O').replace(/[ÇÇ]/g, 'C').replace(/\s/g, '').toUpperCase();
-
-  const getColA = (row: any, keyword: string) => {
-    const kNorm = normA(keyword);
-    const key = Object.keys(row).find(k => normA(k).includes(kNorm));
-    return key ? row[key] : null;
-  };
-
-  const handleExcelImport = (e: any) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const bstr = evt.target?.result;
-      if (!bstr) return;
-      const wb = XLSX.read(bstr, { type: 'binary' });
-      const data: any[] = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-      const aylar: any = { "OCAK":"01","SUBAT":"02","MART":"03","NISAN":"04","MAYIS":"05","HAZIRAN":"06","TEMMUZ":"07","AGUSTOS":"08","EYLUL":"09","EKIM":"10","KASIM":"11","ARALIK":"12" };
-      const mapped = data.map((row: any) => {
-        const ay = aylar[normA(getColA(row, "AY"))] || "01";
-        const tarih = `${getColA(row, "YIL")||"2026"}-${ay}-${String(getColA(row, "GUN")||"01").padStart(2, '0')}`;
-        const start = formatTimeA(getColA(row, "BASLANGIC"));
-        const end = formatTimeA(getColA(row, "BITIS"));
-        const [h1, m1] = start.split(':').map(Number);
-        const [h2, m2] = end.split(':').map(Number);
-        let duration = (h2 * 60 + m2) - (h1 * 60 + m1);
-        if (duration < 0) duration += 1440;
-        const p1 = String(getColA(row, "PERSONEL 1") || "Sistem").trim();
-        return {
-          hatAdi: String(getColA(row, "HAT") || "").trim(), ekipmanAdi: String(getColA(row, "EKIPMAN") || "").trim(),
-          aciklama: String(getColA(row, "IS") || "-"), baslangicSaati: start, bitisSaati: end, 
-          baslangicTarihi: tarih, bitisTarihi: tarih, toplamSureDakika: duration,
-          vardiya: getColA(row, "VARDIYA") || "08:00 - 16:00", isDuruslu: String(getColA(row, "DURUS") || "").toUpperCase() !== "YOK",
-          teknisyen: p1, yardimciTeknisyenler: [getColA(row, "PERSONEL 2"), getColA(row, "PERSONEL 3")].filter(p => p && p !== "-"),
-          bildirenKisi: p1, usedMaterials: [], durum: "Kapalı", kayitTarihi: new Date(), isImported: true
-        };
-      });
-      setImportPreview(mapped.filter(i => i.hatAdi)); setShowImportModal(true);
-    };
-    reader.readAsBinaryString(file);
-  };
-
-  const confirmImport = async () => {
-    if (!window.confirm("Aktarım başlatılsın mı?")) return;
-    setIsImporting(true);
-    try {
-      for (let i = 0; i < importPreview.length; i += 500) {
-        const batch = writeBatch(db);
-        importPreview.slice(i, i + 500).forEach(item => {
-          const uId = `imp_${item.baslangicTarihi}_${item.hatAdi}_${item.ekipmanAdi}_${item.baslangicSaati}`.replace(/\s+/g, '_').replace(/\//g, '-');
-          batch.set(doc(db, "maintenance_logs", uId), item);
-        });
-        await batch.commit();
-      }
-      alert("Aktarım Başarılı"); setShowImportModal(false); window.location.reload();
-    } catch (err) { alert(err); } finally { setIsImporting(false); }
-  };
-
-  const clearOldImports = async () => {
-    if (!window.confirm("KORUNANLAR DIŞINDAKİ TÜM KAYITLAR SİLİNECEK?")) return;
-    setLoading(true);
-    try {
-      const snap = await getDocs(collection(db, "maintenance_logs"));
-      const allowed = ["DFUTECHREPORT", "HALILCAKIR", "TEKNIKSERVIS"];
-      const toDelete = snap.docs.filter(d => {
-          const data = d.data();
-          const bk = normA(data.bildirenKisi);
-          const tk = normA(data.teknisyen);
-          const isAllowed = allowed.some(a => bk.includes(a) || tk.includes(a));
-          return !isAllowed || data.isImported === true;
-      });
-      for (let i = 0; i < toDelete.length; i += 500) {
-        const batch = writeBatch(db);
-        toDelete.slice(i, i + 500).forEach(d => batch.delete(d.ref));
-        await batch.commit();
-      }
-      alert(`${toDelete.length} kayıt silindi.`); window.location.reload();
-    } catch (err) { alert("Hata: " + err); setLoading(false); }
-  };
-
-  const handleMeterDataImport = async (files: FileList) => {
-    if (files.length === 0) return;
-    setIsMeterImporting(true);
-    try {
-      const logSnap = await getDocs(collection(db, "meter_logs"));
-      for (let i = 0; i < logSnap.docs.length; i += 500) {
-        const batch = writeBatch(db);
-        logSnap.docs.slice(i, i + 500).forEach(d => batch.delete(d.ref));
-        await batch.commit();
-      }
-      const uniqueMeters: Record<string, string[]> = { "Elektrik": [], "Su": [], "Doğalgaz": [] };
-      const allLogs: any[] = [];
-      for (let i = 0; i < files.length; i++) {
-        const workbook = XLSX.read(await files[i].arrayBuffer());
-        const data: any[] = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-        let type = files[i].name.toUpperCase().includes("ELEK") ? "Elektrik" : files[i].name.toUpperCase().includes("DOGAL") ? "Doğalgaz" : "Su";
-        data.forEach(row => {
-          const rawTs = row["Zaman damgası"];
-          const dateStr = typeof rawTs === 'number' ? new Date((rawTs - 25569) * 86400 * 1000).toISOString().split('T')[0] : new Date(rawTs).toISOString().split('T')[0];
-          Object.keys(row).forEach(key => {
-            if (key !== "Zaman damgası" && !isNaN(Number(row[key]))) {
-              if (!uniqueMeters[type].includes(key)) uniqueMeters[type].push(key);
-              allLogs.push({ sayacAdi: key, deger: Number(row[key]), tarih: dateStr, tip: type, personel: "Sistem", timestamp: serverTimestamp() });
-            }
-          });
-        });
-      }
-      for (let i = 0; i < allLogs.length; i += 500) {
-        const b = writeBatch(db);
-        allLogs.slice(i, i + 500).forEach(l => b.set(doc(collection(db, "meter_logs")), l));
-        await b.commit();
-      }
-      const mBatch = writeBatch(db);
-      for (const [t, ads] of Object.entries(uniqueMeters)) {
-        for (const ad of ads) mBatch.set(doc(db, "meters", `${t}_${ad}`.replace(/\s+/g,'_').replace(/\//g, '-')), { adi: ad, tip: t }, { merge: true });
-      }
-      await mBatch.commit();
-      alert("Sayaçlar yüklendi."); window.location.reload();
-    } catch (e: any) { alert(e.message); } finally { setIsMeterImporting(false); }
-  };
-
-  const handleCopyScript = () => {
-    const dnaScript = "Get-ChildItem -Recurse -Include *.tsx,*.ts | ForEach-Object { \"--- FILE: $($_.FullName) ---\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt; Get-Content $_.FullName | Out-File -Append PROJE_DOKUMU.txt; [char]96 + \"n\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt }";
-    navigator.clipboard.writeText(dnaScript); setCopySuccess(true); setTimeout(() => setCopySuccess(false), 3000);
-  };
-
-  const downloadDNA = async () => {
-    if (window.prompt("Şifre:") !== "161004") return;
-    try {
-      const collections = ["maintenance_logs", "work_orders", "spare_parts", "users", "assets", "eked_logs", "meter_logs", "overtime_logs", "kar_arsivi"];
-      let dbBackup: any = {};
-      for (const coll of collections) {
-        const snap = await getDocs(collection(db, coll));
-        dbBackup[coll] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      }
-      const payload = { database: dbBackup, dna: "ULTIMATE_V45", date: new Date().toISOString() };
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-      const link = document.createElement("a"); link.href = URL.createObjectURL(blob);
-      link.download = `DFU_SYSTEM_DNA.json`; link.click();
-    } catch (e) { alert("Hata!"); }
-  };
-
   if (loading) return <div className="h-screen bg-black flex items-center justify-center text-white italic font-black uppercase tracking-widest">Yükleniyor...</div>;
   if (!isAdmin) return <div className="p-10 text-red-500 font-bold uppercase italic text-center">YETKİSİZ ERİŞİM!</div>;
 
@@ -403,7 +402,7 @@ const [isAdmin, setIsAdmin] = useState(false);
         {showRcaModal && selectedLogForRca && (<div className="fixed inset-0 bg-black/95 backdrop-blur-sm flex justify-center items-center z-[999] p-4 font-bold italic"><div className="bg-slate-900 border border-slate-800 p-10 rounded-[50px] w-full max-w-xl shadow-2xl relative"><h2 className="text-xl font-black text-white mb-8 uppercase text-center tracking-[0.2em]">Root Cause Analysis</h2><div className="space-y-6 italic"><div className="grid grid-cols-3 gap-2 italic">{RCA_CATEGORIES.map(c=>(<button key={c.id} onClick={()=>setRcaForm({...rcaForm, category:c.id})} className={`p-3 rounded-2xl text-[10px] font-black uppercase transition-all border ${rcaForm.category===c.id?'bg-indigo-600 border-indigo-400 text-white shadow-xl shadow-indigo-600/30':'bg-slate-950 border-slate-800 text-gray-500 hover:border-indigo-400'}`}>{c.label}</button>))}</div><textarea value={rcaForm.why} onChange={e=>setRcaForm({...rcaForm, why:e.target.value})} placeholder="Duruş nedenini detaylandırın..." className="w-full bg-slate-950 border border-slate-800 rounded-[30px] p-6 text-sm text-white outline-none focus:ring-2 ring-indigo-500 h-40 shadow-inner italic font-black" /><div className="flex gap-4 italic"><button onClick={()=>setShowRcaModal(false)} className="flex-1 bg-slate-800 py-4 rounded-[20px] font-black text-gray-400 text-xs uppercase">Vazgeç</button><button onClick={handleSaveRca} className="flex-1 bg-indigo-600 py-4 rounded-[20px] font-black text-white shadow-xl text-xs uppercase transition">Kaydet</button></div></div></div></div>)}
       </div>
 
-      {/* ATLAS NEW MODALS */}
+      {/* KPI MODAL */}
       {showKpiModal && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/95 backdrop-blur-2xl" onClick={() => setShowKpiModal(false)}></div>
@@ -463,7 +462,7 @@ const [isAdmin, setIsAdmin] = useState(false);
         <div className="fixed inset-0 z-[130] flex items-center justify-end p-6 font-black uppercase italic text-white">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={()=>setShowKpiDetailWindow(false)}></div>
           <div className="relative bg-slate-900 border-l-4 border-indigo-500 w-full max-w-xl h-full rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right">
-            <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-900/50 text-white font-black italic uppercase"><h3 className="text-lg tracking-widest">🔍 İş Detay Arşivi</h3><button onClick={()=>setShowKpiDetailWindow(false)} className="text-slate-500 hover:text-white text-2xl">✕</button></div>
+            <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-900/50"><h3 className="text-lg tracking-widest">🔍 İş Detay Arşivi</h3><button onClick={()=>setShowKpiDetailWindow(false)} className="text-slate-500 hover:text-white text-2xl">✕</button></div>
             <div className="p-6 overflow-y-auto flex-1 space-y-4">
               {selectedKpiLogDetails.map((log:any, i:number) => (
                 <div key={i} className="bg-slate-950 border border-slate-800 p-5 rounded-3xl hover:border-indigo-500/50 transition-all font-black uppercase italic"><div className="flex justify-between text-[9px] font-black text-indigo-400 mb-2"><span>{log.baslangicTarihi}</span><span className="text-emerald-400">{log.toplamSureDakika} DK</span></div><h4 className="text-white text-xs font-black mb-2">{log.hatAdi} - {log.ekipmanAdi}</h4><p className="text-slate-400 text-[11px] font-bold italic leading-relaxed uppercase">"{log.aciklama}"</p></div>
@@ -501,6 +500,5 @@ const [isAdmin, setIsAdmin] = useState(false);
       )}
     </div>
   );
-    </div>
-  );
+}
 }

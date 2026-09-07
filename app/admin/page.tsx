@@ -501,5 +501,6 @@ const [isAdmin, setIsAdmin] = useState(false);
       )}
     </div>
   );
-}
+    </div>
+  );
 }

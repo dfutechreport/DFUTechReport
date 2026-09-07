@@ -9,53 +9,18 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 const RCA_CATEGORIES = [
-  { id: "insan", label: "İnsan", color: "#3B82F6" }, 
-  { id: "makine", label: "Makine", color: "#EF4444" },
-  { id: "malzeme", label: "Malzeme", color: "#10B981" }, 
-  { id: "metot", label: "Metot", color: "#F59E0B" },
+  { id: "insan", label: "İnsan", color: "#3B82F6" }, { id: "makine", label: "Makine", color: "#EF4444" },
+  { id: "malzeme", label: "Malzeme", color: "#10B981" }, { id: "metot", label: "Metot", color: "#F59E0B" },
   { id: "ortam", label: "Ortam", color: "#8B5CF6" }
 ];
 
 export default function AdminDashboard() {
   const router = useRouter();
 
-  // --- STATES ---
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [userRole, setUserRole] = useState("");
-  const [userName, setUserName] = useState("");
-  const [loading, setLoading] = useState(true);
   const [copySuccess, setCopySuccess] = useState(false);
   const [importPreview, setImportPreview] = useState<any[]>([]);
   const [showImportModal, setShowImportModal] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const [rawLogs, setRawLogs] = useState<any[]>([]);
-  const [rcaLogs, setRcaLogs] = useState<any[]>([]);
-  const [rawMeterLogs, setRawMeterLogs] = useState<any[]>([]);
-  const [aktifIsler, setAktifIsler] = useState<any[]>([]);
-  const [aktifIsgAlarmlari, setAktifIsgAlarmlari] = useState<any[]>([]);
-  const [aktifEked, setAktifEked] = useState<any[]>([]);
-  const [kpiOnayBekleyen, setKpiOnayBekleyen] = useState(0);
-  const [showEkedModal, setShowEkedModal] = useState(false);
-  const [selectedEked, setSelectedEked] = useState<any>(null);
-  const [selectedVaka, setSelectedVaka] = useState<any>(null);
-  const [showVakaModal, setShowVakaModal] = useState(false);
-  const [showRcaModal, setShowRcaModal] = useState(false);
-  const [selectedLogForRca, setSelectedLogForRca] = useState<any>(null);
-  const [rcaForm, setRcaForm] = useState({ category: "", why: "" });
-  const [filterYil, setFilterYil] = useState(new Date().getFullYear().toString());
-  const [filterElekSayac, setFilterElekSayac] = useState("");
-  const [filterGazSayac, setFilterGazSayac] = useState("");
-  const [filterSuSayac, setFilterSuSayac] = useState("");
-  const [elekSayacList, setElekSayacList] = useState<string[]>([]);
-  const [gazSayacList, setGazSayacList] = useState<string[]>([]);
-  const [suSayacList, setSuSayacList] = useState<string[]>([]);
-  const [kpiTotals, setKpiTotals] = useState({ is: 0, sure: 0, durus: 0, mttr: 0 });
-  const [grafikIsHatti, setGrafikIsHatti] = useState<any[]>([]);
-  const [personelPerformans, setPersonelPerformans] = useState<any[]>([]);
-  const [ekipmanPerformans, setEkipmanPerformans] = useState<any[]>([]);
-  const [grafikElek, setGrafikElek] = useState<any[]>([]);
-  const [grafikGaz, setGrafikGaz] = useState<any[]>([]);
-  const [grafikSu, setGrafikSu] = useState<any[]>([]);
   const [showKpiModal, setShowKpiModal] = useState(false);
   const [selectedKpiLogDetails, setSelectedKpiLogDetails] = useState<any[]>([]);
   const [showKpiDetailWindow, setShowKpiDetailWindow] = useState(false);
@@ -66,16 +31,109 @@ export default function AdminDashboard() {
   const [kpiFDurus, setKpiFDurus] = useState("HEPSİ");
   const [showMeterImportModal, setShowMeterImportModal] = useState(false);
   const [isMeterImporting, setIsMeterImporting] = useState(false);
+const [isAdmin, setIsAdmin] = useState(false);
+  const [userRole, setUserRole] = useState(""); 
+  const [userName, setUserName] = useState(""); 
+  const [loading, setLoading] = useState(true);
+  
+  // VERİ HAVUZLARI
+  const [rawLogs, setRawLogs] = useState<any[]>([]);
+  const [rcaLogs, setRcaLogs] = useState<any[]>([]);
+  const [rawMeterLogs, setRawMeterLogs] = useState<any[]>([]);
+  const [aktifIsler, setAktifIsler] = useState<any[]>([]);
+  const [aktifIsgAlarmlari, setAktifIsgAlarmlari] = useState<any[]>([]);
+  const [aktifEked, setAktifEked] = useState<any[]>([]);
+  const [kpiOnayBekleyen, setKpiOnayBekleyen] = useState(0);
 
-  // --- ATLAS LOGIC ---
-  const formatTimeX = (v: any) => {
+  // MODAL VE FİLTRE STATE'LERİ
+  const [showEkedModal, setShowEkedModal] = useState(false);
+  const [selectedEked, setSelectedEked] = useState<any>(null);
+  const [selectedVaka, setSelectedVaka] = useState<any>(null);
+  const [showVakaModal, setShowVakaModal] = useState(false);
+  const [showRcaModal, setShowRcaModal] = useState(false);
+  const [selectedLogForRca, setSelectedLogForRca] = useState<any>(null);
+  const [rcaForm, setRcaForm] = useState({ category: "", why: "" });
+  
+  const [filterYil, setFilterYil] = useState(new Date().getFullYear().toString());
+  const [filterElekSayac, setFilterElekSayac] = useState("");
+  const [filterGazSayac, setFilterGazSayac] = useState("");
+  const [filterSuSayac, setFilterSuSayac] = useState("");
+  const [elekSayacList, setElekSayacList] = useState<string[]>([]);
+  const [gazSayacList, setGazSayacList] = useState<string[]>([]);
+  const [suSayacList, setSuSayacList] = useState<string[]>([]);
+
+  // HESAPLANAN VERİLER
+  const [kpiTotals, setKpiTotals] = useState({ is: 0, sure: 0, durus: 0, mttr: 0 });
+  const [grafikIsHatti, setGrafikIsHatti] = useState<any[]>([]);
+  const [personelPerformans, setPersonelPerformans] = useState<any[]>([]);
+  const [ekipmanPerformans, setEkipmanPerformans] = useState<any[]>([]);
+  const [grafikElek, setGrafikElek] = useState<any[]>([]);
+  const [grafikGaz, setGrafikGaz] = useState<any[]>([]);
+  const [grafikSu, setGrafikSu] = useState<any[]>([]);
+
+  const RCA_CATEGORIES = [
+    { id: "insan", label: "İnsan", color: "#3B82F6" }, { id: "makine", label: "Makine", color: "#EF4444" },
+    { id: "malzeme", label: "Malzeme", color: "#10B981" }, { id: "metot", label: "Metot", color: "#F59E0B" },
+    { id: "ortam", label: "Ortam", color: "#8B5CF6" }
+  ];
+
+  // --- ŞİFRE KORUMALI SNAPSHOT VE RESET ---
+  const downloadFullSnapshot = async () => {
+    if (window.prompt("Yedekleme Şifresi:") !== "161004") return alert("Hatalı!");
+    try {
+      const collections = ["maintenance_logs", "work_orders", "spare_parts", "users", "assets", "eked_logs", "meter_logs", "overtime_logs", "kar_arsivi"];
+      let dbBackup: any = {};
+      for (const coll of collections) {
+        const snap = await getDocs(collection(db, coll));
+        dbBackup[coll] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      }
+      const codeRes = await fetch('/api/backup-all');
+      const codeData = await codeRes.json();
+      const blob = new Blob([JSON.stringify({ database: dbBackup, dna: codeData.codeDump }, null, 2)], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `DFU_MASTER_FULL_SNAPSHOT.json`;
+      link.click();
+    } catch (e) { alert("Hata!"); }
+  };
+
+  const handleSystemReset = async () => {
+    if (window.confirm("RESET?") && window.prompt("RESET ŞİFRESİ:") === "161004") {
+      setLoading(true);
+      const targetColls = ["maintenance_logs", "work_orders", "meter_logs", "eked_logs", "overtime_logs", "kar_arsivi", "pano_takip", "root_cause_analysis"];
+      for (const collName of targetColls) {
+        const snap = await getDocs(collection(db, collName));
+        const batch = writeBatch(db);
+        snap.docs.forEach((d) => batch.delete(d.ref));
+        await batch.commit();
+      }
+      window.location.reload();
+    }
+  };
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists() && userSnap.data().isApproved) {
+          const role = userSnap.data().role;
+          if (role === "ik") return router.push("/admin/mesai");
+          setIsAdmin(true); setUserRole(role); setUserName(userSnap.data().name);
+          await fetchInitialData(); fetchRcaData();
+        }
+      }
+      setLoading(false);
+    });
+    
+  const formatTimeA = (v: any) => {
     if (!v) return "00:00";
     if (typeof v === 'string') { const m = v.match(/(\d{1,2})[:.](\d{1,2})/); return m ? `${m[1].padStart(2, '0')}:${m[2].padStart(2, '0')}` : "00:00"; }
     if (typeof v === 'number') { const ts = Math.round(v * 86400); return `${String(Math.floor(ts / 3600)).padStart(2, '0')}:${String(Math.floor((ts % 3600) / 60)).padStart(2, '0')}`; }
     return "00:00";
   };
   const normA = (s: any) => String(s || "").replace(/[İIı]/g, 'I').replace(/[ŞŞ]/g, 'S').replace(/[ĞĞ]/g, 'G').replace(/[ÜÜ]/g, 'U').replace(/[ÖÖ]/g, 'O').replace(/[ÇÇ]/g, 'C').replace(/\s/g, '').toUpperCase();
-  const getColX = (row: any, kw: string) => { const kn = normA(kw); const key = Object.keys(row).find(k => normA(k).includes(kn)); return key ? row[key] : null; };
+  const getCA = (row: any, kw: string) => { const kn = normA(kw); const key = Object.keys(row).find(k => normA(k).includes(kn)); return key ? row[key] : null; };
 
   const handleExcelImport = (e: any) => {
     const file = e.target.files?.[0];
@@ -88,21 +146,21 @@ export default function AdminDashboard() {
       const data: any[] = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
       const aylar: any = { "OCAK":"01","SUBAT":"02","MART":"03","NISAN":"04","MAYIS":"05","HAZIRAN":"06","TEMMUZ":"07","AGUSTOS":"08","EYLUL":"09","EKIM":"10","KASIM":"11","ARALIK":"12" };
       const mapped = data.map((row: any) => {
-        const ay = aylar[normA(getColX(row, "AY"))] || "01";
-        const tarih = `${getColX(row, "YIL")||"2026"}-${ay}-${String(getColX(row, "GUN")||"01").padStart(2, '0')}`;
-        const start = formatTimeX(getColX(row, "BASLANGIC"));
-        const end = formatTimeX(getColX(row, "BITIS"));
+        const ay = aylar[normA(getCA(row, "AY"))] || "01";
+        const tarih = `${getCA(row, "YIL")||"2026"}-${ay}-${String(getCA(row, "GUN")||"01").padStart(2, '0')}`;
+        const start = formatTimeA(getCA(row, "BASLANGIC"));
+        const end = formatTimeA(getCA(row, "BITIS"));
         const [h1, m1] = start.split(':').map(Number);
         const [h2, m2] = end.split(':').map(Number);
         let duration = (h2 * 60 + m2) - (h1 * 60 + m1);
         if (duration < 0) duration += 1440;
-        const p1 = String(getColX(row, "PERSONEL 1") || "Sistem").trim();
+        const p1 = String(getCA(row, "PERSONEL 1") || "Sistem").trim();
         return {
-          hatAdi: String(getColX(row, "HAT") || "").trim(), ekipmanAdi: String(getColX(row, "EKIPMAN") || "").trim(),
-          aciklama: String(getColX(row, "IS") || "-"), baslangicSaati: start, bitisSaati: end, 
+          hatAdi: String(getCA(row, "HAT") || "").trim(), ekipmanAdi: String(getCA(row, "EKIPMAN") || "").trim(),
+          aciklama: String(getCA(row, "IS") || "-"), baslangicSaati: start, bitisSaati: end, 
           baslangicTarihi: tarih, bitisTarihi: tarih, toplamSureDakika: duration,
-          vardiya: getColX(row, "VARDIYA") || "08:00 - 16:00", isDuruslu: String(getColX(row, "DURUS") || "").toUpperCase() !== "YOK",
-          teknisyen: p1, yardimciTeknisyenler: [getColX(row, "PERSONEL 2"), getColX(row, "PERSONEL 3")].filter(p => p && p !== "-"),
+          vardiya: getCA(row, "VARDIYA") || "08:00 - 16:00", isDuruslu: String(getCA(row, "DURUS") || "").toUpperCase() !== "YOK",
+          teknisyen: p1, yardimciTeknisyenler: [getCA(row, "PERSONEL 2"), getCA(row, "PERSONEL 3")].filter(p => p && p !== "-"),
           bildirenKisi: p1, usedMaterials: [], durum: "Kapalı", kayitTarihi: new Date(), isImported: true
         };
       });
@@ -112,7 +170,7 @@ export default function AdminDashboard() {
   };
 
   const confirmImport = async () => {
-    if (!window.confirm("Kayıtlar aktarılsın mı?")) return;
+    if (!window.confirm("Aktarımı başlat?")) return;
     setIsImporting(true);
     try {
       for (let i = 0; i < importPreview.length; i += 500) {
@@ -141,9 +199,9 @@ export default function AdminDashboard() {
           return !isAllowed || data.isImported === true;
       });
       for (let i = 0; i < toDelete.length; i += 500) {
-        const b = writeBatch(db);
-        toDelete.slice(i, i + 500).forEach(d => b.delete(d.ref));
-        await b.commit();
+        const batch = writeBatch(db);
+        toDelete.slice(i, i + 500).forEach(d => batch.delete(d.ref));
+        await batch.commit();
       }
       alert(`${toDelete.length} kayıt silindi.`); window.location.reload();
     } catch (err) { alert("Hata: " + err); setLoading(false); }
@@ -170,8 +228,8 @@ export default function AdminDashboard() {
           const dateStr = typeof rawTs === 'number' ? new Date((rawTs - 25569) * 86400 * 1000).toISOString().split('T')[0] : new Date(rawTs).toISOString().split('T')[0];
           Object.keys(row).forEach(key => {
             if (key !== "Zaman damgası" && !isNaN(Number(row[key]))) {
-              if (!uniqueMeters[type].includes(key)) uniqueMeters[type].push(key);
-              allLogs.push({ sayacAdi: key, deger: Number(row[key]), tarih: dateStr, tip: type, personel: "Sistem", timestamp: serverTimestamp() });
+              if (!uniqueMeters[t].includes(key)) uniqueMeters[t].push(key);
+              allLogs.push({ sayacAdi: key, deger: Number(row[key]), tarih: dateStr, tip: t, personel: "Sistem", timestamp: serverTimestamp() });
             }
           });
         });
@@ -181,6 +239,11 @@ export default function AdminDashboard() {
         allLogs.slice(i, i + 500).forEach(l => b.set(doc(collection(db, "meter_logs")), l));
         await b.commit();
       }
+      const mBatch = writeBatch(db);
+      for (const [tp, ads] of Object.entries(uniqueMeters)) {
+        for (const ad of ads) mBatch.set(doc(db, "meters", `${tp}_${ad}`.replace(/\s+/g,'_').replace(/\//g, '-')), { adi: ad, tip: tp }, { merge: true });
+      }
+      await mBatch.commit();
       alert("Sayaçlar yüklendi."); window.location.reload();
     } catch (e: any) { alert(e.message); } finally { setIsMeterImporting(false); }
   };
@@ -190,8 +253,8 @@ export default function AdminDashboard() {
     navigator.clipboard.writeText(dnaScript); setCopySuccess(true); setTimeout(() => setCopySuccess(false), 3000);
   };
 
-  const downloadFullSnapshot = async () => {
-    if (window.prompt("Şifre:") !== "161004") return alert("Hatalı!");
+  const downloadFullSnapshotDNA = async () => {
+    if (window.prompt("Şifre:") !== "161004") return;
     try {
       const collections = ["maintenance_logs", "work_orders", "spare_parts", "users", "assets", "eked_logs", "meter_logs", "overtime_logs", "kar_arsivi"];
       let dbBackup: any = {};
@@ -199,43 +262,15 @@ export default function AdminDashboard() {
         const snap = await getDocs(collection(db, coll));
         dbBackup[coll] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       }
-      const payload = { database: dbBackup, dna: "V_MASTER_FINAL_V57", date: new Date().toISOString() };
+      const payload = { database: dbBackup, dna: "MASTER_V58_ULTIMATE", date: new Date().toISOString() };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
       const link = document.createElement("a"); link.href = URL.createObjectURL(blob);
-      link.download = `DFU_DNA_BACKUP.json`; link.click();
+      link.download = `DFU_MASTER_DNA.json`; link.click();
     } catch (e) { alert("Hata!"); }
   };
-const handleSystemReset = async () => {
-    if (window.confirm("RESET?") && window.prompt("RESET ŞİFRESİ:") === "161004") {
-      setLoading(true);
-      const targetColls = ["maintenance_logs", "work_orders", "meter_logs", "eked_logs", "overtime_logs", "kar_arsivi", "pano_takip", "root_cause_analysis"];
-      for (const collName of targetColls) {
-        const snap = await getDocs(collection(db, collName));
-        const batch = writeBatch(db);
-        snap.docs.forEach((d) => batch.delete(d.ref));
-        await batch.commit();
-      }
-      window.location.reload();
-    }
-  };
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const userRef = doc(db, "users", user.uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists() && userSnap.data().isApproved) {
-          const role = userSnap.data().role;
-          if (role === "ik") return router.push("/admin/mesai");
-          setIsAdmin(true); setUserRole(role); setUserName(userSnap.data().name);
-          await fetchInitialData(); fetchRcaData();
-        }
-      }
-      setLoading(false);
-    });
-  
   if (loading) return <div className="h-screen bg-black flex items-center justify-center text-white italic font-black uppercase tracking-widest">Yükleniyor...</div>;
-  if (!isAdmin) return <div className="p-10 text-red-500 font-bold uppercase italic text-center">YETKİSİZ ERİŞİM!</div>;
+  if (!isAdmin) return <div className="p-10 text-red-500 font-bold uppercase italic text-center text-white">YETKİSİZ ERİŞİM!</div>;
 
   return (
     <div className="min-h-screen bg-[#020617] text-white p-4 md:p-8 font-sans overflow-x-hidden italic font-black uppercase selection:bg-indigo-500">
@@ -245,18 +280,102 @@ const handleSystemReset = async () => {
             <img src="/dfulogo.png" className="h-12 bg-white rounded p-1" />
             <h1 className="text-xl md:text-2xl font-black uppercase text-indigo-400 tracking-tighter italic">Komuta Merkezi</h1>
           </div>
-          <div className="flex flex-wrap justify-center lg:justify-end gap-2 md:gap-3 w-full lg:w-auto">
+          <div className="flex flex-wrap justify-center lg:justify-end gap-2 md:gap-3 w-full lg:w-auto font-black italic uppercase">
              <button onClick={() => setShowKpiModal(true)} className="bg-indigo-500 hover:bg-indigo-400 text-white px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border border-white/10 animate-pulse">📈 KPI ANALİZ</button>
              <Link href="/dashboard" className="bg-slate-800 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border border-slate-700 text-center flex items-center">Vardiya Raporu</Link>
              <button onClick={clearOldImports} className="bg-red-900/40 border border-red-500/30 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg hover:bg-red-800 text-center">🗑️ TEMİZLE</button>
              <label className="bg-orange-600 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border border-orange-500/30 cursor-pointer hover:bg-orange-500 text-center flex items-center">📊 IMPORT <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleExcelImport} /></label>
              <button onClick={() => setShowMeterImportModal(true)} className="bg-emerald-600 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border border-emerald-500/30 text-center">🔌 SAYAÇ</button>
-             <button onClick={downloadFullSnapshot} className="bg-slate-700 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg italic text-center">💾 YEDEK</button>
+             <button onClick={downloadFullSnapshotDNA} className="bg-slate-700 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg italic text-center">💾 YEDEK</button>
              <button onClick={handleCopyScript} type="button" className={`${copySuccess ? 'bg-indigo-500' : 'bg-slate-800'} px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border border-indigo-500/30 transition-all text-center`}>{copySuccess ? '✓ KOPYALANDI' : '🧬 DNA'}</button>
              <button onClick={()=>signOut(auth)} className="bg-red-600 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg text-center font-black italic">Çıkış</button>
           </div>
         </div>
-<div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-12 no-print">
+return () => unsubscribe();
+  }, [router]);
+
+  const fetchRcaData = async () => {
+    const snap = await getDocs(collection(db, "root_cause_analysis"));
+    setRcaLogs(snap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
+  };
+
+  const fetchInitialData = async () => {
+    try {
+      const wSnap = await getDocs(query(collection(db, "work_orders"), where("durum", "==", "Açık")));
+      const wData = wSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+      setAktifIsgAlarmlari(wData.filter(d => d.ekipmanAdi === "KAR devreye alma"));
+      setAktifIsler(wData.filter(d => d.ekipmanAdi !== "KAR devreye alma"));
+      const ekedSnap = await getDocs(query(collection(db, "eked_logs"), where("durum", "==", "Açık")));
+      setAktifEked(ekedSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
+      const logsSnap = await getDocs(collection(db, "maintenance_logs"));
+      setRawLogs(logsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
+      const mSnap = await getDocs(query(collection(db, "meter_logs"), orderBy("tarih", "asc")));
+      setRawMeterLogs(mSnap.docs.map(d => d.data()));
+      setKpiOnayBekleyen((await getDocs(query(collection(db, "users"), where("isApproved", "==", false)))).size);
+    } catch (e) { console.error(e); }
+  };
+
+  useEffect(() => {
+    if (rawLogs.length === 0) return;
+    let isC=0, suC=0, duC=0; const hD:any = {}, pD:any = {}, eD:any = {};
+    rawLogs.forEach((l: any) => {
+      const d = l.kayitTarihi?.toDate ? l.kayitTarihi.toDate() : new Date(l.kayitTarihi);
+      const s = Number(l.toplamSureDakika) || 0;
+      if (d.getFullYear().toString() === filterYil) {
+        isC++; suC += s; hD[l.hatAdi] = (hD[l.hatAdi] || 0) + 1;
+        if(l.isDuruslu) duC += s;
+      }
+      const crew = Array.isArray(l.yardimciTeknisyenler) ? [l.bildirenKisi, ...l.yardimciTeknisyenler] : [l.bildirenKisi];
+      crew.forEach((p: string) => { if(p) { if (!pD[p]) pD[p] = { isSayisi: 0, eforDk: 0 }; pD[p].isSayisi++; pD[p].eforDk += s; } });
+      if (l.isDuruslu) { if (!eD[l.ekipmanAdi]) eD[l.ekipmanAdi] = { count: 0, sure: 0 }; eD[l.ekipmanAdi].count++; eD[l.ekipmanAdi].sure += s; }
+    });
+    setKpiTotals({ is: isC, sure: suC, durus: duC, mttr: isC > 0 ? (suC/isC) : 0 });
+    setGrafikIsHatti(Object.keys(hD).map(k=>({ isim: k, adet: hD[k] })));
+    setPersonelPerformans(Object.keys(pD).map(k=>({ isim: k, ...pD[k] })).sort((a,b)=> b.isSayisi - a.isSayisi));
+    setEkipmanPerformans(Object.keys(eD).map(k=>({ ekipman: k, ...eD[k] })).sort((a,b)=>b.count-a.count).slice(0, 5));
+  }, [rawLogs, filterYil]);
+
+  useEffect(() => {
+    if (rawMeterLogs.length === 0) return;
+    const elS = new Set<string>(), gzS = new Set<string>(), suS = new Set<string>();
+    const tEl:any = {}, tGz:any = {}, tSu:any = {};
+    rawMeterLogs.forEach((l: any) => {
+      const t = l.tip || "Elektrik";
+      if(t==="Elektrik") elS.add(l.sayacAdi); if(t==="Doğalgaz") gzS.add(l.sayacAdi); if(t==="Su") suS.add(l.sayacAdi);
+      const ay = `${l.tarih?.split("-")[1]}. Ay`;
+      if(t==="Elektrik" && (!filterElekSayac || l.sayacAdi===filterElekSayac)) tEl[ay] = (tEl[ay]||0) + Number(l.deger || 0);
+      if(t==="Doğalgaz" && (!filterGazSayac || l.sayacAdi===filterGazSayac)) tGz[ay] = (tGz[ay]||0) + Number(l.deger || 0);
+      if(t==="Su" && (!filterSuSayac || l.sayacAdi===filterSuSayac)) tSu[ay] = (tSu[ay]||0) + Number(l.deger || 0);
+    });
+    setElekSayacList(Array.from(elS).sort()); setGazSayacList(Array.from(gzS).sort()); setSuSayacList(Array.from(suS).sort());
+    setGrafikElek(Object.keys(tEl).map(ay=>({ ay, tuketim: tEl[ay] })));
+    setGrafikGaz(Object.keys(tGz).map(ay=>({ ay, tuketim: tGz[ay] })));
+    setGrafikSu(Object.keys(tSu).map(ay=>({ ay, tuketim: tSu[ay] })));
+  }, [rawMeterLogs, filterElekSayac, filterGazSayac, filterSuSayac]);
+
+  const handleSaveRca = async () => {
+    if (!rcaForm.category) return alert("Seçiniz");
+    await setDoc(doc(db, "root_cause_analysis", String(selectedLogForRca.id)), { logId: selectedLogForRca.id, ekipman: selectedLogForRca.ekipmanAdi, category: rcaForm.category, why: rcaForm.why, analizEden: userName, tarih: serverTimestamp() }, { merge: true });
+    alert("Başarılı!"); setShowRcaModal(false); fetchRcaData();
+  };
+
+  if (loading) return <div className="p-10 bg-slate-950 min-h-screen text-white flex justify-center items-center uppercase italic font-black">Güvenlik Kontrolü...</div>;
+  if (!isAdmin) return <div className="p-10 text-red-500 font-bold uppercase italic">YETKİSİZ ERİŞİM!</div>;
+
+  return (
+    <div className="min-h-screen bg-[#020617] text-white p-4 md:p-8 font-sans overflow-x-hidden italic font-bold">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-10 border-b border-gray-800 pb-5 no-print">
+          <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-12 bg-white rounded p-1" /><h1 className="text-2xl font-black uppercase text-indigo-400">Komuta Merkezi</h1></div>
+          <div className="flex gap-3">
+             <Link href="/dashboard" className="bg-indigo-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg">Vardiya Raporu</Link>
+             <button onClick={downloadFullSnapshot} className="bg-emerald-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg italic">💾 Sistem Yedeği</button>
+             <button onClick={()=>signOut(auth)} className="bg-red-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg">Çıkış</button>
+          </div>
+        </div>
+
+        {/* --- TÜM 23 BUTONLUK NAVİGASYON --- */}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-12 no-print">
           <Link href="/admin/is-emri-ac" className="bg-red-600 p-3 rounded-2xl text-[10px] text-center uppercase shadow-lg">🚨 Yeni İş Emri</Link>
           <Link href="/admin/aktif-isler" className="bg-red-950 border border-red-500 p-3 rounded-2xl text-[10px] text-center uppercase">Aktif Bildirimler</Link>
           <Link href="/admin/eked" className="bg-yellow-600 text-black p-3 rounded-2xl text-[10px] text-center uppercase">🔐 EKED Takip</Link>
@@ -355,8 +474,10 @@ const handleSystemReset = async () => {
         {showVakaModal && selectedVaka && (<div className="fixed inset-0 bg-black/90 backdrop-blur-md flex justify-center items-center z-[1000] p-4 font-bold italic"><div className="bg-slate-900 border border-slate-800 p-10 rounded-[50px] w-full max-w-2xl shadow-3xl relative overflow-hidden italic"><div className={`absolute top-0 left-0 w-full h-2 ${selectedVaka.ekipmanAdi === "KAR devreye alma" ? "bg-red-600 shadow-xl" : "bg-indigo-600 shadow-xl"}`}></div><h2 className="text-2xl font-black text-white mb-8 uppercase italic tracking-widest">Bildirim Detayı</h2><div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 mb-10 shadow-inner italic font-black uppercase italic font-black font-black uppercase"><p className="text-gray-300 text-sm italic font-black italic">"{selectedVaka.arizaDetayi || selectedVaka.aciklama || "Not yok."}"</p></div><button onClick={()=>setShowVakaModal(false)} className="w-full bg-slate-800 hover:bg-slate-700 py-4 rounded-2xl font-black uppercase text-xs transition shadow-2xl italic font-black uppercase italic uppercase">Kapat</button></div></div>)}
         {showRcaModal && selectedLogForRca && (<div className="fixed inset-0 bg-black/95 backdrop-blur-sm flex justify-center items-center z-[999] p-4 font-bold italic"><div className="bg-slate-900 border border-slate-800 p-10 rounded-[50px] w-full max-w-xl shadow-2xl relative"><h2 className="text-xl font-black text-white mb-8 uppercase text-center tracking-[0.2em]">Root Cause Analysis</h2><div className="space-y-6 italic"><div className="grid grid-cols-3 gap-2 italic">{RCA_CATEGORIES.map(c=>(<button key={c.id} onClick={()=>setRcaForm({...rcaForm, category:c.id})} className={`p-3 rounded-2xl text-[10px] font-black uppercase transition-all border ${rcaForm.category===c.id?'bg-indigo-600 border-indigo-400 text-white shadow-xl shadow-indigo-600/30':'bg-slate-950 border-slate-800 text-gray-500 hover:border-indigo-400'}`}>{c.label}</button>))}</div><textarea value={rcaForm.why} onChange={e=>setRcaForm({...rcaForm, why:e.target.value})} placeholder="Duruş nedenini detaylandırın..." className="w-full bg-slate-950 border border-slate-800 rounded-[30px] p-6 text-sm text-white outline-none focus:ring-2 ring-indigo-500 h-40 shadow-inner italic font-black" /><div className="flex gap-4 italic"><button onClick={()=>setShowRcaModal(false)} className="flex-1 bg-slate-800 py-4 rounded-[20px] font-black text-gray-400 text-xs uppercase">Vazgeç</button><button onClick={handleSaveRca} className="flex-1 bg-indigo-600 py-4 rounded-[20px] font-black text-white shadow-xl text-xs uppercase transition">Kaydet</button></div></div></div></div>)}
       </div>
-
-      {/* ATLAS MODALS */}
+    </div>
+  );
+}
+      {/* KPI MODAL */}
       {showKpiModal && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/95 backdrop-blur-2xl" onClick={() => setShowKpiModal(false)}></div>
@@ -415,8 +536,8 @@ const handleSystemReset = async () => {
       {showKpiDetailWindow && (
         <div className="fixed inset-0 z-[130] flex items-center justify-end p-6 font-black uppercase italic text-white text-xs">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={()=>setShowKpiDetailWindow(false)}></div>
-          <div className="relative bg-slate-900 border-l-4 border-indigo-500 w-full max-w-xl h-full rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right font-black italic uppercase text-white uppercase italic font-black">
-            <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-900/50 text-white font-black italic uppercase"><h3 className="text-lg tracking-widest uppercase italic font-black">🔍 İş Detay Arşivi</h3><button onClick={()=>setShowKpiDetailWindow(false)} className="text-slate-500 hover:text-white text-2xl">✕</button></div>
+          <div className="relative bg-slate-900 border-l-4 border-indigo-500 w-full max-w-xl h-full rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right font-black italic uppercase">
+            <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-900/50 font-black italic uppercase text-white"><h3 className="text-lg tracking-widest uppercase font-black italic">🔍 İş Detay Arşivi</h3><button onClick={()=>setShowKpiDetailWindow(false)} className="text-slate-500 hover:text-white text-2xl">✕</button></div>
             <div className="p-6 overflow-y-auto flex-1 space-y-4">
               {selectedKpiLogDetails.map((log:any, i:number) => (
                 <div key={i} className="bg-slate-950 border border-slate-800 p-5 rounded-3xl hover:border-indigo-500/50 transition-all font-black uppercase italic"><div className="flex justify-between text-[9px] font-black text-indigo-400 mb-2"><span>{log.baslangicTarihi}</span><span className="text-emerald-400">{log.toplamSureDakika} DK</span></div><h4 className="text-white text-xs font-black mb-2">{log.hatAdi} - {log.ekipmanAdi}</h4><p className="text-slate-400 text-[11px] font-bold italic leading-relaxed uppercase">"{log.aciklama}"</p></div>
@@ -427,12 +548,12 @@ const handleSystemReset = async () => {
       )}
 
       {showImportModal && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 text-white uppercase font-black italic">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 text-white uppercase font-black italic text-white uppercase italic font-black">
           <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={() => !isImporting && setShowImportModal(false)}></div>
-          <div className="relative bg-slate-900 border-2 border-orange-500/30 w-full max-w-6xl max-h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col font-black italic">
-            <div className="p-8 border-b border-orange-500/10 flex justify-between items-center bg-orange-500/5 uppercase tracking-widest font-black italic"><div><h2 className="text-xl text-orange-500 uppercase italic font-black text-white uppercase italic font-black uppercase italic font-black">📊 EXCEL ÖNİZLEME</h2><p className="text-[10px] text-slate-500 mt-1 uppercase font-bold italic tracking-tighter">Toplam {importPreview.length} kayıt.</p></div><button onClick={() => !isImporting && setShowImportModal(false)} className="text-orange-500/50 hover:text-orange-500 text-2xl">✕</button></div>
+          <div className="relative bg-slate-900 border-2 border-orange-500/30 w-full max-w-6xl max-h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col font-black italic text-white">
+            <div className="p-8 border-b border-orange-500/10 flex justify-between items-center bg-orange-500/5 uppercase tracking-widest font-black italic text-white uppercase font-black italic"><div><h2 className="text-xl text-orange-500 uppercase italic font-black">📊 EXCEL ÖNİZLEME</h2><p className="text-[10px] text-slate-500 mt-1 uppercase font-bold italic tracking-tighter">Toplam {importPreview.length} kayıt.</p></div><button onClick={() => !isImporting && setShowImportModal(false)} className="text-orange-500/50 hover:text-orange-500 text-2xl">✕</button></div>
             <div className="p-6 overflow-y-auto flex-1 text-white uppercase italic font-black"><table className="w-full text-left text-[10px] uppercase font-bold italic text-white uppercase font-black italic">
-                <thead className="sticky top-0 bg-slate-900 text-orange-500/70 border-b border-slate-800 font-black italic text-white uppercase font-black italic"><tr><th className="p-3">Tarih</th><th className="p-3">Zaman</th><th className="p-3">Süre</th><th className="p-3">Hat / Ekipman</th><th className="p-3">SORUMLU</th><th className="p-3">Duruş</th></tr></thead>
+                <thead className="sticky top-0 bg-slate-900 text-orange-500/70 border-b border-slate-800 font-black italic"><tr><th className="p-3">Tarih</th><th className="p-3">Zaman</th><th className="p-3">Süre</th><th className="p-3">Hat / Ekipman</th><th className="p-3">SORUMLU</th><th className="p-3">Duruş</th></tr></thead>
                 <tbody className="divide-y divide-slate-800 text-white uppercase italic font-black">{importPreview.slice(0, 100).map((row, idx) => (<tr key={idx} className="hover:bg-orange-500/5 text-white uppercase italic font-black text-white uppercase italic font-black"><td className="p-3 text-slate-400 whitespace-nowrap">{row.baslangicTarihi}</td><td className="p-3 text-indigo-400 whitespace-nowrap font-mono">{row.baslangicSaati} - {row.bitisSaati}</td><td className="p-3 text-amber-500 font-black">{row.toplamSureDakika} DK</td><td className="p-3 text-white"><span className="text-emerald-400">{row.hatAdi}</span> / {row.ekipmanAdi}</td><td className="p-3 text-indigo-300 font-black">{row.teknisyen}</td><td className="p-3">{row.isDuruslu ? '🔴 VAR' : '🟢 YOK'}</td></tr>))}</tbody>
               </table></div>
             <div className="p-8 border-t border-slate-800 bg-slate-900/50 flex justify-end gap-4 text-[10px] font-black uppercase text-white font-black italic uppercase text-white"><button onClick={() => setShowImportModal(false)} disabled={isImporting} className="bg-slate-800 px-8 py-3 rounded-xl hover:bg-slate-700 text-white font-black italic uppercase">İPTAL</button><button onClick={confirmImport} disabled={isImporting} className="bg-orange-600 text-white px-10 py-3 rounded-xl shadow-xl hover:bg-orange-500 flex items-center gap-2">

@@ -64,6 +64,16 @@ const [isAdmin, setIsAdmin] = useState(false);
 
   // HESAPLANAN VERİLER
   const [kpiTotals, setKpiTotals] = useState({ is: 0, sure: 0, durus: 0, mttr: 0 });
+  // --- KPI ANALİZ STATE ---
+  const [showKpiModal, setShowKpiModal] = useState(false);
+  const [kpiStartDate, setKpiStartDate] = useState("");
+  const [kpiEndDate, setKpiEndDate] = useState("");
+  const [kpiFDurus, setKpiFDurus] = useState("HEPSİ");
+  const [kpiData, setKpiData] = useState([]);
+
+  // --- IMPORT STATE ---
+  const [showMeterImportModal, setShowMeterImportModal] = useState(false);
+
   const [grafikIsHatti, setGrafikIsHatti] = useState<any[]>([]);
   const [personelPerformans, setPersonelPerformans] = useState<any[]>([]);
   const [ekipmanPerformans, setEkipmanPerformans] = useState<any[]>([]);
@@ -273,7 +283,59 @@ const [isAdmin, setIsAdmin] = useState(false);
   if (loading) return <div className="h-screen bg-black flex items-center justify-center text-white italic font-black uppercase tracking-widest text-center">Güvenlik Taraması...</div>;
   if (!isAdmin) return <div className="p-10 text-red-500 font-bold uppercase italic text-center text-white font-black italic uppercase underline text-center">YETKİSİZ ERİŞİM!</div>;
 
-  return (
+  
+  // --- YENİ EKLENEN FONKSİYONLAR ---
+  const calculateKpis = () => {
+    let filtered = [...(logs || [])];
+    if (kpiStartDate) filtered = filtered.filter(l => l.tarih >= kpiStartDate);
+    if (kpiEndDate) filtered = filtered.filter(l => l.tarih <= kpiEndDate);
+    if (kpiFDurus !== "HEPSİ") filtered = filtered.filter(l => kpiFDurus === "VAR" ? l.durus : !l.durus);
+    const groups = filtered.reduce((acc, curr) => {
+      const date = curr.tarih;
+      if (!acc[date]) acc[date] = { date, sure: 0, adet: 0 };
+      acc[date].sure += Number(curr.toplamSureDakika) || 0;
+      acc[date].adet += 1;
+      return acc;
+    }, {});
+    setKpiData(Object.values(groups).sort((a,b) => a.date.localeCompare(b.date)));
+  };
+
+  const handleMeterImport = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(ws);
+        const batch = writeBatch(db);
+        data.forEach(row => {
+          const ref = doc(collection(db, "meters"));
+          batch.set(ref, { ...row, importDate: serverTimestamp() });
+        });
+        await batch.commit();
+        alert("Başarılı!");
+        setShowMeterImportModal(false);
+      } catch (err) { alert("Hata: " + err.message); }
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  const clearOldImports = async () => {
+    if (!window.confirm("Silme işlemini onaylıyor musunuz?")) return;
+    setLoading(true);
+    try {
+      const snap = await getDocs(collection(db, "meters"));
+      const batch = writeBatch(db);
+      snap.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+      alert("Sayaç verileri temizlendi.");
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
+  };
+return (
     <div className="min-h-screen bg-[#020617] text-white p-4 md:p-8 font-sans overflow-x-hidden italic font-black uppercase selection:bg-indigo-500">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col lg:flex-row justify-between items-center gap-6 mb-10 border-b border-gray-800 pb-8 no-print text-white text-center font-black italic uppercase">
@@ -576,6 +638,47 @@ return () => unsubscribe();
           </div>
         </div>
       )}
-    </div>
+    
+      {/* --- KPI ANALİZ MODAL --- */}
+      {showKpiModal && (
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-2xl z-[2000] flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-indigo-500/30 w-full max-w-6xl h-[90vh] rounded-[40px] shadow-2xl flex flex-col overflow-hidden">
+            <div className="p-8 border-b border-indigo-500/20 flex justify-between items-center">
+              <h2 className="text-xl text-indigo-400 font-black italic uppercase">KPI Analiz</h2>
+              <button onClick={() => setShowKpiModal(false)} className="text-slate-500 text-3xl">✕</button>
+            </div>
+            <div className="p-8 flex-1 overflow-y-auto">
+               <div className="flex gap-4 mb-8">
+                 <input type="date" value={kpiStartDate} onChange={e=>setKpiStartDate(e.target.value)} className="bg-slate-800 border-none rounded-xl p-3 text-white text-xs" />
+                 <input type="date" value={kpiEndDate} onChange={e=>setKpiEndDate(e.target.value)} className="bg-slate-800 border-none rounded-xl p-3 text-white text-xs" />
+                 <button onClick={calculateKpis} className="bg-indigo-600 px-6 py-3 rounded-xl text-[10px] font-black uppercase">Hesapla</button>
+               </div>
+               <div className="h-[400px] bg-slate-950 rounded-3xl p-6 border border-slate-800">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={kpiData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                    <XAxis dataKey="date" stroke="#64748b" fontSize={10} />
+                    <YAxis stroke="#64748b" fontSize={10} />
+                    <Tooltip contentStyle={{backgroundColor:'#0f172a', border:'1px solid #1e293b'}} />
+                    <Bar dataKey="sure" fill="#6366f1" radius={[10, 10, 0, 0]} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- SAYAÇ IMPORT MODAL --- */}
+      {showMeterImportModal && (
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-xl z-[2000] flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-emerald-500/30 w-full max-w-md rounded-[40px] p-10 relative">
+            <button onClick={() => setShowMeterImportModal(false)} className="absolute top-6 right-6 text-slate-500">✕</button>
+            <h2 className="text-xl text-emerald-500 font-black uppercase mb-8">Sayaç Aktarımı</h2>
+            <input type="file" accept=".xlsx,.xls" onChange={handleMeterImport} className="w-full bg-slate-950 p-6 rounded-3xl border border-dashed border-slate-800 text-slate-400" />
+          </div>
+        </div>
+      )}
+</div>
   );
 }

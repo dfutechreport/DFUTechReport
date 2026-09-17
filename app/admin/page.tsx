@@ -8,7 +8,6 @@ import { BarChart, Bar, Area, ComposedChart, XAxis, YAxis, Tooltip, ResponsiveCo
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-const RCA_CATEGORIES = [
   { id: "insan", label: "İnsan", color: "#3B82F6" }, { id: "makine", label: "Makine", color: "#EF4444" },
   { id: "malzeme", label: "Malzeme", color: "#10B981" }, { id: "metot", label: "Metot", color: "#F59E0B" },
   { id: "ortam", label: "Ortam", color: "#8B5CF6" }
@@ -16,10 +15,6 @@ const RCA_CATEGORIES = [
 
 export default function AdminDashboard() {
   const router = useRouter();
-
-  const [copySuccess, setCopySuccess] = useState(false);
-  const [importPreview, setImportPreview] = useState<any[]>([]);
-  const [showImportModal, setShowImportModal] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [showKpiModal, setShowKpiModal] = useState(false);
   const [selectedKpiLogDetails, setSelectedKpiLogDetails] = useState<any[]>([]);
@@ -111,11 +106,6 @@ const [isAdmin, setIsAdmin] = useState(false);
     }
   };
 
-  const [showKpiModal, setShowKpiModal] = useState(false);
-  const [showMeterImportModal, setShowMeterImportModal] = useState(false);
-  const [kpiData, setKpiData] = useState<any[]>([]);
-  const [kpiStartDate, setKpiStartDate] = useState("");
-  const [kpiEndDate, setKpiEndDate] = useState("");
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -275,8 +265,8 @@ const [isAdmin, setIsAdmin] = useState(false);
     } catch (e) { alert("Hata!"); }
   };
 
-    return () => unsubscribe();
-  }, [router]);
+  if (loading) return <div className="h-screen bg-black flex items-center justify-center text-white italic font-black uppercase tracking-widest text-center">Güvenlik Taraması...</div>;
+  if (!isAdmin) return <div className="p-10 text-red-500 font-bold uppercase italic text-center text-white font-black italic uppercase underline text-center">YETKİSİZ ERİŞİM!</div>;
 
   const fetchRcaData = async () => {
     const snap = await getDocs(collection(db, "root_cause_analysis"));
@@ -346,17 +336,41 @@ const [isAdmin, setIsAdmin] = useState(false);
   if (loading) return <div className="p-10 bg-slate-950 min-h-screen text-white flex justify-center items-center uppercase italic font-black">Güvenlik Kontrolü...</div>;
   if (!isAdmin) return <div className="p-10 text-red-500 font-bold uppercase italic">YETKİSİZ ERİŞİM!</div>;
 
+  return (
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists() && userSnap.data().isApproved) {
+          const role = userSnap.data().role;
+          if (role === "ik") return router.push("/admin/mesai");
+          setIsAdmin(true); setUserRole(role); setUserName(userSnap.data().name);
+          await fetchInitialData(); fetchRcaData();
+        }
+      }
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, [router]);
+
+  const [showKpiModal, setShowKpiModal] = useState(false);
+  const [showMeterImportModal, setShowMeterImportModal] = useState(false);
+  const [kpiData, setKpiData] = useState<any[]>([]);
+  const [kpiStartDate, setKpiStartDate] = useState("");
+  const [kpiEndDate, setKpiEndDate] = useState("");
 
   const calculateKpis = () => {
     let filtered = [...rawLogs];
-    if (kpiStartDate) filtered = filtered.filter(l => l.tarih >= kpiStartDate);
-    const groups = filtered.reduce((acc, curr: any) => {
+    if (kpiStartDate) filtered = filtered.filter((l:any) => l.tarih >= kpiStartDate);
+    const groups = filtered.reduce((acc:any, curr: any) => {
       const date = curr.tarih;
       if (!acc[date]) acc[date] = { date, sure: 0, adet: 0 };
       acc[date].sure += Number(curr.toplamSureDakika) || 0;
       acc[date].adet += 1;
       return acc;
-    }, {} as any);
+    }, {});
     setKpiData(Object.values(groups).sort((a:any, b:any) => a.date.localeCompare(b.date)));
   };
 
@@ -366,7 +380,7 @@ const [isAdmin, setIsAdmin] = useState(false);
     const reader = new FileReader();
     reader.onload = async (evt: any) => {
       const bstr = evt.target.result;
-      const wb = XLSX.read(bstr, { type: 'binary' });
+      const wb = XLSX.read(bstr, { type: "binary" });
       const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
       const batch = writeBatch(db);
       data.forEach((row: any) => batch.set(doc(collection(db, "meter_logs")), { ...row, timestamp: serverTimestamp() }));
@@ -375,9 +389,6 @@ const [isAdmin, setIsAdmin] = useState(false);
     };
     reader.readAsBinaryString(file);
   };
-  if (loading) return <div className="h-screen bg-black flex items-center justify-center text-white italic font-black uppercase tracking-widest text-center">Güvenlik Taraması...</div>;
-  if (!isAdmin) return <div className="p-10 text-red-500 font-bold uppercase italic text-center text-white font-black italic uppercase underline text-center">YETKİSİZ ERİŞİM!</div>;
-
   return (
     <div className="min-h-screen bg-[#020617] text-white p-4 md:p-8 font-sans overflow-x-hidden italic font-black uppercase selection:bg-indigo-500">
       <div className="max-w-7xl mx-auto">
@@ -397,76 +408,6 @@ const [isAdmin, setIsAdmin] = useState(false);
              <button onClick={()=>signOut(auth)} className="bg-red-600 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg text-center font-black italic uppercase text-white">Çıkış</button>
           </div>
         </div>
-
-  const fetchRcaData = async () => {
-    const snap = await getDocs(collection(db, "root_cause_analysis"));
-    setRcaLogs(snap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
-  };
-
-  const fetchInitialData = async () => {
-    try {
-      const wSnap = await getDocs(query(collection(db, "work_orders"), where("durum", "==", "Açık")));
-      const wData = wSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-      setAktifIsgAlarmlari(wData.filter(d => d.ekipmanAdi === "KAR devreye alma"));
-      setAktifIsler(wData.filter(d => d.ekipmanAdi !== "KAR devreye alma"));
-      const ekedSnap = await getDocs(query(collection(db, "eked_logs"), where("durum", "==", "Açık")));
-      setAktifEked(ekedSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
-      const logsSnap = await getDocs(collection(db, "maintenance_logs"));
-      setRawLogs(logsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
-      const mSnap = await getDocs(query(collection(db, "meter_logs"), orderBy("tarih", "asc")));
-      setRawMeterLogs(mSnap.docs.map(d => d.data()));
-      setKpiOnayBekleyen((await getDocs(query(collection(db, "users"), where("isApproved", "==", false)))).size);
-    } catch (e) { console.error(e); }
-  };
-
-  useEffect(() => {
-    if (rawLogs.length === 0) return;
-    let isC=0, suC=0, duC=0; const hD:any = {}, pD:any = {}, eD:any = {};
-    rawLogs.forEach((l: any) => {
-      const d = l.kayitTarihi?.toDate ? l.kayitTarihi.toDate() : new Date(l.kayitTarihi);
-      const s = Number(l.toplamSureDakika) || 0;
-      if (d.getFullYear().toString() === filterYil) {
-        isC++; suC += s; hD[l.hatAdi] = (hD[l.hatAdi] || 0) + 1;
-        if(l.isDuruslu) duC += s;
-      }
-      const crew = Array.isArray(l.yardimciTeknisyenler) ? [l.bildirenKisi, ...l.yardimciTeknisyenler] : [l.bildirenKisi];
-      crew.forEach((p: string) => { if(p) { if (!pD[p]) pD[p] = { isSayisi: 0, eforDk: 0 }; pD[p].isSayisi++; pD[p].eforDk += s; } });
-      if (l.isDuruslu) { if (!eD[l.ekipmanAdi]) eD[l.ekipmanAdi] = { count: 0, sure: 0 }; eD[l.ekipmanAdi].count++; eD[l.ekipmanAdi].sure += s; }
-    });
-    setKpiTotals({ is: isC, sure: suC, durus: duC, mttr: isC > 0 ? (suC/isC) : 0 });
-    setGrafikIsHatti(Object.keys(hD).map(k=>({ isim: k, adet: hD[k] })));
-    setPersonelPerformans(Object.keys(pD).map(k=>({ isim: k, ...pD[k] })).sort((a,b)=> b.isSayisi - a.isSayisi));
-    setEkipmanPerformans(Object.keys(eD).map(k=>({ ekipman: k, ...eD[k] })).sort((a,b)=>b.count-a.count).slice(0, 5));
-  }, [rawLogs, filterYil]);
-
-  useEffect(() => {
-    if (rawMeterLogs.length === 0) return;
-    const elS = new Set<string>(), gzS = new Set<string>(), suS = new Set<string>();
-    const tEl:any = {}, tGz:any = {}, tSu:any = {};
-    rawMeterLogs.forEach((l: any) => {
-      const t = l.tip || "Elektrik";
-      if(t==="Elektrik") elS.add(l.sayacAdi); if(t==="Doğalgaz") gzS.add(l.sayacAdi); if(t==="Su") suS.add(l.sayacAdi);
-      const ay = `${l.tarih?.split("-")[1]}. Ay`;
-      if(t==="Elektrik" && (!filterElekSayac || l.sayacAdi===filterElekSayac)) tEl[ay] = (tEl[ay]||0) + Number(l.deger || 0);
-      if(t==="Doğalgaz" && (!filterGazSayac || l.sayacAdi===filterGazSayac)) tGz[ay] = (tGz[ay]||0) + Number(l.deger || 0);
-      if(t==="Su" && (!filterSuSayac || l.sayacAdi===filterSuSayac)) tSu[ay] = (tSu[ay]||0) + Number(l.deger || 0);
-    });
-    setElekSayacList(Array.from(elS).sort()); setGazSayacList(Array.from(gzS).sort()); setSuSayacList(Array.from(suS).sort());
-    setGrafikElek(Object.keys(tEl).map(ay=>({ ay, tuketim: tEl[ay] })));
-    setGrafikGaz(Object.keys(tGz).map(ay=>({ ay, tuketim: tGz[ay] })));
-    setGrafikSu(Object.keys(tSu).map(ay=>({ ay, tuketim: tSu[ay] })));
-  }, [rawMeterLogs, filterElekSayac, filterGazSayac, filterSuSayac]);
-
-  const handleSaveRca = async () => {
-    if (!rcaForm.category) return alert("Seçiniz");
-    await setDoc(doc(db, "root_cause_analysis", String(selectedLogForRca.id)), { logId: selectedLogForRca.id, ekipman: selectedLogForRca.ekipmanAdi, category: rcaForm.category, why: rcaForm.why, analizEden: userName, tarih: serverTimestamp() }, { merge: true });
-    alert("Başarılı!"); setShowRcaModal(false); fetchRcaData();
-  };
-
-  if (loading) return <div className="p-10 bg-slate-950 min-h-screen text-white flex justify-center items-center uppercase italic font-black">Güvenlik Kontrolü...</div>;
-  if (!isAdmin) return <div className="p-10 text-red-500 font-bold uppercase italic">YETKİSİZ ERİŞİM!</div>;
-
-  return (
     <div className="min-h-screen bg-[#020617] text-white p-4 md:p-8 font-sans overflow-x-hidden italic font-bold">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-10 border-b border-gray-800 pb-5 no-print">
@@ -679,8 +620,8 @@ const [isAdmin, setIsAdmin] = useState(false);
           </div>
         </div>
       )}
+    </div>
 
-      {/* KPI MODAL */}
       {showKpiModal && (
         <div className="fixed inset-0 bg-black/95 backdrop-blur-2xl z-[2000] flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-indigo-500/30 w-full max-w-6xl h-[90vh] rounded-[40px] shadow-2xl overflow-hidden flex flex-col relative">
@@ -706,7 +647,6 @@ const [isAdmin, setIsAdmin] = useState(false);
           </div>
         </div>
       )}
-
       {showMeterImportModal && (
         <div className="fixed inset-0 bg-black/95 z-[2000] flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-emerald-500/20 p-10 rounded-[40px] w-96">
@@ -716,7 +656,6 @@ const [isAdmin, setIsAdmin] = useState(false);
           </div>
         </div>
       )}
-    </div>
       </div>
-);
-
+  );
+}

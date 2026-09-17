@@ -337,8 +337,6 @@ const [isAdmin, setIsAdmin] = useState(false);
   if (loading) return <div className="p-10 bg-slate-950 min-h-screen text-white flex justify-center items-center uppercase italic font-black">Güvenlik Kontrolü...</div>;
   if (!isAdmin) return <div className="p-10 text-red-500 font-bold uppercase italic">YETKİSİZ ERİŞİM!</div>;
 
-  return (
-
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -658,5 +656,5 @@ const [isAdmin, setIsAdmin] = useState(false);
         </div>
       )}
       </div>
-  ));
+  );
 }

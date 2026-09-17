@@ -8,6 +8,7 @@ import { BarChart, Bar, Area, ComposedChart, XAxis, YAxis, Tooltip, ResponsiveCo
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+const RCA_CATEGORIES = [
   { id: "insan", label: "İnsan", color: "#3B82F6" }, { id: "makine", label: "Makine", color: "#EF4444" },
   { id: "malzeme", label: "Malzeme", color: "#10B981" }, { id: "metot", label: "Metot", color: "#F59E0B" },
   { id: "ortam", label: "Ortam", color: "#8B5CF6" }
@@ -657,5 +658,5 @@ const [isAdmin, setIsAdmin] = useState(false);
         </div>
       )}
       </div>
-  );
+  ));
 }

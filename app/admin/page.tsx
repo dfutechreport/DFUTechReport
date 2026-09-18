@@ -16,26 +16,6 @@ const RCA_CATEGORIES = [
 
 export default function AdminDashboard() {
   const router = useRouter();
-
-  const [copySuccess, setCopySuccess] = useState(false);
-  const [importPreview, setImportPreview] = useState<any[]>([]);
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
-  const [showKpiModal, setShowKpiModal] = useState(false);
-  const [selectedKpiLogDetails, setSelectedKpiLogDetails] = useState<any[]>([]);
-  const [showKpiDetailWindow, setShowKpiDetailWindow] = useState(false);
-  const [kpiFYil, setKpiFYil] = useState(new Date().getFullYear().toString());
-  const [kpiFAy, setKpiFAy] = useState("");
-  const [kpiFHat, setKpiFHat] = useState("");
-  const [kpiFPersonel, setKpiFPersonel] = useState("");
-  const [kpiFDurus, setKpiFDurus] = useState("HEPSİ");
-  const [showMeterImportModal, setShowMeterImportModal] = useState(false);
-  const [isMeterImporting, setIsMeterImporting] = useState(false);
-const [isAdmin, setIsAdmin] = useState(false);
-  const [userRole, setUserRole] = useState(""); 
-  const [userName, setUserName] = useState(""); 
-  const [loading, setLoading] = useState(true);
-  
   // VERİ HAVUZLARI
   const [rawLogs, setRawLogs] = useState<any[]>([]);
   const [rcaLogs, setRcaLogs] = useState<any[]>([]);
@@ -112,18 +92,16 @@ const [isAdmin, setIsAdmin] = useState(false);
   };
 
 
+  // --- ATLAS NEW FEATURES STATES ---
   const [showKpiModal, setShowKpiModal] = useState(false);
   const [showMeterImportModal, setShowMeterImportModal] = useState(false);
   const [kpiData, setKpiData] = useState<any[]>([]);
   const [kpiStartDate, setKpiStartDate] = useState("");
   const [kpiEndDate, setKpiEndDate] = useState("");
   const [kpiFDurus, setKpiFDurus] = useState("HEPSİ");
-  const [kpiFYil, setKpiFYil] = useState("2026");
-  const [kpiFAy, setKpiFAy] = useState("");
-  const [kpiFHat, setKpiFHat] = useState("");
-  const [kpiFPersonel, setKpiFPersonel] = useState("");
   const [copySuccess, setCopySuccess] = useState(false);
 
+  // --- ATLAS NEW FEATURES HANDLERS ---
   const calculateKpis = () => {
     let filtered = [...rawLogs];
     if (kpiStartDate) filtered = filtered.filter((l:any) => l.tarih >= kpiStartDate);
@@ -138,24 +116,22 @@ const [isAdmin, setIsAdmin] = useState(false);
   };
 
   const handleMeterImportLocal = async (e: any) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = async (evt: any) => {
-      const bstr = evt.target.result;
-      const wb = XLSX.read(bstr, { type: 'binary' });
-      const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-      const batch = writeBatch(db);
-      data.forEach((row: any) => batch.set(doc(collection(db, "meter_logs")), { ...row, timestamp: serverTimestamp() }));
-      await batch.commit();
-      alert("Sayaçlar yüklendi."); setShowMeterImportModal(false);
+      try {
+        const bstr = evt.target.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+        const batch = writeBatch(db);
+        data.forEach((row: any) => batch.set(doc(collection(db, "meter_logs")), { ...row, timestamp: serverTimestamp() }));
+        await batch.commit();
+        alert("Sayaç verileri yüklendi."); 
+        setShowMeterImportModal(false);
+      } catch (err) { alert("Import Hatası: " + err); }
     };
     reader.readAsBinaryString(file);
-  };
-
-  const handleCopyScriptLocal = () => {
-    const dnaScript = "Get-ChildItem -Recurse -Include *.tsx,*.ts | ...";
-    navigator.clipboard.writeText(dnaScript); setCopySuccess(true); setTimeout(() => setCopySuccess(false), 3000);
   };
 
   useEffect(() => {
@@ -287,6 +263,28 @@ const [isAdmin, setIsAdmin] = useState(false);
     } catch (e: any) { alert(e.message); } finally { setIsMeterImporting(false); }
   };
 
+  const handleCopyScript = () => {
+    const dnaScript = "Get-ChildItem -Recurse -Include *.tsx,*.ts | ForEach-Object { \"--- FILE: $($_.FullName) ---\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt; Get-Content $_.FullName | Out-File -Append PROJE_DOKUMU.txt; [char]96 + \"n\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt }";
+    navigator.clipboard.writeText(dnaScript); setCopySuccess(true); setTimeout(() => setCopySuccess(false), 3000);
+  };
+
+  const downloadFullSnapshotDNA = async () => {
+    if (window.prompt("Şifre:") !== "161004") return;
+    try {
+      const collections = ["maintenance_logs", "work_orders", "spare_parts", "users", "assets", "eked_logs", "meter_logs", "overtime_logs", "kar_arsivi"];
+      let dbBackup: any = {};
+      for (const coll of collections) {
+        const snap = await getDocs(collection(db, coll));
+        dbBackup[coll] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      }
+      const payload = { database: dbBackup, dna: "MASTER_V61_FINAL", date: new Date().toISOString() };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const link = document.createElement("a"); link.href = URL.createObjectURL(blob);
+      link.download = `DFU_MASTER_DNA.json`; link.click();
+    } catch (e) { alert("Hata!"); }
+  };
+
+
   const fetchRcaData = async () => {
     const snap = await getDocs(collection(db, "root_cause_analysis"));
     setRcaLogs(snap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
@@ -306,12 +304,6 @@ const [isAdmin, setIsAdmin] = useState(false);
       setRawMeterLogs(mSnap.docs.map(d => d.data()));
       setKpiOnayBekleyen((await getDocs(query(collection(db, "users"), where("isApproved", "==", false)))).size);
     } catch (e) { console.error(e); }
-  };
-
-  const handleSaveRca = async () => {
-    if (!rcaForm.category) return alert("Seçiniz");
-    await setDoc(doc(db, "root_cause_analysis", String(selectedLogForRca.id)), { logId: selectedLogForRca.id, ekipman: selectedLogForRca.ekipmanAdi, category: rcaForm.category, why: rcaForm.why, analizEden: userName, tarih: serverTimestamp() }, { merge: true });
-    alert("Başarılı!"); setShowRcaModal(false); fetchRcaData();
   };
 
   useEffect(() => {
@@ -352,12 +344,21 @@ const [isAdmin, setIsAdmin] = useState(false);
     setGrafikSu(Object.keys(tSu).map(ay=>({ ay, tuketim: tSu[ay] })));
   }, [rawMeterLogs, filterElekSayac, filterGazSayac, filterSuSayac]);
 
+  const handleSaveRca = async () => {
+    if (!rcaForm.category) return alert("Seçiniz");
+    await setDoc(doc(db, "root_cause_analysis", String(selectedLogForRca.id)), { logId: selectedLogForRca.id, ekipman: selectedLogForRca.ekipmanAdi, category: rcaForm.category, why: rcaForm.why, analizEden: userName, tarih: serverTimestamp() }, { merge: true });
+    alert("Başarılı!"); setShowRcaModal(false); fetchRcaData();
+  };
+
+  if (loading) return <div className="p-10 bg-slate-950 min-h-screen text-white flex justify-center items-center uppercase italic font-black">Güvenlik Kontrolü...</div>;
+  if (!isAdmin) return <div className="p-10 text-red-500 font-bold uppercase italic">YETKİSİZ ERİŞİM!</div>;
+
   if (loading) return <div className="h-screen bg-black flex items-center justify-center text-white italic font-black uppercase tracking-widest text-center">Güvenlik Taraması...</div>;
   if (!isAdmin) return <div className="p-10 text-red-500 font-bold uppercase italic text-center text-white font-black italic uppercase underline text-center">YETKİSİZ ERİŞİM!</div>;
 
 
   return (
-    <>
+  return (
     <div className="min-h-screen bg-[#020617] text-white p-4 md:p-8 font-sans overflow-x-hidden italic font-black uppercase selection:bg-indigo-500">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col lg:flex-row justify-between items-center gap-6 mb-10 border-b border-gray-800 pb-8 no-print text-white text-center font-black italic uppercase">
@@ -589,22 +590,22 @@ const [isAdmin, setIsAdmin] = useState(false);
           </div>
         </div>
       )}
-    </div>
 
+      {/* --- ATLAS KPI ANALİZ MODAL --- */}
       {showKpiModal && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/95 backdrop-blur-2xl" onClick={() => setShowKpiModal(false)}></div>
-          <div className="relative bg-slate-900 border-2 border-indigo-500/30 w-full max-w-6xl h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col text-white italic font-black uppercase">
+          <div className="relative bg-slate-900 border-2 border-indigo-500/30 w-full max-w-6xl h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col text-white font-black italic uppercase">
             <div className="p-8 border-b border-indigo-500/20 flex justify-between items-center bg-orange-500/5">
               <h2 className="text-xl text-orange-500 tracking-widest uppercase italic font-black">📈 KPI ANALİZ MERKEZİ</h2>
-              <button onClick={() => setShowKpiModal(false)} className="text-slate-500 text-3xl">✕</button>
+              <button onClick={() => setShowKpiModal(false)} className="text-slate-500 hover:text-white text-3xl">✕</button>
             </div>
-            <div className="p-8 flex-1 overflow-y-auto bg-slate-950/50">
-               <div className="flex gap-4 mb-8">
-                 <input type="date" value={kpiStartDate} onChange={e=>setKpiStartDate(e.target.value)} className="bg-slate-800 p-3 rounded-xl text-white text-xs font-black italic uppercase" />
-                 <button onClick={calculateKpis} className="bg-indigo-600 px-6 py-3 rounded-xl text-[10px] font-black uppercase shadow-lg">Hesapla</button>
-               </div>
-               <div className="h-[400px] w-full bg-slate-900 rounded-[30px] p-6 border border-slate-800">
+            <div className="p-8 flex-1 overflow-y-auto">
+              <div className="flex gap-4 mb-8">
+                <input type="date" value={kpiStartDate} onChange={e=>setKpiStartDate(e.target.value)} className="bg-slate-800 p-3 rounded-xl text-white text-xs" />
+                <button onClick={calculateKpis} className="bg-indigo-600 px-6 py-3 rounded-xl text-[10px] font-black uppercase shadow-lg">Hesapla</button>
+              </div>
+              <div className="h-[400px] w-full bg-slate-950 rounded-[30px] p-6 border border-slate-800">
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={kpiData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
@@ -614,22 +615,26 @@ const [isAdmin, setIsAdmin] = useState(false);
                     <Bar dataKey="sure" fill="#6366f1" radius={[10, 10, 0, 0]} />
                   </ComposedChart>
                 </ResponsiveContainer>
-               </div>
+              </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* --- ATLAS SAYAÇ IMPORT MODAL --- */}
       {showMeterImportModal && (
-        <div className="fixed inset-0 bg-black/95 z-[2000] flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-emerald-500/20 p-10 rounded-[40px] w-96 font-black italic uppercase">
+        <div className="fixed inset-0 z-[2000] bg-black/95 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-emerald-500/20 p-10 rounded-[40px] w-96 text-white font-black italic uppercase">
             <h2 className="text-emerald-500 font-black mb-6 uppercase italic">🔌 SAYAÇ AKTARIMI</h2>
-            <input type="file" accept=".xlsx,.xls" onChange={handleMeterImportLocal} className="w-full bg-slate-950 p-6 rounded-3xl border border-dashed border-slate-800 text-slate-400 text-xs" />
-            <button onClick={() => setShowMeterImportModal(false)} className="mt-6 w-full bg-slate-800 py-4 rounded-2xl text-[10px] font-black uppercase">Kapat</button>
+            <div className="space-y-6">
+              <input type="file" accept=".xlsx,.xls" onChange={handleMeterImportLocal} className="w-full bg-slate-950 p-6 rounded-3xl border border-dashed border-slate-800 text-slate-400 text-xs" />
+              <button onClick={() => setShowMeterImportModal(false)} className="w-full bg-slate-800 py-4 rounded-2xl text-[10px] font-black uppercase">Vazgeç</button>
+            </div>
           </div>
         </div>
       )
 
-    </>
-      </div>
-);
+    </div>
+  </div>
+  ));
 

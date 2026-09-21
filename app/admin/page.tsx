@@ -36,8 +36,6 @@ const [isAdmin, setIsAdmin] = useState(false);
   const [userName, setUserName] = useState(""); 
   const [loading, setLoading] = useState(true);
 
-export default function AdminDashboard() {
-  const router = useRouter();
   const [rawLogs, setRawLogs] = useState<any[]>([]);
   const [rcaLogs, setRcaLogs] = useState<any[]>([]);
   const [rawMeterLogs, setRawMeterLogs] = useState<any[]>([]);
@@ -605,7 +603,4 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
-    </div>
 
-  );
-}

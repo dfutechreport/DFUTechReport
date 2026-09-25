@@ -59,21 +59,9 @@ const [isAdmin, setIsAdmin] = useState(false);
   const [filterSuSayac, setFilterSuSayac] = useState("");
   const [elekSayacList, setElekSayacList] = useState<string[]>([]);
 
-  const [showKpiModal, setShowKpiModal] = useState(false);
-  const [showMeterImportModal, setShowMeterImportModal] = useState(false);
   const [kpiData, setKpiData] = useState<any[]>([]);
   const [kpiStartDate, setKpiStartDate] = useState("");
   const [kpiEndDate, setKpiEndDate] = useState("");
-  const [kpiFDurus, setKpiFDurus] = useState("HEPSİ");
-  const [copySuccess, setCopySuccess] = useState(false);
-  const [isMeterImporting, setIsMeterImporting] = useState(false);
-  const [importPreview, setImportPreview] = useState<any[]>([]);
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
-  const [kpiFYil, setKpiFYil] = useState("2026");
-  const [kpiFAy, setKpiFAy] = useState("");
-  const [kpiFHat, setKpiFHat] = useState("");
-  const [kpiFPersonel, setKpiFPersonel] = useState("");
 
   const calculateKpis = () => {
     let filtered = [...rawLogs];
@@ -517,4 +505,11 @@ const [isAdmin, setIsAdmin] = useState(false);
           </div>
         </div>
       )}
+    
+  ;
+
+
+      
+    
+  ;
 

@@ -90,7 +90,6 @@ const [isAdmin, setIsAdmin] = useState(false);
   const normA = (s: any) => String(s || "").replace(/[İIı]/g, 'I').replace(/[ŞŞ]/g, 'S').replace(/[ĞĞ]/g, 'G').replace(/[ÜÜ]/g, 'U').replace(/[ÖÖ]/g, 'O').replace(/[ÇÇ]/g, 'C').replace(/\s/g, '').toUpperCase();
   const getCA = (row: any, kw: string) => { const kn = normA(kw); const key = Object.keys(row).find(k => normA(k).includes(kn)); return key ? row[key] : null; };
 
-  const getCA = (row: any, kw: string) => { const kn = normA(kw); const key = Object.keys(row).find(k => normA(k).includes(kn)); return key ? row[key] : null; };
 
   const handleExcelImport = (e: any) => {
     const file = e.target.files?.[0];

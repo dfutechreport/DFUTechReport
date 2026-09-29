@@ -588,8 +588,8 @@ useEffect(() => {
             <button onClick={() => setShowMeterImportModal(false)} className="mt-6 w-full bg-slate-800 py-4 rounded-2xl text-[10px] font-black uppercase">Kapat</button>
           </div>
         
-      )
+      )}
       
     
   ));
-}
+

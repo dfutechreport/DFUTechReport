@@ -14,92 +14,74 @@ const RCA_CATEGORIES = [
   { id: "ortam", label: "Ortam", color: "#8B5CF6" }
 ];
 
+const normA = (s: any) => String(s || "").replace(/[İIı]/g, "I").replace(/[ŞŞ]/g, "S").replace(/[ĞĞ]/g, "G").replace(/[ÜÜ]/g, "U").replace(/[ÖÖ]/g, "O").replace(/[ÇÇ]/g, "C").replace(/\s/g, "").toUpperCase();
+const getCA = (row: any, kw: string) => { const kn = normA(kw); const key = Object.keys(row).find(k => normA(k).includes(kn)); return key ? row[key] : null; };
+const formatExTime = (v: any) => {
+  if (!v) return "00:00";
+  if (typeof v === 'string') { const m = v.match(/(\d{1,2})[:.](\d{1,2})/); return m ? `${m[1].padStart(2, '0')}:${m[2].padStart(2, '0')}` : "00:00"; }
+  if (typeof v === 'number') { const ts = Math.round(v * 86400); return `${String(Math.floor(ts / 3600)).padStart(2, '0')}:${String(Math.floor((ts % 3600) / 60)).padStart(2, '0')}`; }
+  return "00:00";
+};
+
 export default function AdminDashboard() {
   const router = useRouter();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState("");
+  const [userName, setUserName] = useState("");
+  const [showKpiModal, setShowKpiModal] = useState(false);
+  const [showMeterCenterModal, setShowMeterCenterModal] = useState(false);
+  const [kpiData, setKpiData] = useState<any[]>([]);
+  const [kpiStartDate, setKpiStartDate] = useState("");
+  const [kpiEndDate, setKpiEndDate] = useState("");
+  const [kpiFDurus, setKpiFDurus] = useState("HEPSİ");
+  const [isMeterImporting, setIsMeterImporting] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
   const [importPreview, setImportPreview] = useState<any[]>([]);
   const [showImportModal, setShowImportModal] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const [showKpiModal, setShowKpiModal] = useState(false);
-  const [selectedKpiLogDetails, setSelectedKpiLogDetails] = useState<any[]>([]);
   const [showKpiDetailWindow, setShowKpiDetailWindow] = useState(false);
   const [kpiFYil, setKpiFYil] = useState(new Date().getFullYear().toString());
   const [kpiFAy, setKpiFAy] = useState("");
   const [kpiFHat, setKpiFHat] = useState("");
   const [kpiFPersonel, setKpiFPersonel] = useState("");
-  const [kpiFDurus, setKpiFDurus] = useState("HEPSİ");
   const [showMeterImportModal, setShowMeterImportModal] = useState(false);
-  const [isMeterImporting, setIsMeterImporting] = useState(false);
-const [isAdmin, setIsAdmin] = useState(false);
-  const [userRole, setUserRole] = useState(""); 
-  const [userName, setUserName] = useState(""); 
-  const [loading, setLoading] = useState(true);
-  
-  // VERİ HAVUZLARI
-  const [rawLogs, setRawLogs] = useState<any[]>([]);
-  const [rcaLogs, setRcaLogs] = useState<any[]>([]);
-  const [rawMeterLogs, setRawMeterLogs] = useState<any[]>([]);
-  const [aktifIsler, setAktifIsler] = useState<any[]>([]);
-  const [aktifIsgAlarmlari, setAktifIsgAlarmlari] = useState<any[]>([]);
-  const [aktifEked, setAktifEked] = useState<any[]>([]);
   const [kpiOnayBekleyen, setKpiOnayBekleyen] = useState(0);
-
-  // MODAL VE FİLTRE STATE'LERİ
   const [showEkedModal, setShowEkedModal] = useState(false);
-  const [selectedEked, setSelectedEked] = useState<any>(null);
-  const [selectedVaka, setSelectedVaka] = useState<any>(null);
   const [showVakaModal, setShowVakaModal] = useState(false);
   const [showRcaModal, setShowRcaModal] = useState(false);
-  const [selectedLogForRca, setSelectedLogForRca] = useState<any>(null);
   const [rcaForm, setRcaForm] = useState({ category: "", why: "" });
-  
   const [filterYil, setFilterYil] = useState(new Date().getFullYear().toString());
   const [filterElekSayac, setFilterElekSayac] = useState("");
   const [filterGazSayac, setFilterGazSayac] = useState("");
   const [filterSuSayac, setFilterSuSayac] = useState("");
-  const [elekSayacList, setElekSayacList] = useState<string[]>([]);
+  const [kpiTotals, setKpiTotals] = useState({ is: 0, sure: 0, durus: 0, mttr: 0 });  const fetchRcaData = async () => {
+    const snap = await getDocs(collection(db, "root_cause_analysis"));
+    setRcaLogs(snap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
+  }
 
-  const [kpiData, setKpiData] = useState<any[]>([]);
-  const [kpiStartDate, setKpiStartDate] = useState("");
-  const [kpiEndDate, setKpiEndDate] = useState("");
+  const fetchInitialData = async () => {
+    try {
+      const wSnap = await getDocs(query(collection(db, "work_orders"), where("durum", "==", "Açık")));
+      const wData = wSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+      setAktifIsgAlarmlari(wData.filter(d => d.ekipmanAdi === "KAR devreye alma"));
+      setAktifIsler(wData.filter(d => d.ekipmanAdi !== "KAR devreye alma"));
+      const ekedSnap = await getDocs(query(collection(db, "eked_logs"), where("durum", "==", "Açık")));
+      setAktifEked(ekedSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
+      const logsSnap = await getDocs(collection(db, "maintenance_logs"));
+      setRawLogs(logsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
+      const mSnap = await getDocs(query(collection(db, "meter_logs"), orderBy("tarih", "asc")));
+      setRawMeterLogs(mSnap.docs.map(d => d.data()));
+      setKpiOnayBekleyen((await getDocs(query(collection(db, "users"), where("isApproved", "==", false)))).size);
+    } catch (e) { console.error(e); }
+  }
 
-  const calculateKpis = () => {
-    let filtered = [...rawLogs];
-    if (kpiStartDate) filtered = filtered.filter((l: any) => l.tarih >= kpiStartDate);
-    const groups = filtered.reduce((acc: any, curr: any) => {
-      const date = curr.tarih;
-      if (!acc[date]) acc[date] = { date, sure: 0, adet: 0 };
-      acc[date].sure += Number(curr.toplamSureDakika) || 0;
-      acc[date].adet += 1;
-      return acc;
-    }, {});
-    setKpiData(Object.values(groups).sort((a: any, b: any) => a.date.localeCompare(b.date)));
-  };
+  const handleSaveRca = async () => {
+    if (!rcaForm.category) return alert("Seçiniz");
+    await setDoc(doc(db, "root_cause_analysis", String(selectedLogForRca.id)), { logId: selectedLogForRca.id, ekipman: selectedLogForRca.ekipmanAdi, category: rcaForm.category, why: rcaForm.why, analizEden: userName, tarih: serverTimestamp() }, { merge: true });
+    alert("Başarılı!"); setShowRcaModal(false); fetchRcaData();
+  }
 
-  const handleMeterImportLocal = async (e: any) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setIsMeterImporting(true);
-    const reader = new FileReader();
-    reader.onload = async (evt: any) => {
-      try {
-        const bstr = evt.target.result;
-        const wb = XLSX.read(bstr, { type: "binary" });
-        const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-        const batch = writeBatch(db);
-        data.forEach((row: any) => batch.set(doc(collection(db, "meter_logs")), { ...row, timestamp: serverTimestamp() }));
-        await batch.commit();
-        alert("Sayaçlar aktarıldı."); setShowMeterImportModal(false);
-      } catch (err) { alert(err); } finally { setIsMeterImporting(false); }
-    };
-    reader.readAsBinaryString(file);
-  };
-  const formatExTime = (v: any) => {
-    if (!v) return "00:00";
-    if (typeof v === 'string') { const m = v.match(/(\d{1,2})[:.](\d{1,2})/); return m ? `${m[1].padStart(2, '0')}:${m[2].padStart(2, '0')}` : "00:00"; }
-    if (typeof v === 'number') { const ts = Math.round(v * 86400); return `${String(Math.floor(ts / 3600)).padStart(2, '0')}:${String(Math.floor((ts % 3600) / 60)).padStart(2, '0')}`; }
-    return "00:00";
-  };
   const handleExcelImport = (e: any) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -133,7 +115,8 @@ const [isAdmin, setIsAdmin] = useState(false);
       setImportPreview(mapped.filter(i => i.hatAdi)); setShowImportModal(true);
     };
     reader.readAsBinaryString(file);
-  };
+  }
+
   const confirmImport = async () => {
     if (!window.confirm("Aktarımı başlat?")) return;
     setIsImporting(true);
@@ -148,7 +131,8 @@ const [isAdmin, setIsAdmin] = useState(false);
       }
       alert("Aktarım Başarılı"); setShowImportModal(false); window.location.reload();
     } catch (err) { alert(err); } finally { setIsImporting(false); }
-  };
+  }
+
   const clearOldImports = async () => {
     if (!window.confirm("KORUNANLAR DIŞINDAKİ TÜM KAYITLAR SİLİNECEK?")) return;
     setLoading(true);
@@ -169,30 +153,53 @@ const [isAdmin, setIsAdmin] = useState(false);
       }
       alert(`${toDelete.length} kayıt silindi.`); window.location.reload();
     } catch (err) { alert("Hata: " + err); setLoading(false); }
+  }
+
+  const handleCopyScript = () => {
+    const dnaScript = "Get-ChildItem -Recurse -Include *.tsx,*.ts | ForEach-Object { \"--- FILE: $($_.FullName) ---\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt; Get-Content $_.FullName | Out-File -Append PROJE_DOKUMU.txt; [char]96 + \"n\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt }";
+    navigator.clipboard.writeText(dnaScript); setCopySuccess(true); setTimeout(() => setCopySuccess(false), 3000);
+  }
+
+  
+  const calculateKpis = () => {
+    let filtered = [...rawLogs];
+    if (kpiStartDate) filtered = filtered.filter(l => l.tarih >= kpiStartDate);
+    if (kpiEndDate) filtered = filtered.filter(l => l.tarih <= kpiEndDate);
+    if (kpiFDurus !== "HEPSİ") filtered = filtered.filter(l => kpiFDurus === "VAR" ? l.isDuruslu : !l.isDuruslu);
+    
+    const groups = filtered.reduce((acc, curr) => {
+      const date = curr.baslangicTarihi || curr.tarih;
+      if (!acc[date]) acc[date] = { date, sure: 0, adet: 0 };
+      acc[date].sure += Number(curr.toplamSureDakika) || 0;
+      acc[date].adet += 1;
+      return acc;
+    }, {} as any);
+    setKpiData(Object.values(groups).sort((a:any,b:any) => a.date.localeCompare(b.date)));
   };
-  const fetchRcaData = async () => {
-    const snap = await getDocs(collection(db, "root_cause_analysis"));
-    setRcaLogs(snap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
-  };
-  const fetchInitialData = async () => {
-    try {
-      const wSnap = await getDocs(query(collection(db, "work_orders"), where("durum", "==", "Açık")));
-      const wData = wSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-      setAktifIsgAlarmlari(wData.filter(d => d.ekipmanAdi === "KAR devreye alma"));
-      setAktifIsler(wData.filter(d => d.ekipmanAdi !== "KAR devreye alma"));
-      const ekedSnap = await getDocs(query(collection(db, "eked_logs"), where("durum", "==", "Açık")));
-      setAktifEked(ekedSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
-      const logsSnap = await getDocs(collection(db, "maintenance_logs"));
-      setRawLogs(logsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
-      const mSnap = await getDocs(query(collection(db, "meter_logs"), orderBy("tarih", "asc")));
-      setRawMeterLogs(mSnap.docs.map(d => d.data()));
-      setKpiOnayBekleyen((await getDocs(query(collection(db, "users"), where("isApproved", "==", false)))).size);
-    } catch (e) { console.error(e); }
-  };
-  const handleSaveRca = async () => {
-    if (!rcaForm.category) return alert("Seçiniz");
-    await setDoc(doc(db, "root_cause_analysis", String(selectedLogForRca.id)), { logId: selectedLogForRca.id, ekipman: selectedLogForRca.ekipmanAdi, category: rcaForm.category, why: rcaForm.why, analizEden: userName, tarih: serverTimestamp() }, { merge: true });
-    alert("Başarılı!"); setShowRcaModal(false); fetchRcaData();
+
+  const handleMeterImportLocal = async (e: any) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsMeterImporting(true);
+    const reader = new FileReader();
+    reader.onload = async (evt: any) => {
+      try {
+        const bstr = evt.target.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+        const batch = writeBatch(db);
+        data.forEach((row: any) => {
+          const ref = doc(collection(db, "meter_logs"));
+          batch.set(ref, { ...row, timestamp: serverTimestamp() });
+        });
+        await batch.commit();
+        alert("Sayaç verileri yüklendi.");
+        setShowMeterCenterModal(false);
+        fetchInitialData();
+      } catch (err) { alert(err); }
+      finally { setIsMeterImporting(false); }
+    };
+    reader.readAsBinaryString(file);
   };
 
   useEffect(() => {
@@ -229,8 +236,9 @@ const [isAdmin, setIsAdmin] = useState(false);
     setGrafikIsHatti(Object.keys(hD).map(k=>({ isim: k, adet: hD[k] })));
     setPersonelPerformans(Object.keys(pD).map(k=>({ isim: k, ...pD[k] })).sort((a,b)=> b.isSayisi - a.isSayisi));
     setEkipmanPerformans(Object.keys(eD).map(k=>({ ekipman: k, ...eD[k] })).sort((a,b)=>b.count-a.count).slice(0, 5));
-  }, [rawLogs, filterYil]);
-  useEffect(() => {
+  }
+useEffect(() => {
+    if (rawMeterLogs.length === 0) return;  useEffect(() => {
     if (rawMeterLogs.length === 0) return;
     const elS = new Set<string>(), gzS = new Set<string>(), suS = new Set<string>();
     const tEl:any = {}, tGz:any = {}, tSu:any = {};
@@ -246,26 +254,30 @@ const [isAdmin, setIsAdmin] = useState(false);
     setGrafikElek(Object.keys(tEl).map(ay=>({ ay, tuketim: tEl[ay] })));
     setGrafikGaz(Object.keys(tGz).map(ay=>({ ay, tuketim: tGz[ay] })));
     setGrafikSu(Object.keys(tSu).map(ay=>({ ay, tuketim: tSu[ay] })));
-  }, [rawMeterLogs, filterElekSayac, filterGazSayac, filterSuSayac]);
+  }
   if (loading) return <div className="h-screen bg-black flex items-center justify-center text-white italic font-black uppercase tracking-widest text-center">Güvenlik Taraması...</div>;
-  if (!isAdmin) return <div className="p-10 text-red-500 font-bold uppercase italic text-center text-white font-black italic uppercase underline text-center">YETKİSİZ ERİŞİM!</div>;
-
+  if (loading) return <div className="p-10 bg-slate-950 min-h-screen text-white flex justify-center items-center uppercase italic font-black">Güvenlik Kontrolü...</div>;
+  if (!isAdmin) return <div className="p-10 text-red-500 font-bold uppercase italic">YETKİSİZ ERİŞİM!</div>;
 
   return (
     <div className="min-h-screen bg-[#020617] text-white p-4 md:p-8 font-sans overflow-x-hidden italic font-bold">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-10 border-b border-gray-800 pb-5 no-print">
-          <div className="flex items-center gap-4"><img src="/dfulogo.png" className="h-12 bg-white rounded p-1" /><h1 className="text-2xl font-black uppercase text-indigo-400">Komuta Merkezi</h1></div>
-          <div className="flex gap-3 no-print">
-             <button onClick={() => setShowKpiModal(true)} className="bg-indigo-500 text-white px-3 md:px-5 py-2 md:py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase shadow-lg">📈 KPI ANALİZ</button>
-             <button onClick={() => setShowMeterImportModal(true)} className="bg-emerald-600 px-3 md:px-5 py-2 md:py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase shadow-lg">🔌 SAYAÇ</button>
-             <button onClick={() => { const script = 'Get-ChildItem -Recurse...'; navigator.clipboard.writeText(script); setCopySuccess(true); setTimeout(()=>setCopySuccess(false),2000); }} className={`px-3 md:px-5 py-2 md:py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border transition-all ${copySuccess ? 'bg-indigo-500' : 'bg-slate-800'}`}>{copySuccess ? '✓ KOPYALANDI' : '🧬 DNA'}</button>
-             <Link href="/dashboard" className="bg-indigo-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg">Vardiya Raporu</Link>
-             <button onClick={clearOldImports} className="bg-red-900/40 border border-red-500/30 px-3 md:px-5 py-2 md:py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase shadow-lg hover:bg-red-800 text-center">🗑️ TEMİZLE</button>
-             <button onClick={()=>signOut(auth)} className="bg-red-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg">Çıkış</button>
+        {/* --- HEADER --- */}
+        <div className="flex flex-col lg:flex-row justify-between items-center gap-6 mb-10 border-b border-gray-800 pb-8 no-print text-white text-center font-black italic uppercase">
+          <div className="flex items-center gap-4 w-full lg:w-auto justify-center lg:justify-start">
+            <img src="/dfulogo.png" className="h-12 bg-white rounded p-1" />
+            <h1 className="text-xl md:text-2xl font-black uppercase text-indigo-400 tracking-tighter italic">Komuta Merkezi</h1>
+          </div>
+          <div className="flex flex-wrap justify-center lg:justify-end gap-2 md:gap-3 w-full lg:w-auto font-black italic uppercase">
+             <button onClick={() => setShowKpiModal(true)} className="bg-indigo-500 hover:bg-indigo-400 text-white px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border border-white/10 animate-pulse">📈 KPI ANALİZ</button>
+             <button onClick={() => setShowMeterCenterModal(true)} className="bg-emerald-600 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border border-emerald-500/30 text-center">🔌 SAYAÇ MERKEZİ</button>
+             <button onClick={handleCopyScript} type="button" className={`${copySuccess ? 'bg-indigo-500' : 'bg-slate-800'} px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border border-indigo-500/30 transition-all text-center`}>{copySuccess ? '✓ KOPYALANDI' : '🧬 DNA'}</button>
+             <Link href="/dashboard" className="bg-indigo-600 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border border-indigo-500/30 text-center flex items-center">Vardiya Raporu</Link>
+             <button onClick={clearOldImports} className="bg-red-900/40 border border-red-500/30 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg hover:bg-red-800 text-center">🗑️ TEMİZLE</button>
+             <button onClick={()=>signOut(auth)} className="bg-red-600 px-3 md:px-5 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-[10px] font-black uppercase shadow-lg text-center font-black italic uppercase text-white">Çıkış</button>
           </div>
         </div>
-        {/* --- TÜM 23 BUTONLUK NAVİGASYON --- */}
+{/* --- TÜM 23 BUTONLUK NAVİGASYON --- */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-12 no-print">
           <Link href="/admin/is-emri-ac" className="bg-red-600 p-3 rounded-2xl text-[10px] text-center uppercase shadow-lg">🚨 Yeni İş Emri</Link>
           <Link href="/admin/aktif-isler" className="bg-red-950 border border-red-500 p-3 rounded-2xl text-[10px] text-center uppercase">Aktif Bildirimler</Link>
@@ -351,25 +363,6 @@ const [isAdmin, setIsAdmin] = useState(false);
           </div>
         </div>
 
-        {/* --- BAĞIMSIZ FİLTRELİ ENERJİ GRAFİKLERİ --- */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12 italic font-bold">
-          <div className="bg-slate-900 border border-slate-800 p-6 rounded-[30px] shadow-xl font-black">
-             <h2 className="text-xs font-bold text-yellow-400 mb-4 uppercase underline underline-offset-8">⚡ Elektrik (kWh)</h2>
-             <select value={filterElekSayac} onChange={e=>setFilterElekSayac(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-[10px] mb-4 text-white uppercase italic shadow-inner"><option value="">Tüm Sayaçlar</option>{elekSayacList.map(s=><option key={s} value={s}>{s}</option>)}</select>
-             <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikElek}><XAxis dataKey="ay" tick={{fontSize:10, fill:'#475569'}}/><Tooltip contentStyle={{backgroundColor:'#0f172a', border:'none', borderRadius:'15px'}}/><Bar dataKey="tuketim" fill="#EAB308" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div>
-          </div>
-          <div className="bg-slate-900 border border-slate-800 p-6 rounded-[30px] shadow-xl font-black">
-             <h2 className="text-xs font-bold text-red-400 mb-4 uppercase underline underline-offset-8">🔥 Doğalgaz (m³)</h2>
-             <select value={filterGazSayac} onChange={e=>setFilterGazSayac(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-[10px] mb-4 text-white uppercase italic shadow-inner"><option value="">Tüm Sayaçlar</option>{gazSayacList.map(s=><option key={s} value={s}>{s}</option>)}</select>
-             <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikGaz}><XAxis dataKey="ay" tick={{fontSize:10, fill:'#475569'}}/><Tooltip contentStyle={{backgroundColor:'#0f172a', border:'none', borderRadius:'15px'}}/><Bar dataKey="tuketim" fill="#EF4444" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div>
-          </div>
-          <div className="bg-slate-900 border border-slate-800 p-6 rounded-[30px] shadow-xl font-black">
-             <h2 className="text-xs font-bold text-blue-400 mb-4 uppercase underline underline-offset-8">💧 Su (m³)</h2>
-             <select value={filterSuSayac} onChange={e=>setFilterSuSayac(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-[10px] mb-4 text-white uppercase italic shadow-inner"><option value="">Tüm Sayaçlar</option>{suSayacList.map(s=><option key={s} value={s}>{s}</option>)}</select>
-             <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikSu}><XAxis dataKey="ay" tick={{fontSize:10, fill:'#475569'}}/><Tooltip contentStyle={{backgroundColor:'#0f172a', border:'none', borderRadius:'15px'}}/><Bar dataKey="tuketim" fill="#3B82F6" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div>
-          </div>
-        </div>
-
         {/* --- PERSONEL MTTR MATRİSİ VE RCA PARETO --- */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12 italic font-black">
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-[3rem] shadow-2xl italic">
@@ -378,8 +371,6 @@ const [isAdmin, setIsAdmin] = useState(false);
           </div>
           <div className="bg-slate-900 border border-slate-800 p-6 rounded-[35px] shadow-2xl italic font-black uppercase"><h2 className="text-sm font-black text-indigo-400 mb-6 uppercase text-center tracking-[0.2em]">📊 RCA Pareto Analizi</h2><div className="h-64 w-full"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={RCA_CATEGORIES.map(c=>({ name:c.label, value: rcaLogs.filter(r=>r.category===c.id).length, color: c.color })).filter(d=>d.value>0)} cx="50%" cy="50%" innerRadius={60} outerRadius={80} dataKey="value" labelLine={false} label={({name, percent}) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}>{RCA_CATEGORIES.map((e,i)=><Cell key={i} fill={e.color} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></div></div>
         </div>
-
-
       {/* ATLAS MODALS */}
       {showKpiModal && (
         <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
@@ -389,9 +380,9 @@ const [isAdmin, setIsAdmin] = useState(false);
               <h2 className="text-xl text-orange-500 tracking-widest uppercase italic font-black">📈 KPI ANALİZ MERKEZİ</h2>
               <button onClick={() => setShowKpiModal(false)} className="text-slate-500 hover:text-white text-3xl transition">✕</button>
             </div>
-            <div className="p-8 flex-1 overflow-y-auto">
+            <div className="p-8 flex-1 overflow-y-auto bg-slate-950/50">
                <div className="flex gap-4 mb-8">
-                 <input type="date" value={kpiStartDate} onChange={e=>setKpiStartDate(e.target.value)} className="bg-slate-800 p-3 rounded-xl text-white text-xs" />
+                 <input type="date" value={kpiStartDate} onChange={e=>setKpiStartDate(e.target.value)} className="bg-slate-800 p-3 rounded-xl text-white text-xs font-black italic uppercase" />
                  <button onClick={calculateKpis} className="bg-indigo-600 px-6 py-3 rounded-xl text-[10px] font-black uppercase shadow-lg">Hesapla</button>
                </div>
                <div className="h-[400px] w-full bg-slate-900 rounded-[30px] p-6 border border-slate-800">
@@ -418,7 +409,7 @@ const [isAdmin, setIsAdmin] = useState(false);
           </div>
         </div>
       )}
-        {/* MODALLAR */}
+MODALLAR */}
         {showEkedModal && selectedEked && (<div className="fixed inset-0 bg-black/95 backdrop-blur-xl z-[1000] flex items-center justify-center p-4 italic font-bold text-center"><div className="bg-slate-900 border-2 border-yellow-600/30 w-full max-w-2xl rounded-[3rem] shadow-2xl p-10 relative text-white"><button onClick={() => setShowEkedModal(false)} className="absolute top-6 right-6 text-gray-400 hover:text-white text-2xl font-black">✕</button><h2 className="text-2xl font-black text-yellow-400 uppercase tracking-widest mb-8 italic">🔐 EKED LOTO BİLGİSİ</h2><div className="space-y-6 italic font-black"><div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 shadow-inner uppercase tracking-tighter"><p className="text-xl font-black italic">{selectedEked.yer}</p></div><div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 shadow-inner font-black uppercase"><p className="text-xl text-yellow-500 italic font-black">{selectedEked.personel}</p></div><button onClick={() => setShowEkedModal(false)} className="w-full bg-yellow-600 text-black py-5 rounded-2xl font-black uppercase text-xs shadow-xl active:scale-95 transition-all uppercase font-black italic font-black">Bilgileri Onayladım</button></div></div></div>)}
         {showVakaModal && selectedVaka && (<div className="fixed inset-0 bg-black/90 backdrop-blur-md flex justify-center items-center z-[1000] p-4 font-bold italic"><div className="bg-slate-900 border border-slate-800 p-10 rounded-[50px] w-full max-w-2xl shadow-3xl relative overflow-hidden italic"><div className={`absolute top-0 left-0 w-full h-2 ${selectedVaka.ekipmanAdi === "KAR devreye alma" ? "bg-red-600 shadow-xl" : "bg-indigo-600 shadow-xl"}`}></div><h2 className="text-2xl font-black text-white mb-8 uppercase italic tracking-widest">Bildirim Detayı</h2><div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 mb-10 shadow-inner italic font-black uppercase italic font-black font-black uppercase"><p className="text-gray-300 text-sm italic font-black italic">"{selectedVaka.arizaDetayi || selectedVaka.aciklama || "Not yok."}"</p></div><button onClick={()=>setShowVakaModal(false)} className="w-full bg-slate-800 hover:bg-slate-700 py-4 rounded-2xl font-black uppercase text-xs transition shadow-2xl italic font-black uppercase italic uppercase">Kapat</button></div></div>)}
         {showRcaModal && selectedLogForRca && (<div className="fixed inset-0 bg-black/95 backdrop-blur-sm flex justify-center items-center z-[999] p-4 font-bold italic"><div className="bg-slate-900 border border-slate-800 p-10 rounded-[50px] w-full max-w-xl shadow-2xl relative"><h2 className="text-xl font-black text-white mb-8 uppercase text-center tracking-[0.2em]">Root Cause Analysis</h2><div className="space-y-6 italic"><div className="grid grid-cols-3 gap-2 italic">{RCA_CATEGORIES.map(c=>(<button key={c.id} onClick={()=>setRcaForm({...rcaForm, category:c.id})} className={`p-3 rounded-2xl text-[10px] font-black uppercase transition-all border ${rcaForm.category===c.id?'bg-indigo-600 border-indigo-400 text-white shadow-xl shadow-indigo-600/30':'bg-slate-950 border-slate-800 text-gray-500 hover:border-indigo-400'}`}>{c.label}</button>))}</div><textarea value={rcaForm.why} onChange={e=>setRcaForm({...rcaForm, why:e.target.value})} placeholder="Duruş nedenini detaylandırın..." className="w-full bg-slate-950 border border-slate-800 rounded-[30px] p-6 text-sm text-white outline-none focus:ring-2 ring-indigo-500 h-40 shadow-inner italic font-black" /><div className="flex gap-4 italic"><button onClick={()=>setShowRcaModal(false)} className="flex-1 bg-slate-800 py-4 rounded-[20px] font-black text-gray-400 text-xs uppercase">Vazgeç</button><button onClick={handleSaveRca} className="flex-1 bg-indigo-600 py-4 rounded-[20px] font-black text-white shadow-xl text-xs uppercase transition">Kaydet</button></div></div></div></div>)}
@@ -523,12 +514,240 @@ const [isAdmin, setIsAdmin] = useState(false);
             {!isMeterImporting && <button onClick={() => setShowMeterImportModal(false)} className="mt-8 text-[10px] text-slate-600 uppercase font-black italic font-black text-white font-black uppercase italic">KAPAT</button>}
           </div>
         </div>
-      )}
+      )
     
-  ;
-
-
       
     
-  ;
+  ));
+{/* RCA ANALİZ LİSTESİ */}
+        <div className="bg-slate-900 border border-slate-800 p-8 rounded-[3rem] mb-12 shadow-2xl italic">
+          <h2 className="text-xl font-black text-white mb-6 uppercase tracking-widest italic underline decoration-indigo-500 font-black">🧠 RCA Analizi Bekleyen Duruşlar</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {rawLogs.filter((l: any) => l.isDuruslu).slice(0, 6).map((log, idx) => {
+              const hasRca = rcaLogs.find(r => r.logId === log.id);
+              return (<div key={idx} className="bg-slate-950 p-6 rounded-[30px] border border-slate-800 flex flex-col justify-between h-full hover:border-indigo-500 transition shadow-xl italic font-black"><div><p className="text-[10px] text-gray-500 uppercase font-black tracking-widest">{log.hatAdi}</p><p className="font-bold text-gray-200 uppercase">{log.ekipmanAdi}</p><p className="text-red-400 font-black text-xs mt-1 italic uppercase">{log.toplamSureDakika} dk Kayıp</p></div><button onClick={() => { setSelectedLogForRca(log); setShowRcaModal(true); setRcaForm({ category: hasRca?.category || "", why: hasRca?.why || "" }); }} className={`w-full py-3 mt-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${hasRca ? 'bg-green-600/20 text-green-400 border border-green-500/30' : 'bg-indigo-600 text-white shadow-lg'}`}>{hasRca ? "Girişi Güncelle" : "Analiz Yap"}</button></div>);
+            })}
+          </div>
+        </div>
+
+        {/* KPI KARTLARI */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10 text-center uppercase italic font-bold">
+           <div className="bg-slate-900 p-6 rounded-[30px] border border-slate-800 shadow-xl font-black"><p className="text-[10px] text-gray-500">İş Adedi</p><h3 className="text-4xl text-green-400">{kpiTotals.is}</h3></div>
+           <div className="bg-slate-900 p-6 rounded-[30px] border border-slate-800 shadow-xl font-black"><p className="text-[10px] text-gray-500">Müdahale</p><h3 className="text-4xl text-white">{kpiTotals.sure} dk</h3></div>
+           <div className="bg-slate-900 p-6 rounded-[30px] border border-red-900/30 shadow-xl font-black"><p className="text-[10px] text-red-500">Duruş</p><h3 className="text-4xl text-red-400">{kpiTotals.durus} dk</h3></div>
+           <div className="bg-slate-900 p-6 rounded-[30px] border border-indigo-900/30 shadow-xl font-black"><p className="text-[10px] text-indigo-400">MTTR</p><h3 className="text-4xl text-indigo-400">{kpiTotals.mttr.toFixed(0)} dk</h3></div>
+        </div>
+
+        {/* --- BAĞIMSIZ FİLTRELİ ENERJİ GRAFİKLERİ --- */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12 italic font-bold">
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-[30px] shadow-xl font-black">
+             <h2 className="text-xs font-bold text-yellow-400 mb-4 uppercase underline underline-offset-8">⚡ Elektrik (kWh)</h2>
+             <select value={filterElekSayac} onChange={e=>setFilterElekSayac(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-[10px] mb-4 text-white uppercase italic shadow-inner"><option value="">Tüm Sayaçlar</option>{elekSayacList.map(s=><option key={s} value={s}>{s}</option>)}</select>
+             <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikElek}><XAxis dataKey="ay" tick={{fontSize:10, fill:'#475569'}}/><Tooltip contentStyle={{backgroundColor:'#0f172a', border:'none', borderRadius:'15px'}}/><Bar dataKey="tuketim" fill="#EAB308" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div>
+          </div>
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-[30px] shadow-xl font-black">
+             <h2 className="text-xs font-bold text-red-400 mb-4 uppercase underline underline-offset-8">🔥 Doğalgaz (m³)</h2>
+             <select value={filterGazSayac} onChange={e=>setFilterGazSayac(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-[10px] mb-4 text-white uppercase italic shadow-inner"><option value="">Tüm Sayaçlar</option>{gazSayacList.map(s=><option key={s} value={s}>{s}</option>)}</select>
+             <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikGaz}><XAxis dataKey="ay" tick={{fontSize:10, fill:'#475569'}}/><Tooltip contentStyle={{backgroundColor:'#0f172a', border:'none', borderRadius:'15px'}}/><Bar dataKey="tuketim" fill="#EF4444" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div>
+          </div>
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-[30px] shadow-xl font-black">
+             <h2 className="text-xs font-bold text-blue-400 mb-4 uppercase underline underline-offset-8">💧 Su (m³)</h2>
+             <select value={filterSuSayac} onChange={e=>setFilterSuSayac(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-[10px] mb-4 text-white uppercase italic shadow-inner"><option value="">Tüm Sayaçlar</option>{suSayacList.map(s=><option key={s} value={s}>{s}</option>)}</select>
+             <div className="h-48"><ResponsiveContainer width="100%" height="100%"><BarChart data={grafikSu}><XAxis dataKey="ay" tick={{fontSize:10, fill:'#475569'}}/><Tooltip contentStyle={{backgroundColor:'#0f172a', border:'none', borderRadius:'15px'}}/><Bar dataKey="tuketim" fill="#3B82F6" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div>
+          </div>
+        </div>
+
+        {/* --- PERSONEL MTTR MATRİSİ VE RCA PARETO --- */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12 italic font-black">
+          <div className="bg-slate-900 border border-slate-800 p-8 rounded-[3rem] shadow-2xl italic">
+            <h2 className="text-lg font-black text-white mb-6 uppercase underline decoration-indigo-500 font-black italic">🏆 Personel Performans Matrisi</h2>
+            <div className="overflow-x-auto"><table className="w-full text-left text-[11px] uppercase tracking-tighter italic font-black font-black italic"><thead className="text-gray-500 border-b border-slate-800"><tr><th className="py-4">Personel</th><th className="py-4 text-center">İş Adedi</th><th className="py-4 text-right">Efor (MTTR)</th></tr></thead><tbody className="divide-y divide-slate-800">{personelPerformans.map((p,i)=>(<tr key={i} className="hover:bg-slate-800/30 italic"><td className="py-4 text-gray-200 font-black italic">{p.isim}</td><td className="py-4 text-green-400 text-center font-black italic">{p.isSayisi}</td><td className="py-4 text-indigo-400 text-right font-black italic">{p.eforDk} dk <span className="text-[8px] text-gray-600 italic">ort.</span></td></tr>))}</tbody></table></div>
+          </div>
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-[35px] shadow-2xl italic font-black uppercase"><h2 className="text-sm font-black text-indigo-400 mb-6 uppercase text-center tracking-[0.2em]">📊 RCA Pareto Analizi</h2><div className="h-64 w-full"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={RCA_CATEGORIES.map(c=>({ name:c.label, value: rcaLogs.filter(r=>r.category===c.id).length, color: c.color })).filter(d=>d.value>0)} cx="50%" cy="50%" innerRadius={60} outerRadius={80} dataKey="value" labelLine={false} label={({name, percent}) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}>{RCA_CATEGORIES.map((e,i)=><Cell key={i} fill={e.color} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></div></div>
+        </div>
+      {/* ATLAS MODALS */}
+      {showKpiModal && (
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/95 backdrop-blur-2xl" onClick={() => setShowKpiModal(false)}></div>
+          <div className="relative bg-slate-900 border-2 border-indigo-500/30 w-full max-w-6xl h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col text-white italic font-black uppercase">
+            <div className="p-8 border-b border-indigo-500/20 flex justify-between items-center bg-orange-500/5">
+              <h2 className="text-xl text-orange-500 tracking-widest uppercase italic font-black">📈 KPI ANALİZ MERKEZİ</h2>
+              <button onClick={() => setShowKpiModal(false)} className="text-slate-500 hover:text-white text-3xl transition">✕</button>
+            </div>
+            <div className="p-8 flex-1 overflow-y-auto bg-slate-950/50">
+               <div className="flex gap-4 mb-8">
+                 <input type="date" value={kpiStartDate} onChange={e=>setKpiStartDate(e.target.value)} className="bg-slate-800 p-3 rounded-xl text-white text-xs font-black italic uppercase" />
+                 <button onClick={calculateKpis} className="bg-indigo-600 px-6 py-3 rounded-xl text-[10px] font-black uppercase shadow-lg">Hesapla</button>
+               </div>
+               <div className="h-[400px] w-full bg-slate-900 rounded-[30px] p-6 border border-slate-800">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={kpiData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                    <XAxis dataKey="date" stroke="#64748b" fontSize={10} />
+                    <YAxis stroke="#64748b" fontSize={10} />
+                    <Tooltip />
+                    <Bar dataKey="sure" fill="#6366f1" radius={[10, 10, 0, 0]} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {showMeterImportModal && (
+        <div className="fixed inset-0 bg-black/95 z-[2000] flex items-center justify-center p-4 text-white font-black italic uppercase">
+          <div className="bg-slate-900 border border-emerald-500/20 p-10 rounded-[40px] w-96">
+            <h2 className="text-emerald-500 font-black mb-6 uppercase italic">🔌 SAYAÇ AKTARIMI</h2>
+            <input type="file" accept=".xlsx,.xls" onChange={handleMeterImportLocal} className="w-full bg-slate-950 p-6 rounded-3xl border border-dashed border-slate-800 text-slate-400 text-xs" />
+            <button onClick={() => setShowMeterImportModal(false)} className="mt-6 w-full bg-slate-800 py-4 rounded-2xl text-[10px] font-black uppercase">Kapat</button>
+          </div>
+        </div>
+      )}
+MODALLAR */}
+        {showEkedModal && selectedEked && (<div className="fixed inset-0 bg-black/95 backdrop-blur-xl z-[1000] flex items-center justify-center p-4 italic font-bold text-center"><div className="bg-slate-900 border-2 border-yellow-600/30 w-full max-w-2xl rounded-[3rem] shadow-2xl p-10 relative text-white"><button onClick={() => setShowEkedModal(false)} className="absolute top-6 right-6 text-gray-400 hover:text-white text-2xl font-black">✕</button><h2 className="text-2xl font-black text-yellow-400 uppercase tracking-widest mb-8 italic">🔐 EKED LOTO BİLGİSİ</h2><div className="space-y-6 italic font-black"><div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 shadow-inner uppercase tracking-tighter"><p className="text-xl font-black italic">{selectedEked.yer}</p></div><div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 shadow-inner font-black uppercase"><p className="text-xl text-yellow-500 italic font-black">{selectedEked.personel}</p></div><button onClick={() => setShowEkedModal(false)} className="w-full bg-yellow-600 text-black py-5 rounded-2xl font-black uppercase text-xs shadow-xl active:scale-95 transition-all uppercase font-black italic font-black">Bilgileri Onayladım</button></div></div></div>)}
+        {showVakaModal && selectedVaka && (<div className="fixed inset-0 bg-black/90 backdrop-blur-md flex justify-center items-center z-[1000] p-4 font-bold italic"><div className="bg-slate-900 border border-slate-800 p-10 rounded-[50px] w-full max-w-2xl shadow-3xl relative overflow-hidden italic"><div className={`absolute top-0 left-0 w-full h-2 ${selectedVaka.ekipmanAdi === "KAR devreye alma" ? "bg-red-600 shadow-xl" : "bg-indigo-600 shadow-xl"}`}></div><h2 className="text-2xl font-black text-white mb-8 uppercase italic tracking-widest">Bildirim Detayı</h2><div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 mb-10 shadow-inner italic font-black uppercase italic font-black font-black uppercase"><p className="text-gray-300 text-sm italic font-black italic">"{selectedVaka.arizaDetayi || selectedVaka.aciklama || "Not yok."}"</p></div><button onClick={()=>setShowVakaModal(false)} className="w-full bg-slate-800 hover:bg-slate-700 py-4 rounded-2xl font-black uppercase text-xs transition shadow-2xl italic font-black uppercase italic uppercase">Kapat</button></div></div>)}
+        {showRcaModal && selectedLogForRca && (<div className="fixed inset-0 bg-black/95 backdrop-blur-sm flex justify-center items-center z-[999] p-4 font-bold italic"><div className="bg-slate-900 border border-slate-800 p-10 rounded-[50px] w-full max-w-xl shadow-2xl relative"><h2 className="text-xl font-black text-white mb-8 uppercase text-center tracking-[0.2em]">Root Cause Analysis</h2><div className="space-y-6 italic"><div className="grid grid-cols-3 gap-2 italic">{RCA_CATEGORIES.map(c=>(<button key={c.id} onClick={()=>setRcaForm({...rcaForm, category:c.id})} className={`p-3 rounded-2xl text-[10px] font-black uppercase transition-all border ${rcaForm.category===c.id?'bg-indigo-600 border-indigo-400 text-white shadow-xl shadow-indigo-600/30':'bg-slate-950 border-slate-800 text-gray-500 hover:border-indigo-400'}`}>{c.label}</button>))}</div><textarea value={rcaForm.why} onChange={e=>setRcaForm({...rcaForm, why:e.target.value})} placeholder="Duruş nedenini detaylandırın..." className="w-full bg-slate-950 border border-slate-800 rounded-[30px] p-6 text-sm text-white outline-none focus:ring-2 ring-indigo-500 h-40 shadow-inner italic font-black" /><div className="flex gap-4 italic"><button onClick={()=>setShowRcaModal(false)} className="flex-1 bg-slate-800 py-4 rounded-[20px] font-black text-gray-400 text-xs uppercase">Vazgeç</button><button onClick={handleSaveRca} className="flex-1 bg-indigo-600 py-4 rounded-[20px] font-black text-white shadow-xl text-xs uppercase transition">Kaydet</button></div></div></div></div>)}
+      </div>
+    </div>
+  );
+}
+      {/* ATLAS MODALS */}
+      {showKpiModal && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/95 backdrop-blur-2xl" onClick={() => setShowKpiModal(false)}></div>
+          <div className="relative bg-slate-900 border-2 border-indigo-500/30 w-full max-w-[95%] h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col text-white font-black italic uppercase">
+            <div className="p-8 border-b border-indigo-500/20 flex justify-between items-center bg-orange-500/5"><div><h2 className="text-xl text-orange-500 tracking-widest uppercase italic font-black">📈 KPI ANALİZ MERKEZİ</h2></div><button onClick={() => setShowKpiModal(false)} className="text-indigo-500/50 hover:text-orange-500 text-3xl">✕</button></div>
+            <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+              <div className="w-full lg:w-80 bg-black/30 border-r border-slate-800 p-6 space-y-4 overflow-y-auto text-[9px]">
+                <h3 className="text-indigo-500 uppercase tracking-widest">Filtreleme</h3>
+                <div><label className="text-slate-500 block">YIL</label><select value={kpiFYil} onChange={e=>setKpiFYil(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-white font-black italic uppercase"><option value="2025">2025</option><option value="2026">2026</option></select></div>
+                <div><label className="text-slate-500 block">AY</label><select value={kpiFAy} onChange={e=>setKpiFAy(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-white font-black italic uppercase"><option value="">TÜM AYLAR</option>{["01","02","03","04","05","06","07","08","09","10","11","12"].map(m=><option key={m} value={m}>{m}</option>)}</select></div>
+                <div><label className="text-slate-500 block">HAT</label><select value={kpiFHat} onChange={e=>setKpiFHat(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-white font-black italic uppercase"><option value="">TÜM HATTAR</option>{Array.from(new Set(rawLogs.map((l:any)=>l.hatAdi))).filter(Boolean).sort().map(h=><option key={h} value={h}>{h}</option>)}</select></div>
+                <div><label className="text-slate-500 block">PERSONEL</label><select value={kpiFPersonel} onChange={e=>setKpiFPersonel(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-white font-black italic uppercase"><option value="">TÜM PERSONEL</option>{Array.from(new Set(rawLogs.map((l:any)=>l.teknisyen))).filter(Boolean).sort().map(p=><option key={p} value={p}>{p}</option>)}</select></div>
+                <div><label className="text-slate-500 block">DURUŞ</label><div className="flex gap-2">{["HEPSİ", "VAR", "YOK"].map(d=><button key={d} onClick={()=>setKpiFDurus(d)} className={`flex-1 py-2 rounded-xl border ${kpiFDurus === d ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-slate-800 border-slate-700 text-slate-400'}`}>{d}</button>)}</div></div>
+              </div>
+              <div className="flex-1 p-8 overflow-y-auto bg-slate-950/50 text-white">
+                <div className="h-[500px] w-full text-white font-black italic uppercase">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={(() => {
+                        const filtered = rawLogs.filter((l:any) => {
+                          const d = l.baslangicTarihi || "";
+                          const matchYil = d.startsWith(kpiFYil);
+                          const matchAy = !kpiFAy || d.split('-')[1] === kpiFAy;
+                          const matchHat = !kpiFHat || l.hatAdi === kpiFHat;
+                          const matchPers = !kpiFPersonel || l.teknisyen === kpiFPersonel;
+                          const matchDurus = kpiFDurus === "HEPSİ" || (kpiFDurus === "VAR" ? l.isDuruslu : !l.isDuruslu);
+                          return matchYil && matchAy && matchHat && matchPers && matchDurus;
+                        });
+                        const groups: any = {};
+                        filtered.forEach((f:any) => {
+                          const key = kpiFHat ? f.ekipmanAdi : f.hatAdi;
+                          if(!groups[key]) groups[key] = { name: key, sure: 0, adet: 0, logs: [] };
+                          groups[key].sure += Number(f.toplamSureDakika) || 0;
+                          groups[key].adet += 1;
+                          groups[key].logs.push(f);
+                        });
+                        return Object.values(groups).sort((a:any, b:any) => b.sure - a.sure);
+                      })()}
+                      onClick={(data: any) => { if(data && data.activePayload) { setSelectedKpiLogDetails(data.activePayload[0].payload.logs); setShowKpiDetailWindow(true); } }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                      <XAxis dataKey="name" stroke="#94a3b8" fontSize={9} tickLine={false} axisLine={false} />
+                      <YAxis yAxisId="left" stroke="#94a3b8" fontSize={9} tickLine={false} axisLine={false} />
+                      <YAxis yAxisId="right" orientation="right" stroke="#6366f1" fontSize={9} tickLine={false} axisLine={false} />
+                      <Tooltip contentStyle={{backgroundColor:'rgba(15, 23, 42, 0.9)', border:'1px solid rgba(99, 102, 241, 0.5)', borderRadius:'20px', backdropFilter: 'blur(10px)'}} />
+                      <Area yAxisId="right" type="monotone" name="İş Adedi" dataKey="adet" fill="#6366f133" stroke="#6366f1" />
+                      <Bar yAxisId="left" dataKey="sure" name="Toplam Süre (DK)" fill="#818cf8" radius={[10, 10, 0, 0]} barSize={35} />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showKpiDetailWindow && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-end p-6 font-black uppercase italic text-white text-xs">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={()=>setShowKpiDetailWindow(false)}></div>
+          <div className="relative bg-slate-900 border-l-4 border-indigo-500 w-full max-w-xl h-full rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right font-black italic uppercase text-white uppercase italic font-black">
+            <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-900/50 text-white font-black italic uppercase"><h3 className="text-lg tracking-widest uppercase font-black italic">🔍 İş Detay Arşivi</h3><button onClick={()=>setShowKpiDetailWindow(false)} className="text-slate-500 hover:text-white text-2xl">✕</button></div>
+            <div className="p-6 overflow-y-auto flex-1 space-y-4">
+              {selectedKpiLogDetails.map((log:any, i:number) => (
+                <div key={i} className="bg-slate-950 border border-slate-800 p-5 rounded-3xl hover:border-indigo-500/50 transition-all font-black uppercase italic text-white"><div className="flex justify-between text-[9px] font-black text-indigo-400 mb-2"><span>{log.baslangicTarihi}</span><span className="text-emerald-400">{log.toplamSureDakika} DK</span></div><h4 className="text-white text-xs font-black mb-2">{log.hatAdi} - {log.ekipmanAdi}</h4><p className="text-slate-400 text-[11px] font-bold italic leading-relaxed uppercase">"{log.aciklama}"</p></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showImportModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 text-white uppercase font-black italic text-white uppercase italic font-black">
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={() => !isImporting && setShowImportModal(false)}></div>
+          <div className="relative bg-slate-900 border-2 border-orange-500/30 w-full max-w-6xl max-h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col font-black italic text-white">
+            <div className="p-8 border-b border-orange-500/10 flex justify-between items-center bg-orange-500/5 uppercase tracking-widest font-black italic text-white uppercase font-black italic"><div><h2 className="text-xl text-orange-500 uppercase italic font-black">📊 EXCEL ÖNİZLEME</h2><p className="text-[10px] text-slate-500 mt-1 uppercase font-bold italic tracking-tighter">Toplam {importPreview.length} kayıt.</p></div><button onClick={() => !isImporting && setShowImportModal(false)} className="text-orange-500/50 hover:text-orange-500 text-2xl">✕</button></div>
+            <div className="p-6 overflow-y-auto flex-1 text-white uppercase italic font-black"><table className="w-full text-left text-[10px] uppercase font-bold italic text-white uppercase font-black italic">
+                <thead className="sticky top-0 bg-slate-900 text-orange-500/70 border-b border-slate-800 font-black italic"><tr><th className="p-3">Tarih</th><th className="p-3">Zaman</th><th className="p-3">Süre</th><th className="p-3">Hat / Ekipman</th><th className="p-3">SORUMLU</th><th className="p-3">Duruş</th></tr></thead>
+                <tbody className="divide-y divide-slate-800 text-white uppercase italic font-black text-white uppercase italic font-black">{importPreview.slice(0, 100).map((row, idx) => (<tr key={idx} className="hover:bg-orange-500/5 text-white uppercase italic font-black text-white uppercase italic font-black"><td className="p-3 text-slate-400 whitespace-nowrap">{row.baslangicTarihi}</td><td className="p-3 text-indigo-400 whitespace-nowrap font-mono">{row.baslangicSaati} - {row.bitisSaati}</td><td className="p-3 text-amber-500 font-black">{row.toplamSureDakika} DK</td><td className="p-3 text-white"><span className="text-emerald-400">{row.hatAdi}</span> / {row.ekipmanAdi}</td><td className="p-3 text-indigo-300 font-black">{row.teknisyen}</td><td className="p-3">{row.isDuruslu ? '🔴 VAR' : '🟢 YOK'}</td></tr>))}</tbody>
+              </table></div>
+            <div className="p-8 border-t border-slate-800 bg-slate-900/50 flex justify-end gap-4 text-[10px] font-black uppercase text-white font-black italic uppercase text-white"><button onClick={() => setShowImportModal(false)} disabled={isImporting} className="bg-slate-800 px-8 py-3 rounded-xl hover:bg-slate-700 text-white font-black italic uppercase">İPTAL</button><button onClick={confirmImport} disabled={isImporting} className="bg-orange-600 text-white px-10 py-3 rounded-xl shadow-xl hover:bg-orange-500 flex items-center gap-2">
+                {isImporting ? '⏳ AKTARILIYOR...' : '🚀 AKTARIMI BAŞLAT'}
+              </button></div>
+          </div>
+        </div>
+      )}
+
+      {showMeterImportModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/95 backdrop-blur-xl" onClick={() => !isMeterImporting && setShowMeterImportModal(false)}></div>
+          <div className="relative bg-slate-900 border-2 border-emerald-500/30 w-full max-w-md rounded-[3rem] shadow-2xl p-10 flex flex-col items-center text-center text-white font-black italic uppercase">
+            <h2 className="text-xl font-black text-white uppercase tracking-widest mb-6 uppercase italic font-black text-white">Sayaç DNA Aktarımı</h2>
+            <p className="text-xs text-slate-400 mb-8 uppercase font-bold italic font-black text-white">Lütfen Elektrik, Su ve Doğalgaz dosyalarını seçin.</p>
+            <input type="file" multiple accept=".xlsx, .xls" onChange={(e) => e.target.files && handleMeterDataImport(e.target.files)} disabled={isMeterImporting} className="w-full text-xs text-slate-500 file:bg-emerald-600 file:text-white file:border-0 file:py-3 file:px-6 file:rounded-full file:font-black file:uppercase cursor-pointer font-black italic uppercase text-white" />
+            {isMeterImporting && <div className="mt-8 text-[10px] text-emerald-400 font-black animate-pulse uppercase italic font-black">VERİLER YAZILIYOR...</div>}
+            {!isMeterImporting && <button onClick={() => setShowMeterImportModal(false)} className="mt-8 text-[10px] text-slate-600 uppercase font-black italic font-black text-white font-black uppercase italic">KAPAT</button>}
+          </div>
+        </div>
+      )
+    
+      
+    
+  ));
+
+      {/* ATLAS KPI MODAL */}
+      {showKpiModal && (
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/95 backdrop-blur-2xl" onClick={() => setShowKpiModal(false)}></div>
+          <div className="relative bg-slate-900 border-2 border-indigo-500/30 w-full max-w-6xl h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col text-white italic font-black uppercase">
+            <div className="p-8 border-b border-indigo-500/20 flex justify-between items-center bg-orange-500/5">
+              <h2 className="text-xl text-orange-500 tracking-widest uppercase italic font-black">📈 KPI ANALİZ MERKEZİ</h2>
+              <button onClick={() => setShowKpiModal(false)} className="text-slate-500 text-3xl transition">✕</button>
+            </div>
+            <div className="p-8 flex-1 overflow-y-auto">
+               <div className="flex gap-4 mb-8">
+                 <input type="date" value={kpiStartDate} onChange={e=>setKpiStartDate(e.target.value)} className="bg-slate-800 p-3 rounded-xl text-white text-xs" />
+                 <button onClick={calculateKpis} className="bg-indigo-600 px-6 py-3 rounded-xl text-[10px] font-black uppercase shadow-lg">Hesapla</button>
+               </div>
+               <div className="h-[400px] w-full bg-slate-900 rounded-[30px] p-6 border border-slate-800">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={kpiData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                    <XAxis dataKey="date" stroke="#64748b" fontSize={10} />
+                    <YAxis stroke="#64748b" fontSize={10} />
+                    <Tooltip />
+                    <Bar dataKey="sure" fill="#6366f1" radius={[10, 10, 0, 0]} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {showMeterCenterModal && (
+        <div className="fixed inset-0 bg-black/95 z-[2000] flex items-center justify-center p-4 text-white font-black italic uppercase">
+          <div className="bg-slate-900 border border-emerald-500/20 p-10 rounded-[40px] w-96">
+            <h2 className="text-emerald-500 font-black mb-6 uppercase italic">🔌 SAYAÇ AKTARIMI</h2>
+            <input type="file" accept=".xlsx,.xls" onChange={handleMeterImportLocal} className="w-full bg-slate-950 p-6 rounded-3xl border border-dashed border-slate-800 text-slate-400 text-xs" />
+            <button onClick={() => setShowMeterCenterModal(false} className="mt-6 w-full bg-slate-800 py-4 rounded-2xl text-[10px] font-black uppercase">Kapat</button>
+     };
 

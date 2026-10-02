@@ -199,6 +199,48 @@ const handleMeterDataImport = async (files: FileList) => {
       alert("Sayaçlar yüklendi."); window.location.reload();
     } catch (e: any) { alert(e.message); } finally { setIsMeterImporting(false); }
   };
+const handleSystemReset = async () => {
+    const password = window.prompt("Sistem sıfırlama şifresini giriniz:");
+
+    if (password !== "161004") {
+      alert("Yetkisiz işlem: Şifre hatalı.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Bakım kayıtları ve iş emirleri kalıcı olarak silinecek. Bu işlem geri alınamaz. Devam etmek istiyor musunuz?"
+    );
+
+    if (!confirmed) return;
+
+    setLoading(true);
+
+    try {
+      const collectionsToReset = ["maintenance_logs", "work_orders"];
+      let deletedCount = 0;
+
+      for (const collectionName of collectionsToReset) {
+        const snapshot = await getDocs(collection(db, collectionName));
+
+        for (let index = 0; index < snapshot.docs.length; index += 500) {
+          const batch = writeBatch(db);
+          const documents = snapshot.docs.slice(index, index + 500);
+
+          documents.forEach((documentSnapshot) => batch.delete(documentSnapshot.ref));
+          await batch.commit();
+          deletedCount += documents.length;
+        }
+      }
+
+      alert(`${deletedCount} kayıt silindi. Sistem verileri yenileniyor.`);
+      window.location.reload();
+    } catch (error) {
+      console.error("Sistem sıfırlama hatası:", error);
+      alert("Sistem sıfırlama işlemi tamamlanamadı.");
+      setLoading(false);
+    }
+  };
+
 const handleCopyScript = () => {
     const dnaScript = "Get-ChildItem -Recurse -Include *.tsx,*.ts | ForEach-Object { \"--- FILE: $($_.FullName) ---\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt; Get-Content $_.FullName | Out-File -Append PROJE_DOKUMU.txt; [char]96 + \"n\" + [char]96 + \"n\" | Out-File -Append PROJE_DOKUMU.txt }";
     navigator.clipboard.writeText(dnaScript); setCopySuccess(true); setTimeout(() => setCopySuccess(false), 3000);

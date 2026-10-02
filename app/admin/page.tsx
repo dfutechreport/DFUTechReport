@@ -42,6 +42,25 @@ export default function AdminDashboard() {
   const [filterGazSayac, setFilterGazSayac] = useState("");
   const [filterSuSayac, setFilterSuSayac] = useState("");
   const [kpiTotals, setKpiTotals] = useState({ is: 0, sure: 0, durus: 0, mttr: 0 });
+  const [aktifIsler, setAktifIsler] = useState<any[]>([]);
+  const [aktifIsgAlarmlari, setAktifIsgAlarmlari] = useState<any[]>([]);
+  const [aktifEked, setAktifEked] = useState<any[]>([]);
+  const [rawLogs, setRawLogs] = useState<any[]>([]);
+  const [rawMeterLogs, setRawMeterLogs] = useState<any[]>([]);
+  const [rcaLogs, setRcaLogs] = useState<any[]>([]);
+  const [selectedEked, setSelectedEked] = useState<any>(null);
+  const [selectedVaka, setSelectedVaka] = useState<any>(null);
+  const [selectedLogForRca, setSelectedLogForRca] = useState<any>(null);
+  const [selectedKpiLogDetails, setSelectedKpiLogDetails] = useState<any[]>([]);
+  const [grafikIsHatti, setGrafikIsHatti] = useState<any[]>([]);
+  const [personelPerformans, setPersonelPerformans] = useState<any[]>([]);
+  const [ekipmanPerformans, setEkipmanPerformans] = useState<any[]>([]);
+  const [elekSayacList, setElekSayacList] = useState<string[]>([]);
+  const [gazSayacList, setGazSayacList] = useState<string[]>([]);
+  const [suSayacList, setSuSayacList] = useState<string[]>([]);
+  const [grafikElek, setGrafikElek] = useState<any[]>([]);
+  const [grafikGaz, setGrafikGaz] = useState<any[]>([]);
+  const [grafikSu, setGrafikSu] = useState<any[]>([]);
 
   const [kpiData, setKpiData] = useState<any[]>([]);
   const [kpiStartDate, setKpiStartDate] = useState("");

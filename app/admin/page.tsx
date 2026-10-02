@@ -18,6 +18,7 @@ export default function AdminDashboard() {
   const [copySuccess, setCopySuccess] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [importPreview, setImportPreview] = useState<any[]>([]);
   const [showKpiModal, setShowKpiModal] = useState(false);
   const [showKpiDetailWindow, setShowKpiDetailWindow] = useState(false);
   const [kpiFYil, setKpiFYil] = useState(new Date().getFullYear().toString());

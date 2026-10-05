@@ -368,7 +368,8 @@ useEffect(() => {
           <div className="flex gap-3 no-print">
              <button onClick={() => setShowKpiModal(true)} className="bg-indigo-500 text-white px-3 md:px-5 py-2 md:py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase shadow-lg">📈 KPI ANALİZ</button>
              <button onClick={() => setShowMeterImportModal(true)} className="bg-emerald-600 px-3 md:px-5 py-2 md:py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase shadow-lg text-center">🔌 SAYAÇ</button>
-             <button onClick={() => { navigator.clipboard.writeText('DNA SCRIPT'); setCopySuccess(true); setTimeout(()=>setCopySuccess(false),2000); }} className={`px-3 md:px-5 py-2 md:py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border transition-all ${copySuccess ? 'bg-indigo-500' : 'bg-slate-800'}`}>{copySuccess ? '✓ KOPYALANDI' : '🧬 DNA'}</button>
+             <button onClick={handleCopyScript} className={`px-3 md:px-5 py-2 md:py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase shadow-lg border transition-all ${copySuccess ? 'bg-indigo-500' : 'bg-slate-800'}`}>{copySuccess ? '✓ KOPYALANDI' : '🧬 DNA'}</button>
+             <button onClick={downloadFullSnapshotDNA} className="bg-violet-700 px-3 md:px-5 py-2 md:py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase shadow-lg text-white hover:bg-violet-600 transition-all">💾 Tam Yedek</button>
              <Link href="/dashboard" className="bg-indigo-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg">Vardiya Raporu</Link>
              <button onClick={() => clearOldImports()} className="bg-red-900/40 border border-red-500/30 px-3 md:px-5 py-2 md:py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase shadow-lg hover:bg-red-800 text-center">🗑️ TEMİZLE</button>
              <button onClick={()=>signOut(auth)} className="bg-red-600 px-5 py-2.5 rounded-2xl text-[10px] uppercase shadow-lg">Çıkış</button>

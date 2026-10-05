@@ -21,7 +21,7 @@ export default function AdminDashboard() {
   const [importPreview, setImportPreview] = useState<any[]>([]);
   const [showKpiModal, setShowKpiModal] = useState(false);
   const [showKpiDetailWindow, setShowKpiDetailWindow] = useState(false);
-  const [kpiFYil, setKpiFYil] = useState("");
+  const [kpiFYil, setKpiFYil] = useState(new Date().getFullYear().toString());
   const [kpiFAy, setKpiFAy] = useState("");
   const [kpiFHat, setKpiFHat] = useState("");
   const [kpiFPersonel, setKpiFPersonel] = useState("");
@@ -469,6 +469,34 @@ useEffect(() => {
           <div className="bg-slate-900 border border-slate-800 p-6 rounded-[35px] shadow-2xl italic font-black uppercase"><h2 className="text-sm font-black text-indigo-400 mb-6 uppercase text-center tracking-[0.2em]">📊 RCA Pareto Analizi</h2><div className="h-64 w-full"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={RCA_CATEGORIES.map(c=>({ name:c.label, value: rcaLogs.filter(r=>r.category===c.id).length, color: c.color })).filter(d=>d.value>0)} cx="50%" cy="50%" innerRadius={60} outerRadius={80} dataKey="value" labelLine={false} label={({name, percent}) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}>{RCA_CATEGORIES.map((e,i)=><Cell key={i} fill={e.color} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></div></div>
         </div>
       {/* ATLAS MODALS */}
+      {showKpiModal && (
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/95 backdrop-blur-2xl" onClick={() => setShowKpiModal(false)}></div>
+          <div className="relative bg-slate-900 border-2 border-indigo-500/30 w-full max-w-6xl h-[90vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col text-white italic font-black uppercase">
+            <div className="p-8 border-b border-indigo-500/20 flex justify-between items-center bg-orange-500/5">
+              <h2 className="text-xl text-orange-500 tracking-widest uppercase italic font-black">📈 KPI ANALİZ MERKEZİ</h2>
+              <button onClick={() => setShowKpiModal(false)} className="text-slate-500 hover:text-white text-3xl transition">✕</button>
+            </div>
+            <div className="p-8 flex-1 overflow-y-auto bg-slate-950/50">
+               <div className="flex gap-4 mb-8">
+                 <input type="date" value={kpiStartDate} onChange={e=>setKpiStartDate(e.target.value)} className="bg-slate-800 p-3 rounded-xl text-white text-xs font-black italic uppercase" />
+                 <button onClick={calculateKpis} className="bg-indigo-600 px-6 py-3 rounded-xl text-[10px] font-black uppercase shadow-lg">Hesapla</button>
+               </div>
+               <div className="h-[400px] w-full bg-slate-900 rounded-[30px] p-6 border border-slate-800">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={kpiData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                    <XAxis dataKey="date" stroke="#64748b" fontSize={10} />
+                    <YAxis stroke="#64748b" fontSize={10} />
+                    <Tooltip />
+                    <Bar dataKey="sure" fill="#6366f1" radius={[10, 10, 0, 0]} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
       {/* --- MODALLAR --- */}
         {showEkedModal && selectedEked && (<div className="fixed inset-0 bg-black/95 backdrop-blur-xl z-[1000] flex items-center justify-center p-4 italic font-bold text-center"><div className="bg-slate-900 border-2 border-yellow-600/30 w-full max-w-2xl rounded-[3rem] shadow-2xl p-10 relative text-white"><button onClick={() => setShowEkedModal(false)} className="absolute top-6 right-6 text-gray-400 hover:text-white text-2xl font-black">✕</button><h2 className="text-2xl font-black text-yellow-400 uppercase tracking-widest mb-8 italic">🔐 EKED LOTO BİLGİSİ</h2><div className="space-y-6 italic font-black"><div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 shadow-inner uppercase tracking-tighter"><p className="text-xl font-black italic">{selectedEked.yer}</p></div><div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 shadow-inner font-black uppercase"><p className="text-xl text-yellow-500 italic font-black">{selectedEked.personel}</p></div><button onClick={() => setShowEkedModal(false)} className="w-full bg-yellow-600 text-black py-5 rounded-2xl font-black uppercase text-xs shadow-xl active:scale-95 transition-all uppercase font-black italic font-black">Bilgileri Onayladım</button></div></div></div>)}
         {showVakaModal && selectedVaka && (<div className="fixed inset-0 bg-black/90 backdrop-blur-md flex justify-center items-center z-[1000] p-4 font-bold italic"><div className="bg-slate-900 border border-slate-800 p-10 rounded-[50px] w-full max-w-2xl shadow-3xl relative overflow-hidden italic"><div className={`absolute top-0 left-0 w-full h-2 ${selectedVaka.ekipmanAdi === "KAR devreye alma" ? "bg-red-600 shadow-xl" : "bg-indigo-600 shadow-xl"}`}></div><h2 className="text-2xl font-black text-white mb-8 uppercase italic tracking-widest">Bildirim Detayı</h2><div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 mb-10 shadow-inner italic font-black uppercase italic font-black font-black uppercase"><p className="text-gray-300 text-sm italic font-black italic">"{selectedVaka.arizaDetayi || selectedVaka.aciklama || "Not yok."}"</p></div><button onClick={()=>setShowVakaModal(false)} className="w-full bg-slate-800 hover:bg-slate-700 py-4 rounded-2xl font-black uppercase text-xs transition shadow-2xl italic font-black uppercase italic uppercase">Kapat</button></div></div>)}
@@ -482,7 +510,7 @@ useEffect(() => {
             <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
               <div className="w-full lg:w-80 bg-black/30 border-r border-slate-800 p-6 space-y-4 overflow-y-auto text-[9px]">
                 <h3 className="text-indigo-500 uppercase tracking-widest">Filtreleme</h3>
-                <div><label className="text-slate-500 block">YIL</label><select value={kpiFYil} onChange={e=>setKpiFYil(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-white font-black italic uppercase"><option value="">TÜM YILLAR</option>{Array.from(new Set(rawLogs.map((l:any) => String(l.baslangicTarihi || l.tarih || (l.kayitTarihi?.toDate ? l.kayitTarihi.toDate().toISOString().slice(0, 10) : "")).slice(0, 4)))).filter(Boolean).sort().reverse().map(y=><option key={y} value={y}>{y}</option>)}</select></div>
+                <div><label className="text-slate-500 block">YIL</label><select value={kpiFYil} onChange={e=>setKpiFYil(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-white font-black italic uppercase"><option value="2025">2025</option><option value="2026">2026</option></select></div>
                 <div><label className="text-slate-500 block">AY</label><select value={kpiFAy} onChange={e=>setKpiFAy(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-white font-black italic uppercase"><option value="">TÜM AYLAR</option>{["01","02","03","04","05","06","07","08","09","10","11","12"].map(m=><option key={m} value={m}>{m}</option>)}</select></div>
                 <div><label className="text-slate-500 block">HAT</label><select value={kpiFHat} onChange={e=>setKpiFHat(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-white font-black italic uppercase"><option value="">TÜM HATTAR</option>{Array.from(new Set(rawLogs.map((l:any)=>l.hatAdi))).filter(Boolean).sort().map(h=><option key={h} value={h}>{h}</option>)}</select></div>
                 <div><label className="text-slate-500 block">PERSONEL</label><select value={kpiFPersonel} onChange={e=>setKpiFPersonel(e.target.value)} className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2 text-white font-black italic uppercase"><option value="">TÜM PERSONEL</option>{Array.from(new Set(rawLogs.map((l:any)=>l.teknisyen))).filter(Boolean).sort().map(p=><option key={p} value={p}>{p}</option>)}</select></div>
@@ -493,12 +521,8 @@ useEffect(() => {
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={(() => {
                         const filtered = rawLogs.filter((l:any) => {
-                          const d = String(
-                            l.baslangicTarihi ||
-                            l.tarih ||
-                            (l.kayitTarihi?.toDate ? l.kayitTarihi.toDate().toISOString().slice(0, 10) : "")
-                          );
-                          const matchYil = !kpiFYil || d.startsWith(kpiFYil);
+                          const d = l.baslangicTarihi || "";
+                          const matchYil = d.startsWith(kpiFYil);
                           const matchAy = !kpiFAy || d.split('-')[1] === kpiFAy;
                           const matchHat = !kpiFHat || l.hatAdi === kpiFHat;
                           const matchPers = !kpiFPersonel || l.teknisyen === kpiFPersonel;

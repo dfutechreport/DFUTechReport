@@ -40,93 +40,33 @@ export default function LoginPage() {
     return () => unsubscribe();
   }, [router]);
 
-  const getAuthErrorMessage = (code?: string) => {
-    const messages: Record<string, string> = {
-      "auth/invalid-email": "Geçerli bir e-posta adresi giriniz.",
-      "auth/invalid-credential": "E-posta veya şifre hatalı.",
-      "auth/user-not-found": "E-posta veya şifre hatalı.",
-      "auth/wrong-password": "E-posta veya şifre hatalı.",
-      "auth/email-already-in-use": "Bu e-posta adresi zaten kayıtlı.",
-      "auth/weak-password": "Şifreniz en az 8 karakter olmalıdır.",
-      "auth/popup-closed-by-user": "Google ile giriş işlemi iptal edildi.",
-      "auth/too-many-requests": "Çok fazla deneme yapıldı. Lütfen daha sonra tekrar deneyiniz.",
-      "permission-denied": "Bu işlem için yetkiniz bulunmuyor."
-    };
-    return messages[code || ""] || "İşlem tamamlanamadı. Lütfen tekrar deneyiniz.";
-  };
-
-  const createPendingUserProfile = async (uid: string, displayName: string | null, userEmail: string | null) => {
-    if (!userEmail) throw new Error("auth/invalid-email");
-
-    await setDoc(doc(db, "users", uid), {
-      name: (displayName || "Yeni Kullanıcı").trim().slice(0, 80),
-      email: userEmail.trim().toLowerCase(),
-      role: "user",
-      isApproved: false,
-      createdAt: serverTimestamp()
-    });
-  };
-
   const handleGoogleLogin = async () => {
-    setError("");
-    setSuccessMsg("");
-    setIsProcessing(true);
     const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: "select_account" });
-
     try {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
-      const userSnap = await getDoc(doc(db, "users", user.uid));
-
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
       if (!userSnap.exists()) {
-        await createPendingUserProfile(user.uid, user.displayName, user.email);
-        setSuccessMsg("Kayıt oluşturuldu. Yönetici onayı sonrasında giriş yapabilirsiniz.");
+        await setDoc(userRef, { name: user.displayName, email: user.email, role: "user", isApproved: false, createdAt: serverTimestamp() });
       }
-    } catch (err: any) {
-      setError(getAuthErrorMessage(err?.code));
-    } finally {
-      setIsProcessing(false);
-    }
+    } catch (err) { setError("İşlem iptal edildi."); }
   };
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setSuccessMsg("");
     setIsProcessing(true);
-
-    const normalizedEmail = email.trim().toLowerCase();
-
     try {
-      if (isResetMode) {
-        await sendPasswordResetEmail(auth, normalizedEmail);
-        setSuccessMsg("Şifre sıfırlama bağlantısı kurumsal e-posta adresinize gönderildi.");
-      } else if (isLoginMode) {
-        await signInWithEmailAndPassword(auth, normalizedEmail, password);
-      } else {
-        if (password.length < 8) {
-          setError("Şifreniz en az 8 karakter olmalıdır.");
-          return;
-        }
-
-        const cleanName = name.trim();
-        if (cleanName.length < 2) {
-          setError("Ad Soyad alanını eksiksiz giriniz.");
-          return;
-        }
-
-        const userCred = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
-        await createPendingUserProfile(userCred.user.uid, cleanName, normalizedEmail);
-        setSuccessMsg("Kayıt başarılı. Yönetici onayı bekleniyor.");
-        setPassword("");
+      if (isResetMode) { await sendPasswordResetEmail(auth, email); setSuccessMsg("Sıfırlama linki gönderildi."); }
+      else if (isLoginMode) { await signInWithEmailAndPassword(auth, email, password); }
+      else {
+        const userCred = await createUserWithEmailAndPassword(auth, email, password);
+        await setDoc(doc(db, "users", userCred.user.uid), { name, email, role: "user", isApproved: false, createdAt: serverTimestamp() });
+        setSuccessMsg("Kayıt başarılı! Admin onayı bekleyin.");
         setIsLoginMode(true);
       }
-    } catch (err: any) {
-      setError(getAuthErrorMessage(err?.code));
-    } finally {
-      setIsProcessing(false);
-    }
+    } catch (err: any) { setError(err.message); }
+    setIsProcessing(false);
   };
 
   if (loading) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white italic tracking-widest">YÜKLENİYOR...</div>;
@@ -149,7 +89,7 @@ export default function LoginPage() {
           <form onSubmit={handleAuth} className="space-y-4">
             {!isLoginMode && !isResetMode && <input type="text" placeholder="Ad Soyad" className="w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl text-white outline-none focus:border-blue-500" value={name} onChange={(e)=>setName(e.target.value)} required />}
             <input type="email" placeholder="E-posta" className="w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl text-white outline-none focus:border-blue-500" value={email} onChange={(e)=>setEmail(e.target.value)} required />
-            {!isResetMode && <input type="password" placeholder="Şifre" minLength={isLoginMode ? undefined : 8} autoComplete={isLoginMode ? "current-password" : "new-password"} className="w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl text-white outline-none focus:border-blue-500" value={password} onChange={(e)=>setPassword(e.target.value)} required />}
+            {!isResetMode && <input type="password" placeholder="Şifre" className="w-full bg-slate-950 border border-slate-800 p-4 rounded-2xl text-white outline-none focus:border-blue-500" value={password} onChange={(e)=>setPassword(e.target.value)} required />}
             <button type="submit" disabled={isProcessing} className="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-2xl text-white font-black uppercase text-xs tracking-widest transition-all">{isProcessing ? "İŞLENİYOR..." : isResetMode ? "ŞİFREYİ SIFIRLA" : isLoginMode ? "SİSTEME GİRİŞ" : "KAYDI TAMAMLA"}</button>
           </form>
           {isLoginMode && !isResetMode && (
